@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "helix-ethics"
+version = "1.0.0"
+description = "Enterprise AI Governance & Ethical Decision Framework - Ethical guardrails for autonomous AI systems at scale"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Andrew John Ward", email = "andrew@helixcollective.ai"}
+]
+keywords = [
+    "ethics",
+    "ai-governance",
+    "compliance",
+    "autonomous-agents",
+    "ethical-ai",
+    "soc2",
+    "audit-trail"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "sqlalchemy>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "structlog>=23.0.0",
+    "tenacity>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.0.0",
+]
+
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=1.3.0",
+    "sphinx-autodoc-typehints>=1.24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Deathcharge/helix-hub-knowledge"
+Documentation = "https://github.com/Deathcharge/helix-hub-knowledge/tree/main/docs"
+Repository = "https://github.com/Deathcharge/helix-hub-knowledge.git"
+Issues = "https://github.com/Deathcharge/helix-hub-knowledge/issues"
+
+[tool.setuptools]
+packages = ["helix_ethics"]
+package-dir = {"" = "src"}
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "--cov=src/helix_ethics --cov-report=html"
