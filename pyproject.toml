@@ -9,7 +9,7 @@ description = "Enterprise AI Governance & Ethical Decision Framework - Ethical g
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
-authors = [
+authors = [{name = "Samsara Helix"}]
     {name = "Andrew John Ward", email = "andrew@helixcollective.ai"}
 ]
 keywords = [

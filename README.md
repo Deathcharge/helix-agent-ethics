@@ -296,7 +296,7 @@ Dual-license available for commercial use. Contact for details.
 
 ## 🙏 Acknowledgments
 
-Built as part of the **Helix Collective** — ethical AI governance at scale.
+Built as part of the **Samsara Helix** — ethical AI governance at scale.
 
 - **Thought Leadership:** Enterprise AI ethics & governance
 - **Open Source:** Apache 2.0 licensed
