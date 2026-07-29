@@ -137,8 +137,10 @@ certification or ethics truth.
 - [x] Dependencies added substantial vulnerability and install surface unrelated to actual code.
 - [x] No CLI contract, validation command, exit-code behavior, or runnable example existed.
 - [x] No CI protected formatting, lint, typing, tests, coverage, or package shape.
-- [ ] Run the added CI matrix on GitHub; local execution cannot substitute for hosted runners.
-- [ ] Confirm wheel behavior on Python 3.12-3.14; local verification currently uses Python 3.11.9.
+- [x] [GitHub Actions run 30422122937](https://github.com/Deathcharge/samsarix-agent-ethics/actions/runs/30422122937)
+  passed the complete Python 3.11-3.14 CI matrix.
+- [x] Hosted runners confirmed tests and package checks on Python 3.12-3.14 in addition to the
+  clean local Python 3.11 wheel verification.
 
 ### P2 — valuable post-candidate work
 
