@@ -1,0 +1,141 @@
+"""Input bounds, duplicate-key handling, and audit privacy tests."""
+
+from __future__ import annotations
+
+import io
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from helix_ethics import (
+    AuditLogError,
+    InputValidationError,
+    Policy,
+    PolicyEngine,
+    PolicyValidationError,
+)
+from helix_ethics.io import (
+    MAX_INPUT_BYTES,
+    MAX_JSON_DEPTH,
+    MAX_STRING_LENGTH,
+    append_audit_record,
+    load_context,
+    load_policy,
+    write_sample_policy,
+)
+
+
+def test_duplicate_policy_key_is_rejected(tmp_path: Path) -> None:
+    path = tmp_path / "duplicate.json"
+    path.write_text('{"schema_version":1,"schema_version":1}', encoding="utf-8")
+
+    with pytest.raises(PolicyValidationError, match="duplicate object key"):
+        load_policy(path)
+
+
+def test_oversized_standard_input_is_rejected() -> None:
+    stream = io.BytesIO(b"{" + b'"x":"' + (b"a" * MAX_INPUT_BYTES) + b'"}')
+
+    with pytest.raises(InputValidationError, match="byte limit"):
+        load_context(None, stdin=stream)
+
+
+def test_non_object_input_is_rejected() -> None:
+    with pytest.raises(InputValidationError, match="JSON object"):
+        load_context(None, stdin=io.BytesIO(b"[]"))
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        (b"\xff", "must be UTF-8"),
+        (b'{"value":NaN}', "non-finite number"),
+        (
+            json.dumps({"value": "x" * (MAX_STRING_LENGTH + 1)}).encode(),
+            "string longer",
+        ),
+    ],
+    ids=("invalid-utf8", "non-finite-number", "long-string"),
+)
+def test_invalid_json_encodings_and_values(payload: bytes, message: str) -> None:
+    with pytest.raises(InputValidationError, match=message):
+        load_context(None, stdin=io.BytesIO(payload))
+
+
+def test_excessive_json_depth_is_rejected() -> None:
+    value: dict[str, Any] = {}
+    cursor = value
+    for _ in range(MAX_JSON_DEPTH + 1):
+        child: dict[str, Any] = {}
+        cursor["child"] = child
+        cursor = child
+
+    with pytest.raises(InputValidationError, match="maximum JSON depth"):
+        load_context(None, stdin=io.BytesIO(json.dumps(value).encode()))
+
+
+def test_parser_recursion_error_becomes_an_input_error() -> None:
+    payload = ("[" * 2_000 + "]" * 2_000).encode()
+
+    with pytest.raises(InputValidationError, match="not valid JSON"):
+        load_context(None, stdin=io.BytesIO(b'{"value":' + payload + b"}"))
+
+
+def test_context_file_and_missing_stdin(tmp_path: Path) -> None:
+    path = tmp_path / "input.json"
+    path.write_text('{"action":{"operation":"read"}}', encoding="utf-8")
+
+    assert load_context(path)["action"]["operation"] == "read"
+    with pytest.raises(InputValidationError, match="no stream"):
+        load_context(None)
+
+
+def test_missing_and_non_file_paths_are_rejected(tmp_path: Path) -> None:
+    with pytest.raises(PolicyValidationError, match="cannot read policy"):
+        load_policy(tmp_path / "missing.json")
+    with pytest.raises(PolicyValidationError, match="not a regular file"):
+        load_policy(tmp_path)
+
+
+def test_sample_policy_is_valid_and_overwrite_is_explicit(tmp_path: Path) -> None:
+    path = tmp_path / "policy.json"
+    resolved = write_sample_policy(path)
+
+    assert resolved == path.resolve()
+    assert load_policy(path).id == "safe-agent-actions"
+    with pytest.raises(PolicyValidationError, match="refusing to overwrite"):
+        write_sample_policy(path)
+    assert write_sample_policy(path, force=True) == path.resolve()
+
+
+def test_sample_policy_requires_existing_parent(tmp_path: Path) -> None:
+    with pytest.raises(PolicyValidationError, match="parent directory"):
+        write_sample_policy(tmp_path / "missing" / "policy.json")
+
+
+def test_audit_record_excludes_raw_input(tmp_path: Path, policy_document: dict[str, Any]) -> None:
+    decision = PolicyEngine(Policy.from_dict(policy_document)).evaluate(
+        {"action": {"operation": "read"}, "secret": "do-not-log"}
+    )
+    audit_path = tmp_path / "audit.jsonl"
+
+    append_audit_record(audit_path, decision)
+    record = json.loads(audit_path.read_text(encoding="utf-8"))
+
+    assert record["outcome"] == "allow"
+    assert record["decision_id"] == decision.decision_id
+    assert "secret" not in record
+    assert "do-not-log" not in audit_path.read_text(encoding="utf-8")
+
+
+def test_audit_log_requires_existing_parent(
+    tmp_path: Path, policy_document: dict[str, Any]
+) -> None:
+    decision = PolicyEngine(Policy.from_dict(policy_document)).evaluate(
+        {"action": {"operation": "read"}}
+    )
+
+    with pytest.raises(AuditLogError, match="parent directory"):
+        append_audit_record(tmp_path / "missing" / "audit.jsonl", decision)
