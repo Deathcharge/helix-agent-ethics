@@ -1,93 +1,188 @@
-# helix-agent-ethics
+# Helix Agent Ethics
 
-Ethical guidelines and constraints for agent behavior
+Helix Agent Ethics is a local, deterministic policy gate for autonomous agent actions. It
+answers one operational question before an agent acts: **allow, deny, or require human
+review?**
 
-## 🎯 Overview
+It is for Python developers who need a small policy-as-code boundary in front of tool calls,
+workflows, or other consequential operations. Policies and inputs are JSON, decisions are
+explainable, and the optional audit log excludes raw input by design. The package makes no
+network calls and has no runtime dependencies.
 
-This repository is part of the [Helix Collective](https://github.com/Deathcharge/helix-platform), a comprehensive ecosystem for building intelligent, multi-agent systems with consciousness frameworks and advanced LLM integration.
+> Status: **0.1.0 release candidate.** The core CLI and library journey is implemented and
+> tested. It is not a general moral-reasoning system, a compliance certification product, or a
+> substitute for application authorization and human judgment.
 
-## 🚀 Quick Start
+## Fastest successful path
 
-### Installation
+Prerequisites: Python 3.11 or newer and Git.
 
-\`\`\`bash
+```bash
 git clone https://github.com/Deathcharge/helix-agent-ethics.git
 cd helix-agent-ethics
-pip install -r requirements.txt
-\`\`\`
+python -m venv .venv
+```
 
-### Basic Usage
+Activate the environment:
 
-See the [examples/](examples/) directory for working examples and integration patterns.
+```bash
+# macOS/Linux
+source .venv/bin/activate
 
-## 📚 Documentation
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+```
 
-- **[Architecture](docs/ARCHITECTURE.md)** - System design and components
-- **[API Reference](docs/API.md)** - Complete API documentation
-- **[Integration Guide](docs/INTEGRATION.md)** - How to integrate with other Helix repos
-- **[Deployment](docs/DEPLOYMENT.md)** - Production deployment guide
-- **[Contributing](CONTRIBUTING.md)** - How to contribute
+Install and evaluate the included read-only action:
 
-## 🔗 Related Repositories
+```bash
+python -m pip install -e .
+helix-ethics validate examples/policies/safe-agent-actions.json
+helix-ethics check \
+  --policy examples/policies/safe-agent-actions.json \
+  --input examples/actions/read-resource.json
+```
 
-- **[helix-platform](https://github.com/Deathcharge/helix-platform)** - Central hub and integration guide
-- **[helix-unified](https://github.com/Deathcharge/helix-unified)** - Main unified codebase
-- **[helix-core](https://github.com/Deathcharge/helix-core)** - Core utilities and LLM integration
+The last command prints a JSON decision with `"outcome": "allow"` and exits `0`.
 
-See [HELIX_REPOSITORY_INDEX.md](https://github.com/Deathcharge/helix-platform/blob/main/HELIX_REPOSITORY_INDEX.md) for the complete ecosystem map.
+The destructive example is denied and exits `3`:
 
-## 🧪 Testing
+```bash
+helix-ethics check \
+  --policy examples/policies/safe-agent-actions.json \
+  --input examples/actions/delete-resource.json
+```
 
-Run tests with pytest:
+PowerShell accepts the same command on one line. The CLI also reads input from standard input:
 
-\`\`\`bash
-pytest tests/ -v --cov=src
-\`\`\`
+```bash
+echo '{"action":{"operation":"read","risk":"low"}}' | \
+  helix-ethics check --policy examples/policies/safe-agent-actions.json
+```
 
-## 🔄 CI/CD
+## CLI
 
-This repository uses GitHub Actions for:
-- ✅ Automated testing (Python 3.9, 3.10, 3.11)
-- ✅ Code linting (flake8)
-- ✅ Type checking (mypy)
-- ✅ Security scanning (bandit, safety)
-- ✅ Coverage reporting (Codecov)
+```text
+helix-ethics init POLICY.json [--force]
+helix-ethics validate POLICY.json [--format text|json]
+helix-ethics check --policy POLICY.json [--input INPUT.json|-]
+                   [--audit-log decisions.jsonl] [--format json|text]
+helix-ethics --help
+helix-ethics --version
+```
 
-See [.github/workflows/ci.yml](.github/workflows/ci.yml) for details.
+Exit codes are stable for non-interactive use:
 
-## 📋 Requirements
+| Code | Meaning |
+| ---: | --- |
+| `0` | action allowed, or non-decision command succeeded |
+| `2` | invalid invocation, policy, input, evaluation, or requested audit write |
+| `3` | action denied |
+| `4` | human review required |
 
-- Python 3.9+
-- Dependencies listed in requirements.txt
-- Development dependencies in requirements-dev.txt
+Only code `0` authorizes execution. Invalid data is an error, never an implicit allow.
 
-## 🤝 Contributing
+Generate a starting policy without overwriting existing work:
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Development setup
-- Code style guide
-- Testing requirements
-- Pull request process
+```bash
+helix-ethics init policy.json
+```
 
-## 📄 License
+`--force` is required to replace an existing file.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Python API
 
-## 🆘 Support
+```python
+from helix_ethics import PolicyEngine, load_policy
 
-- **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/Deathcharge/helix-agent-ethics/issues)
-- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/Deathcharge/helix-agent-ethics/discussions)
-- **Documentation**: See the [docs/](docs/) directory
-- **Ecosystem**: Visit [helix-platform](https://github.com/Deathcharge/helix-platform)
+policy = load_policy("examples/policies/safe-agent-actions.json")
+decision = PolicyEngine(policy).evaluate(
+    {
+        "actor": {"id": "research-agent"},
+        "action": {"operation": "read", "risk": "low"},
+        "context": {"human_approved": False},
+    }
+)
 
-## 🎓 Learn More
+if decision.allowed:
+    print(decision.decision_id, decision.reasons)
+```
 
-- [Helix Collective Repository Index](https://github.com/Deathcharge/helix-platform/blob/main/HELIX_REPOSITORY_INDEX.md)
-- [Architecture Guide](https://github.com/Deathcharge/helix-platform/blob/main/docs/ARCHITECTURE.md)
-- [Integration Examples](https://github.com/Deathcharge/helix-platform/tree/main/examples)
+The application remains responsible for enforcing the decision immediately before the protected
+operation. See [API reference](docs/API.md) and [policy format](docs/POLICY_FORMAT.md).
 
----
+## Decision semantics
 
-**Status**: ✅ Production Ready  
-**Last Updated**: June 19, 2026  
-**Maintainer**: Helix Collective Contributors
+- Every rule is evaluated; all conditions in a rule must match.
+- A matching `deny` overrides every `review` or `allow`.
+- A matching `review` overrides every `allow`.
+- If no decisive rule matches, `default_effect` applies.
+- `warn` and `audit` rules are non-decisive metadata.
+- Policy and evaluation errors are surfaced instead of silently skipping a rule.
+
+This narrow model follows established policy-engine patterns—explicit grants, deny overrides, and
+pre-use validation—without attempting to reproduce the much broader OPA or Cedar languages.
+
+## Security and privacy
+
+- Policy files are trusted developer/operator configuration; evaluation input may be untrusted.
+- JSON byte size, nesting depth, string length, container count, rule count, and condition count are
+  bounded.
+- Duplicate JSON keys and non-finite numbers are rejected.
+- There is no expression evaluation, regex engine, template expansion, dynamic import, shell
+  execution, network request, database, or secret requirement.
+- Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
+- Audit retention, access controls, rotation, and tamper resistance belong to the embedding
+  application. A successful append is flushed to disk but is not a cryptographic ledger.
+
+See [SECURITY.md](SECURITY.md) for the threat boundary and reporting process.
+
+## Development
+
+The runtime has no third-party dependencies. The checked-in development requirements pin the
+local and CI toolchain:
+
+```bash
+python -m venv .venv
+python -m pip install -r requirements-dev.txt
+python -m ruff format --check .
+python -m ruff check .
+python -m mypy
+python -m pytest
+python -m build
+python -m twine check dist/*
+```
+
+CI runs formatting, linting, strict type checking, tests with a 90% coverage gate, and package
+build checks. Compatibility tests cover Python 3.11 through 3.14.
+
+## Packaging and release
+
+Build artifacts locally with `python -m build`. Publication is intentionally not automated and has
+not been performed. Before publishing, the owner must confirm the distribution name, version, and
+license metadata, then test the wheel in a clean environment as described in
+[docs/PRODUCTIZATION.md](docs/PRODUCTIZATION.md).
+
+## Architecture and limitations
+
+The product is a library plus CLI; it has no server or cloud component. The package separates
+validated immutable models, deterministic evaluation, bounded I/O, and presentation/exit codes.
+See [architecture](docs/ARCHITECTURE.md).
+
+Deliberate limitations:
+
+- JSON policies only; no arbitrary code, regex, network data, or plugin execution.
+- In-process evaluation only; no policy distribution control plane.
+- JSONL audit append is local and metadata-only, with no cross-process ordering guarantee.
+- The engine evaluates explicit caller-supplied facts; it does not infer intent or truth.
+- Policies must be reviewed and tested for the embedding application's real threat model.
+
+## Contributing and license status
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the verified development workflow.
+
+The repository's current [LICENSE](LICENSE) is Business Source License 1.1 with a June 16, 2027
+change date, but its `Licensed Work` field names a different product and
+[LICENSE.PROPRIETARY](LICENSE.PROPRIETARY) adds ambiguity. Those files were preserved rather than
+rewritten. Owner/legal confirmation is required before public package publication or commercial
+reliance.
