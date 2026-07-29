@@ -76,10 +76,10 @@ def test_excessive_json_depth_is_rejected() -> None:
         load_context(None, stdin=io.BytesIO(json.dumps(value).encode()))
 
 
-def test_parser_recursion_error_becomes_an_input_error() -> None:
+def test_deeply_nested_json_becomes_an_input_error() -> None:
     payload = ("[" * 2_000 + "]" * 2_000).encode()
 
-    with pytest.raises(InputValidationError, match="not valid JSON"):
+    with pytest.raises(InputValidationError, match=r"not valid JSON|maximum JSON depth"):
         load_context(None, stdin=io.BytesIO(b'{"value":' + payload + b"}"))
 
 
