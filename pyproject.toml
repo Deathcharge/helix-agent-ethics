@@ -3,16 +3,19 @@ requires = ["setuptools==80.9.0", "wheel==0.45.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "helix-agent-ethics"
+name = "samsarix-agent-ethics"
 version = "0.1.0"
 description = "A local, deterministic policy gate for autonomous agent actions"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "LicenseRef-Helix-Collective-BSL-1.1"
-license-files = ["LICENSE", "LICENSE.PROPRIETARY"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [
-    { name = "Helix Collective" },
-    { name = "Andrew John Ward", email = "andrew@helixcollective.ai" },
+    { name = "Andrew John Ward" },
+    { name = "Samsarix LLC", email = "contact@samsarix.com" },
+]
+maintainers = [
+    { name = "Samsarix LLC", email = "support@samsarix.com" },
 ]
 keywords = ["ai-agents", "guardrails", "policy-as-code", "governance", "audit"]
 classifiers = [
@@ -38,17 +41,19 @@ dev = [
 ]
 
 [project.scripts]
-helix-ethics = "helix_ethics.cli:entrypoint"
+samsarix-ethics = "samsarix_ethics.cli:entrypoint"
 
 [project.urls]
-Repository = "https://github.com/Deathcharge/helix-agent-ethics"
-Issues = "https://github.com/Deathcharge/helix-agent-ethics/issues"
+Homepage = "https://www.samsarix.com"
+Repository = "https://github.com/Deathcharge/samsarix-agent-ethics"
+Issues = "https://github.com/Deathcharge/samsarix-agent-ethics/issues"
+Support = "https://github.com/Deathcharge/samsarix-agent-ethics/blob/main/SUPPORT.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-helix_ethics = ["py.typed"]
+samsarix_ethics = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -56,14 +61,14 @@ addopts = [
     "-ra",
     "--strict-config",
     "--strict-markers",
-    "--cov=helix_ethics",
+    "--cov=samsarix_ethics",
     "--cov-branch",
     "--cov-report=term-missing",
     "--cov-fail-under=90",
 ]
 
 [tool.coverage.run]
-source = ["helix_ethics"]
+source = ["samsarix_ethics"]
 branch = true
 
 [tool.coverage.report]
@@ -83,5 +88,5 @@ select = ["B", "E", "F", "I", "RUF", "S", "SIM", "UP"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-packages = ["helix_ethics"]
+packages = ["samsarix_ethics"]
 mypy_path = "src"

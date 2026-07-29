@@ -9,14 +9,14 @@ from typing import Any
 
 import pytest
 
-from helix_ethics import (
+from samsarix_ethics import (
     AuditLogError,
     InputValidationError,
     Policy,
     PolicyEngine,
     PolicyValidationError,
 )
-from helix_ethics.io import (
+from samsarix_ethics.io import (
     MAX_INPUT_BYTES,
     MAX_JSON_DEPTH,
     MAX_STRING_LENGTH,

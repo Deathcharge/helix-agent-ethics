@@ -2,7 +2,7 @@
 
 ## Commitment
 
-Helix Agent Ethics aims to provide a respectful, inclusive, and constructive environment for
+Samsarix Agent Ethics aims to provide a respectful, inclusive, and constructive environment for
 everyone who participates. Contributors, maintainers, and users are expected to help keep project
 spaces safe and useful regardless of identity, background, experience, or ability.
 
@@ -29,16 +29,14 @@ project-controlled spaces. It also applies when someone officially represents th
 
 ## Reporting conduct concerns
 
-Do not publish personal or sensitive incident details in a public issue. Contact the repository
-owner or a maintainer through a private channel already available to you. If no private channel is
-available, open a minimal public issue asking the owner to establish one, without naming people or
-describing the incident.
+Do not publish personal or sensitive incident details in a public issue. Email
+[contact@samsarix.com](mailto:contact@samsarix.com) or contact a maintainer through another private
+channel available to you.
 
 Security vulnerabilities follow the separate process in [SECURITY.md](SECURITY.md).
 
-The repository does not currently publish a dedicated conduct address, response-time promise,
-appeal committee, or enforcement SLA. The owner should add those only after confirming that they
-are staffed and monitored.
+The repository does not promise a response-time SLA or formal appeal committee. Samsarix LLC should
+add those only when they are staffed and can be honored.
 
 ## Enforcement
 

@@ -1,14 +1,14 @@
 # Contributing
 
-Thank you for improving Helix Agent Ethics. Contributions should preserve its narrow product
+Thank you for improving Samsarix Agent Ethics. Contributions should preserve its narrow product
 boundary: a deterministic, local policy gate rather than a hosted service or subjective ethics
 oracle.
 
 ## Setup
 
 ```bash
-git clone https://github.com/Deathcharge/helix-agent-ethics.git
-cd helix-agent-ethics
+git clone https://github.com/Deathcharge/samsarix-agent-ethics.git
+cd samsarix-agent-ethics
 python -m venv .venv
 ```
 
@@ -57,6 +57,6 @@ than publishing exploit details in an issue.
 
 ## License
 
-Contributions are expected to use the repository's existing license terms. The current license
-metadata requires owner/legal clarification before public package publication; do not rewrite or
-reinterpret the license in a pull request without explicit owner direction.
+Contributions are submitted under Apache License 2.0 unless explicitly marked otherwise before
+submission. Preserve the repository's `LICENSE`, `NOTICE`, and trademark notices. Questions about
+contribution licensing can be sent to [contact@samsarix.com](mailto:contact@samsarix.com).

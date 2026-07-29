@@ -1,6 +1,6 @@
 # API reference
 
-All supported public names are exported from `helix_ethics`.
+All supported public names are exported from `samsarix_ethics`.
 
 ## Loading and evaluating
 
@@ -58,8 +58,8 @@ does not include evaluation input, rule messages, or secrets. Raises `AuditLogEr
 ## Error hierarchy
 
 `PolicyValidationError`, `InputValidationError`, `EvaluationError`, and `AuditLogError` derive from
-`HelixEthicsError`. The base class is defined in `helix_ethics.errors`; specialized errors are also
-exported from `helix_ethics`.
+`SamsarixEthicsError`. The base class and specialized errors are exported from
+`samsarix_ethics` and defined in `samsarix_ethics.errors`.
 
 ## Compatibility
 

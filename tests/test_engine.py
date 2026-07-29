@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from helix_ethics import EvaluationError, InputValidationError, Outcome, Policy, PolicyEngine
+from samsarix_ethics import EvaluationError, InputValidationError, Outcome, Policy, PolicyEngine
 
 
 def test_explicit_allow(policy_document: dict[str, Any]) -> None:

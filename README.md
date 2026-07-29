@@ -1,13 +1,14 @@
-# Helix Agent Ethics
+# Samsarix Agent Ethics
 
-Helix Agent Ethics is a local, deterministic policy gate for autonomous agent actions. It
+Samsarix Agent Ethics is a local, deterministic policy gate for autonomous agent actions. It
 answers one operational question before an agent acts: **allow, deny, or require human
 review?**
 
 It is for Python developers who need a small policy-as-code boundary in front of tool calls,
 workflows, or other consequential operations. Policies and inputs are JSON, decisions are
 explainable, and the optional audit log excludes raw input by design. The package makes no
-network calls and has no runtime dependencies.
+network calls and has no runtime dependencies. Other Samsarix repositories can embed it, but none
+is required; the package and its release lifecycle stand on their own.
 
 > Status: **0.1.0 release candidate.** The core CLI and library journey is implemented and
 > tested. It is not a general moral-reasoning system, a compliance certification product, or a
@@ -18,8 +19,8 @@ network calls and has no runtime dependencies.
 Prerequisites: Python 3.11 or newer and Git.
 
 ```bash
-git clone https://github.com/Deathcharge/helix-agent-ethics.git
-cd helix-agent-ethics
+git clone https://github.com/Deathcharge/samsarix-agent-ethics.git
+cd samsarix-agent-ethics
 python -m venv .venv
 ```
 
@@ -37,8 +38,8 @@ Install and evaluate the included read-only action:
 
 ```bash
 python -m pip install -e .
-helix-ethics validate examples/policies/safe-agent-actions.json
-helix-ethics check \
+samsarix-ethics validate examples/policies/safe-agent-actions.json
+samsarix-ethics check \
   --policy examples/policies/safe-agent-actions.json \
   --input examples/actions/read-resource.json
 ```
@@ -48,7 +49,7 @@ The last command prints a JSON decision with `"outcome": "allow"` and exits `0`.
 The destructive example is denied and exits `3`:
 
 ```bash
-helix-ethics check \
+samsarix-ethics check \
   --policy examples/policies/safe-agent-actions.json \
   --input examples/actions/delete-resource.json
 ```
@@ -57,18 +58,18 @@ PowerShell accepts the same command on one line. The CLI also reads input from s
 
 ```bash
 echo '{"action":{"operation":"read","risk":"low"}}' | \
-  helix-ethics check --policy examples/policies/safe-agent-actions.json
+  samsarix-ethics check --policy examples/policies/safe-agent-actions.json
 ```
 
 ## CLI
 
 ```text
-helix-ethics init POLICY.json [--force]
-helix-ethics validate POLICY.json [--format text|json]
-helix-ethics check --policy POLICY.json [--input INPUT.json|-]
-                   [--audit-log decisions.jsonl] [--format json|text]
-helix-ethics --help
-helix-ethics --version
+samsarix-ethics init POLICY.json [--force]
+samsarix-ethics validate POLICY.json [--format text|json]
+samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
+                      [--audit-log decisions.jsonl] [--format json|text]
+samsarix-ethics --help
+samsarix-ethics --version
 ```
 
 Exit codes are stable for non-interactive use:
@@ -85,7 +86,7 @@ Only code `0` authorizes execution. Invalid data is an error, never an implicit 
 Generate a starting policy without overwriting existing work:
 
 ```bash
-helix-ethics init policy.json
+samsarix-ethics init policy.json
 ```
 
 `--force` is required to replace an existing file.
@@ -93,7 +94,7 @@ helix-ethics init policy.json
 ## Python API
 
 ```python
-from helix_ethics import PolicyEngine, load_policy
+from samsarix_ethics import PolicyEngine, load_policy
 
 policy = load_policy("examples/policies/safe-agent-actions.json")
 decision = PolicyEngine(policy).evaluate(
@@ -135,7 +136,10 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
 - Audit retention, access controls, rotation, and tamper resistance belong to the embedding
   application. A successful append is flushed to disk but is not a cryptographic ledger.
 
-See [SECURITY.md](SECURITY.md) for the threat boundary and reporting process.
+See [SECURITY.md](SECURITY.md) for the threat boundary and reporting process and
+[SUPPORT.md](SUPPORT.md) for safe support requests.
+General support is available at [support@samsarix.com](mailto:support@samsarix.com); company and
+partnership inquiries can use [contact@samsarix.com](mailto:contact@samsarix.com).
 
 ## Development
 
@@ -159,9 +163,9 @@ build checks. Compatibility tests cover Python 3.11 through 3.14.
 ## Packaging and release
 
 Build artifacts locally with `python -m build`. Publication is intentionally not automated and has
-not been performed. Before publishing, the owner must confirm the distribution name, version, and
-license metadata, then test the wheel in a clean environment as described in
-[docs/PRODUCTIZATION.md](docs/PRODUCTIZATION.md).
+not been performed. The `samsarix-agent-ethics` distribution name was unclaimed on PyPI when this
+release candidate was prepared, but availability is not a reservation. Test the wheel in a clean
+environment as described in [docs/PRODUCTIZATION.md](docs/PRODUCTIZATION.md) before publishing.
 
 ## Architecture and limitations
 
@@ -177,12 +181,10 @@ Deliberate limitations:
 - The engine evaluates explicit caller-supplied facts; it does not infer intent or truth.
 - Policies must be reviewed and tested for the embedding application's real threat model.
 
-## Contributing and license status
+## Contributing and license
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the verified development workflow.
 
-The repository's current [LICENSE](LICENSE) is Business Source License 1.1 with a June 16, 2027
-change date, but its `Licensed Work` field names a different product and
-[LICENSE.PROPRIETARY](LICENSE.PROPRIETARY) adds ambiguity. Those files were preserved rather than
-rewritten. Owner/legal confirmation is required before public package publication or commercial
-reliance.
+Copyright 2024-2026 Samsarix LLC. Licensed under the [Apache License 2.0](LICENSE). The
+[NOTICE](NOTICE) file preserves product attribution, and [TRADEMARKS.md](TRADEMARKS.md) explains
+that the software license does not grant rights to Samsarix names or branding.

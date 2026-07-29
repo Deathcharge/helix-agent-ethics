@@ -1,3 +1,6 @@
+# Copyright 2024-2026 Samsarix LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """Command-line interface for policy validation and action checks."""
 
 from __future__ import annotations
@@ -11,7 +14,7 @@ from typing import BinaryIO, TextIO
 
 from . import __version__
 from .engine import PolicyEngine
-from .errors import HelixEthicsError
+from .errors import SamsarixEthicsError
 from .io import append_audit_record, load_context, load_policy, write_sample_policy
 from .models import Decision, Outcome
 
@@ -23,7 +26,7 @@ EXIT_REVIEW = 4
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="helix-ethics",
+        prog="samsarix-ethics",
         description="Evaluate agent actions against local, explicit JSON policies.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -121,7 +124,7 @@ def main(
             append_audit_record(Path(arguments.audit_log), decision)
         print(_render_decision(decision, arguments.format), file=output)
         return _decision_exit(decision.outcome)
-    except HelixEthicsError as exc:
+    except SamsarixEthicsError as exc:
         print(f"error: {exc}", file=errors)
         return EXIT_ERROR
 

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import helix_ethics
+import samsarix_ethics
 
 
 def test_public_api_is_importable() -> None:
-    assert helix_ethics.__version__ == "0.1.0"
-    assert helix_ethics.PolicyEngine.__module__ == "helix_ethics.engine"
-    assert "PolicyValidationError" in helix_ethics.__all__
+    assert samsarix_ethics.__version__ == "0.1.0"
+    assert samsarix_ethics.PolicyEngine.__module__ == "samsarix_ethics.engine"
+    assert "PolicyValidationError" in samsarix_ethics.__all__
+    assert "SamsarixEthicsError" in samsarix_ethics.__all__

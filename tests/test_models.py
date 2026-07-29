@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from helix_ethics import Outcome, Policy, PolicyCondition, PolicyRule, PolicyValidationError
+from samsarix_ethics import Outcome, Policy, PolicyCondition, PolicyRule, PolicyValidationError
 
 
 def test_valid_policy_is_immutable(policy_document: dict[str, Any]) -> None:

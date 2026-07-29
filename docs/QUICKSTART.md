@@ -12,19 +12,19 @@ Activate `.venv`, then:
 
 ```bash
 python -m pip install -e .
-helix-ethics --version
+samsarix-ethics --version
 ```
 
 Expected version output:
 
 ```text
-helix-ethics 0.1.0
+samsarix-ethics 0.1.0
 ```
 
 ## 2. Validate the policy
 
 ```bash
-helix-ethics validate examples/policies/safe-agent-actions.json
+samsarix-ethics validate examples/policies/safe-agent-actions.json
 ```
 
 Expected result:
@@ -36,7 +36,7 @@ Valid policy safe-agent-actions@1.0.0: 5 rules, default=review
 ## 3. Evaluate an allowed action
 
 ```bash
-helix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json
+samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json
 ```
 
 The JSON result has `outcome: allow`, `allowed: true`, a new `decision_id`, the policy version, and
@@ -45,7 +45,7 @@ the matching rule explanation. The command exits `0`.
 ## 4. Observe safe denial
 
 ```bash
-helix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/delete-resource.json
+samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/delete-resource.json
 ```
 
 The example lacks human approval, so the deny rule wins and the command exits `3`. This nonzero
@@ -54,7 +54,7 @@ exit is intentional and suitable for shell or CI gates.
 ## 5. Add a privacy-minimized audit record
 
 ```bash
-helix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json --audit-log decisions.jsonl
+samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json --audit-log decisions.jsonl
 ```
 
 `decisions.jsonl` receives decision metadata only. The input document is not copied. Decide access,
@@ -63,8 +63,8 @@ rotation, retention, and deletion policy before enabling this in a real applicat
 ## 6. Start a policy of your own
 
 ```bash
-helix-ethics init my-policy.json
-helix-ethics validate my-policy.json
+samsarix-ethics init my-policy.json
+samsarix-ethics validate my-policy.json
 ```
 
 The init command refuses to overwrite a file unless `--force` is present. Continue with the

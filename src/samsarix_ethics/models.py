@@ -1,3 +1,6 @@
+# Copyright 2024-2026 Samsarix LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """Validated, immutable policy and decision models."""
 
 from __future__ import annotations

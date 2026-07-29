@@ -7,10 +7,11 @@ receive security fixes. No older repository snapshot is supported as an installa
 
 ## Reporting
 
-Please use GitHub's private **Report a vulnerability** flow for this repository when it is enabled.
-Do not include credentials, personal data, production policy files, or sensitive action inputs in a
-public issue. If private reporting is unavailable, open a minimal public issue asking the owner to
-enable a private channel without disclosing exploit details.
+Please use GitHub's private **Report a vulnerability** flow for this repository; private
+vulnerability reporting is enabled. Do not include credentials, personal data, production policy
+files, or sensitive action inputs in a public issue. If the private flow is inaccessible, email
+[support@samsarix.com](mailto:support@samsarix.com) with a minimal description and request a safer
+channel before sending secrets, production data, or exploit details.
 
 No response-time SLA or bounty program is currently promised.
 

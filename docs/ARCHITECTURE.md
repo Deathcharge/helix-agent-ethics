@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-Helix Agent Ethics is an embedded policy decision point. The caller supplies trusted policy
+Samsarix Agent Ethics is an embedded policy decision point. The caller supplies trusted policy
 configuration and an action-context object, receives an explainable decision, and remains
 responsible for enforcement immediately before the protected operation.
 
@@ -14,7 +14,7 @@ untrusted action JSON ─> bounded parser ──> context object ──┘      
 ```
 
 There is no network service, identity provider, database, model provider, or dependency on
-`helix-unified`.
+the legacy `helix-unified` repository.
 
 ## Components
 

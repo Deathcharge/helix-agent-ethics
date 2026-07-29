@@ -15,7 +15,7 @@ def _run_cli(*args: str, stdin: str | None = None) -> subprocess.CompletedProces
     source_path = str(Path(__file__).parents[1] / "src")
     environment["PYTHONPATH"] = source_path + os.pathsep + environment.get("PYTHONPATH", "")
     return subprocess.run(
-        [sys.executable, "-m", "helix_ethics", *args],
+        [sys.executable, "-m", "samsarix_ethics", *args],
         input=stdin,
         text=True,
         capture_output=True,
@@ -31,7 +31,7 @@ def test_help_and_version() -> None:
     assert help_result.returncode == 0
     assert "check" in help_result.stdout
     assert version_result.returncode == 0
-    assert version_result.stdout.strip() == "helix-ethics 0.1.0"
+    assert version_result.stdout.strip() == "samsarix-ethics 0.1.0"
 
 
 def test_check_exit_codes_and_json(write_json: Any, policy_document: dict[str, Any]) -> None:

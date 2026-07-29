@@ -42,7 +42,7 @@ used after metadata correction.
 
 ## Chosen product
 
-**Helix Agent Ethics is a zero-runtime-dependency Python library and CLI that acts as a local,
+**Samsarix Agent Ethics is a zero-runtime-dependency Python library and CLI that acts as a local,
 deterministic policy decision point for autonomous agent actions.**
 
 The target user is a Python developer integrating an agent, tool runner, or workflow that needs a
@@ -57,8 +57,9 @@ The primary journey is:
 5. receive an explained `allow`, `deny`, or `review` decision;
 6. enforce that result and optionally append a metadata-only audit record.
 
-This product exists independently of `helix-unified`: it is offline, embeddable, has a deliberate
-public API, requires no private service, and can guard any Python agent system.
+This product exists independently of the legacy `helix-unified` repository: it is offline,
+embeddable, has a deliberate public API, requires no private service, and can guard any Python
+agent system.
 
 ## Research-backed decisions
 
@@ -72,6 +73,13 @@ Bounded review used current primary sources:
   decision identity and masking/removing sensitive input in logs.
 - [NIST AI RMF Core](https://airc.nist.gov/airmf-resources/airmf/5-sec-core/) emphasizes documented
   governance roles and human-AI oversight rather than treating an automated score as certification.
+- [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) requires redistribution of the
+  license and applicable notices, includes an explicit patent grant, and does not grant trademark
+  rights. The [Apache application guidance](https://www.apache.org/legal/apply-license) recommends
+  an unmodified `LICENSE`, a `NOTICE`, and short source headers.
+- [Mozilla's MPL 2.0 FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/) confirms that MPL's file-level
+  copyleft requires distributed modifications to covered files to remain available. Apache-2.0 was
+  selected instead to minimize obligations for applications embedding this small library.
 
 Consequent decisions: validate before use; deny/review override allow; expose reasons and a decision
 ID; omit raw input from audit records; preserve a first-class human-review outcome; do not claim
@@ -98,9 +106,11 @@ certification or ethics truth.
 - Evaluation inputs may be untrusted.
 - The caller provides authenticated, accurate facts and enforces the decision without a
   time-of-check/time-of-use gap.
-- The checked-in BSL file reflects some owner intent, but its product name and the second license
-  file require owner/legal clarification.
-- No package name, version, or public distribution is assumed reserved until the owner verifies it.
+- Samsarix LLC owns the current product identity and has supplied monitored contact addresses.
+- Apache License 2.0 is the selected open-source posture; `NOTICE` preserves attribution and the
+  separate trademark notice protects brand identity without restricting software use.
+- The `samsarix-agent-ethics` PyPI name was unclaimed during the release review, but remains
+  unreserved until publication succeeds.
 
 ## Findings
 
@@ -167,33 +177,35 @@ certification or ethics truth.
 - [x] Configuration is local, bounded, versioned, and requires no secrets.
 - [x] No locally actionable P0 remains.
 - [x] Documentation describes implemented behavior rather than aspiration.
-- [ ] Owner resolves license/package identity before publication.
+- [x] Owner resolves license/package identity before publication.
 
 ## Completed work
 
-- Established the `helix_ethics` public API and `helix-ethics` console command.
+- Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
 - Added 67 real tests; latest local run: 67 passed, 93.39% branch coverage.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
-- Completed a schema-sealed security review of all 34 in-scope files with complete coverage, no
-  deferred surfaces, and no reportable findings.
+- Completed a schema-sealed security review of the 34-file product core with complete coverage, no
+  deferred surfaces, and no reportable findings. The subsequent 41-file Samsarix/legal/public-repo
+  delta added no runtime capability and passed the full local release suite and clean-wheel checks.
 - Replaced unverified conduct contact, SLA, and committee claims with an honest project-scoped
   reporting and enforcement policy.
+- Rebranded the unreleased package to Samsarix, recorded Samsarix LLC ownership and working contact
+  addresses, and replaced conflicting legacy licenses with Apache-2.0, NOTICE attribution, and
+  trademark guidance.
 - Added strict typing, Ruff formatting/linting, pinned tools, examples, CI, and package metadata.
 - Removed non-functional duplicate validators, fake compliance checks, generic policy package,
   unrelated dependencies, mock-only test suite, and stale portal HTML.
 - Added accurate README, quick start, API, policy, architecture, security, changelog, contribution,
   and productization documentation.
+- Added monitored support/conduct/security paths, GitHub issue forms, code ownership, and a
+  security-aware pull request template; confirmed GitHub private vulnerability reporting is enabled.
 
 ## Deferred and blocked work
 
-Owner/legal controlled:
+Owner controlled:
 
-- Confirm whether BSL 1.1 applies to this repository; correct the `Licensed Work`, licensor contact,
-  change date, and relationship to `LICENSE.PROPRIETARY` through legal review.
-- Confirm distribution name (`helix-agent-ethics`) and first public version (`0.1.0`).
-- Enable GitHub private vulnerability reporting and nominate a monitored security contact.
 - Authorize and perform PyPI publication, signing/provenance, and GitHub release creation.
 
 External validation gates:
@@ -216,5 +228,5 @@ External validation gates:
 The simplest distribution is a source distribution and universal Python wheel. No hosted service
 is required, so operating cost is effectively zero beyond repository maintenance and release
 infrastructure. Plausible sustainability is paid integration support, policy design/review, and
-commercial licensing under whatever owner-approved license replaces or clarifies the current
-files. No subscription or usage-priced service is justified by repository evidence.
+support contracts around the Apache-2.0 core. The Samsarix marks remain separately protected. No
+subscription or usage-priced service is justified by repository evidence.

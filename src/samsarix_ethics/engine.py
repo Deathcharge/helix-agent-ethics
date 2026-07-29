@@ -1,3 +1,6 @@
+# Copyright 2024-2026 Samsarix LLC
+# SPDX-License-Identifier: Apache-2.0
+
 """Deterministic evaluation engine with deny-overrides semantics."""
 
 from __future__ import annotations

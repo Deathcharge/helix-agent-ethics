@@ -117,7 +117,7 @@ Validate structure first, then maintain positive, negative, override, missing-fi
 fixtures for every protected operation:
 
 ```bash
-helix-ethics validate policy.json
-helix-ethics check --policy policy.json --input allowed.json
-helix-ethics check --policy policy.json --input denied.json
+samsarix-ethics validate policy.json
+samsarix-ethics check --policy policy.json --input allowed.json
+samsarix-ethics check --policy policy.json --input denied.json
 ```
