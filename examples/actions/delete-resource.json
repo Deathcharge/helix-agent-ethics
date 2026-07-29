@@ -1,0 +1,19 @@
+{
+  "actor": {
+    "id": "maintenance-agent"
+  },
+  "action": {
+    "operation": "delete",
+    "risk": "high"
+  },
+  "resource": {
+    "type": "artifact",
+    "id": "build-42"
+  },
+  "context": {
+    "human_approved": false
+  },
+  "data": {
+    "sensitivity": "internal"
+  }
+}

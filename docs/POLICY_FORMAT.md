@@ -1,0 +1,123 @@
+# Policy format
+
+Policies are UTF-8 JSON objects with `schema_version: 1`.
+
+```json
+{
+  "schema_version": 1,
+  "id": "tenant-boundary",
+  "version": "1.0.0",
+  "description": "Allow reads only inside the actor's tenant.",
+  "default_effect": "deny",
+  "rules": [
+    {
+      "id": "allow-same-tenant-read",
+      "effect": "allow",
+      "priority": 100,
+      "message": "Actor and resource tenant match.",
+      "conditions": [
+        {"field": "action.operation", "operator": "eq", "value": "read"},
+        {
+          "field": "actor.tenant_id",
+          "operator": "eq",
+          "value": {"$ref": "resource.tenant_id"}
+        }
+      ]
+    }
+  ]
+}
+```
+
+Unknown fields are rejected so spelling mistakes do not silently weaken a gate.
+
+## Policy fields
+
+| Field | Requirement |
+| --- | --- |
+| `schema_version` | integer `1` |
+| `id` | stable 1-128 character identifier |
+| `version` | stable 1-128 character version identifier |
+| `description` | optional string, at most 1,000 characters |
+| `default_effect` | `allow`, `deny`, or `review` |
+| `rules` | array of at most 1,000 rules with unique IDs |
+
+Prefer `deny` for authorization boundaries and `review` when a human queue is a valid safe fallback.
+Use `allow` only when the surrounding system is intentionally permissive.
+
+## Rule fields
+
+| Field | Requirement |
+| --- | --- |
+| `id` | unique stable identifier |
+| `effect` | `allow`, `deny`, `review`, `warn`, or `audit` |
+| `conditions` | array of at most 32 conditions; an empty array always matches |
+| `message` | optional explanation, at most 500 characters |
+| `priority` | optional integer from -10,000 through 10,000; default `100` |
+
+Priority affects the stable ordering of matched rules and messages, not outcome precedence.
+
+## Effects and precedence
+
+All rules run. Final precedence is:
+
+1. any matching `deny` -> deny;
+2. otherwise any matching `review` -> review;
+3. otherwise any matching `allow` -> allow;
+4. otherwise `default_effect`.
+
+`warn` adds a warning. `audit` records that its rule matched in `matched_rules`. Neither grants an
+action.
+
+## Conditions
+
+Each condition contains a dotted `field`, an `operator`, and—except for existence checks—a `value`.
+All conditions in a rule must be true.
+
+| Operator | Meaning |
+| --- | --- |
+| `eq`, `neq` | equality or inequality |
+| `exists`, `not_exists` | dotted field presence |
+| `in`, `not_in` | input field is/is not a member of the policy array |
+| `contains`, `not_contains` | input array contains/does not contain the policy value |
+| `starts_with`, `ends_with` | string prefix or suffix |
+| `gt`, `gte`, `lt`, `lte` | same-type number or string comparison; booleans rejected |
+
+Missing ordinary input fields make a condition false. A missing `$ref` is an evaluation error,
+because silently ignoring a cross-field comparison could weaken the policy.
+
+## Cross-field references
+
+Use exactly one `$ref` key as the value:
+
+```json
+{
+  "field": "actor.tenant_id",
+  "operator": "eq",
+  "value": {"$ref": "resource.tenant_id"}
+}
+```
+
+No interpolation or expression evaluation occurs.
+
+## Resource limits
+
+- policy file: 1 MiB;
+- input object: 256 KiB;
+- JSON nesting: 32 levels;
+- combined container entries: 10,000;
+- individual strings: 65,536 characters;
+- rules: 1,000 per policy;
+- conditions: 32 per rule.
+
+Duplicate JSON keys, non-UTF-8 input, `NaN`, and infinities are invalid.
+
+## Testing a policy
+
+Validate structure first, then maintain positive, negative, override, missing-field, and wrong-type
+fixtures for every protected operation:
+
+```bash
+samsarix-ethics validate policy.json
+samsarix-ethics check --policy policy.json --input allowed.json
+samsarix-ethics check --policy policy.json --input denied.json
+```

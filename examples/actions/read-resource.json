@@ -1,0 +1,19 @@
+{
+  "actor": {
+    "id": "research-agent"
+  },
+  "action": {
+    "operation": "read",
+    "risk": "low"
+  },
+  "resource": {
+    "type": "knowledge-base",
+    "id": "public-handbook"
+  },
+  "context": {
+    "human_approved": false
+  },
+  "data": {
+    "sensitivity": "public"
+  }
+}

@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a focused improvement to the local policy gate
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What concrete integration or policy-authoring problem needs to be solved?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful behavior and its expected API or CLI contract.
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and compatibility impact
+      description: Explain effects on fail-closed behavior, determinism, audit privacy, dependencies, and existing policies.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Product boundary
+      options:
+        - label: This request keeps the package local and deterministic, or explains why its product boundary should change.
+          required: true

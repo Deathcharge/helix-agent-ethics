@@ -1,0 +1,135 @@
+# Copyright 2024-2026 Samsarix LLC
+# SPDX-License-Identifier: Apache-2.0
+
+"""Command-line interface for policy validation and action checks."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from collections.abc import Sequence
+from pathlib import Path
+from typing import BinaryIO, TextIO
+
+from . import __version__
+from .engine import PolicyEngine
+from .errors import SamsarixEthicsError
+from .io import append_audit_record, load_context, load_policy, write_sample_policy
+from .models import Decision, Outcome
+
+EXIT_ALLOWED = 0
+EXIT_ERROR = 2
+EXIT_DENIED = 3
+EXIT_REVIEW = 4
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="samsarix-ethics",
+        description="Evaluate agent actions against local, explicit JSON policies.",
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    check = subparsers.add_parser("check", help="evaluate one JSON action context")
+    check.add_argument("--policy", required=True, help="path to a JSON policy")
+    check.add_argument(
+        "--input", default="-", help="path to a JSON input object; default: standard input"
+    )
+    check.add_argument("--audit-log", help="append metadata-only JSONL to this path")
+    check.add_argument("--format", choices=("json", "text"), default="json")
+
+    validate = subparsers.add_parser(
+        "validate", help="validate a JSON policy without evaluating it"
+    )
+    validate.add_argument("policy", help="path to a JSON policy")
+    validate.add_argument("--format", choices=("json", "text"), default="text")
+
+    initialize = subparsers.add_parser("init", help="write a documented sample policy")
+    initialize.add_argument("path", help="output path for the sample JSON policy")
+    initialize.add_argument(
+        "--force", action="store_true", help="explicitly replace an existing file"
+    )
+    return parser
+
+
+def _render_decision(decision: Decision, output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(decision.to_dict(), indent=2, sort_keys=True)
+    lines = [
+        f"Outcome: {decision.outcome.value.upper()}",
+        f"Allowed: {'yes' if decision.allowed else 'no'}",
+        f"Decision ID: {decision.decision_id}",
+        f"Policy: {decision.policy_id}@{decision.policy_version}",
+        "Reasons:",
+    ]
+    lines.extend(f"  - {reason}" for reason in decision.reasons)
+    if decision.warnings:
+        lines.append("Warnings:")
+        lines.extend(f"  - {warning}" for warning in decision.warnings)
+    return "\n".join(lines)
+
+
+def _decision_exit(outcome: Outcome) -> int:
+    return {
+        Outcome.ALLOW: EXIT_ALLOWED,
+        Outcome.DENY: EXIT_DENIED,
+        Outcome.REVIEW: EXIT_REVIEW,
+    }[outcome]
+
+
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    stdin: BinaryIO | None = None,
+    stdout: TextIO | None = None,
+    stderr: TextIO | None = None,
+) -> int:
+    """Run the CLI and return a process exit code."""
+
+    arguments = _parser().parse_args(argv)
+    output = stdout or sys.stdout
+    errors = stderr or sys.stderr
+    binary_input = stdin if stdin is not None else sys.stdin.buffer
+
+    try:
+        if arguments.command == "init":
+            target = write_sample_policy(arguments.path, force=arguments.force)
+            print(f"Wrote sample policy: {target}", file=output)
+            return EXIT_ALLOWED
+
+        policy = load_policy(arguments.policy)
+        if arguments.command == "validate":
+            result = {
+                "valid": True,
+                "policy_id": policy.id,
+                "policy_version": policy.version,
+                "default_effect": policy.default_effect.value,
+                "rule_count": len(policy.rules),
+            }
+            if arguments.format == "json":
+                print(json.dumps(result, indent=2, sort_keys=True), file=output)
+            else:
+                print(
+                    f"Valid policy {policy.id}@{policy.version}: "
+                    f"{len(policy.rules)} rules, default={policy.default_effect.value}",
+                    file=output,
+                )
+            return EXIT_ALLOWED
+
+        context = load_context(arguments.input, stdin=binary_input)
+        decision = PolicyEngine(policy).evaluate(context)
+        if arguments.audit_log:
+            append_audit_record(Path(arguments.audit_log), decision)
+        print(_render_decision(decision, arguments.format), file=output)
+        return _decision_exit(decision.outcome)
+    except SamsarixEthicsError as exc:
+        print(f"error: {exc}", file=errors)
+        return EXIT_ERROR
+
+
+def entrypoint() -> None:
+    """Console-script entry point."""
+
+    raise SystemExit(main())

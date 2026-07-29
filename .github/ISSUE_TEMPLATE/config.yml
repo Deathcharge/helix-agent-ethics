@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support guidance
+    url: https://github.com/Deathcharge/samsarix-agent-ethics/blob/main/SUPPORT.md
+    about: Get help without publishing sensitive data.
+  - name: Security policy
+    url: https://github.com/Deathcharge/samsarix-agent-ethics/security/policy
+    about: Report vulnerabilities through the private process when available.

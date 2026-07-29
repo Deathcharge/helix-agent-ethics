@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "id": "safe-agent-actions",
+  "version": "1.0.0",
+  "description": "Example gate for read-only and explicitly approved agent actions.",
+  "default_effect": "review",
+  "rules": [
+    {
+      "id": "deny-unapproved-destructive-action",
+      "effect": "deny",
+      "priority": 10,
+      "message": "Destructive actions require explicit human approval.",
+      "conditions": [
+        {
+          "field": "action.operation",
+          "operator": "in",
+          "value": ["delete", "destroy", "publish", "release", "send"]
+        },
+        {
+          "field": "context.human_approved",
+          "operator": "neq",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "review-high-risk-action",
+      "effect": "review",
+      "priority": 20,
+      "message": "High-risk actions require human review.",
+      "conditions": [
+        {
+          "field": "action.risk",
+          "operator": "in",
+          "value": ["high", "critical"]
+        }
+      ]
+    },
+    {
+      "id": "allow-read-only-action",
+      "effect": "allow",
+      "priority": 100,
+      "message": "Read-only actions are permitted.",
+      "conditions": [
+        {
+          "field": "action.operation",
+          "operator": "in",
+          "value": ["inspect", "list", "read", "search"]
+        }
+      ]
+    },
+    {
+      "id": "allow-approved-low-risk-action",
+      "effect": "allow",
+      "priority": 110,
+      "message": "The action is low-risk and has explicit human approval.",
+      "conditions": [
+        {
+          "field": "context.human_approved",
+          "operator": "eq",
+          "value": true
+        },
+        {
+          "field": "action.risk",
+          "operator": "in",
+          "value": ["low", "medium"]
+        }
+      ]
+    },
+    {
+      "id": "warn-sensitive-data",
+      "effect": "warn",
+      "priority": 200,
+      "message": "The action references sensitive data; minimize audit content.",
+      "conditions": [
+        {
+          "field": "data.sensitivity",
+          "operator": "in",
+          "value": ["confidential", "restricted"]
+        }
+      ]
+    }
+  ]
+}
