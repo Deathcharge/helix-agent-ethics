@@ -104,6 +104,9 @@ Bounded review used current primary sources:
   decisions actually used identical policy content.
 - Official `actions/upload-artifact` v6+ and `actions/download-artifact` v7+ releases use the
   Node 24 action runtime required by current GitHub-hosted runners.
+- Official [`actions/attest-build-provenance` v4 release guidance](https://github.com/actions/attest-build-provenance/releases/tag/v4.1.1)
+  identifies it as a compatibility wrapper and recommends direct `actions/attest` usage for new
+  implementations.
 
 Consequent decisions: validate before use; deny/review override allow; expose reasons and a decision
 ID; omit raw input from audit records; preserve a first-class human-review outcome; do not claim
@@ -179,6 +182,8 @@ certification or ethics truth.
   tool identity or capability labels.
 - [x] Migrate artifact retention/provenance jobs off the deprecated Node 20 action runtime and add
   automated GitHub Actions update proposals.
+- [x] Migrate new build-provenance generation from the compatibility wrapper to direct,
+  exact-commit-pinned `actions/attest` v4 usage.
 - [x] Add exact canonical policy fingerprints to decisions, test reports, gates, validation output,
   and audit records so an unchanged display version cannot hide changed evaluated policy content.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
