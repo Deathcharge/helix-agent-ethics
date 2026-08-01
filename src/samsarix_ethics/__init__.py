@@ -26,6 +26,15 @@ from .composition import (
     PolicyCompositionSource,
     compose_policies,
 )
+from .contracts import (
+    CONTEXT_CONTRACT_VERSION,
+    MAX_CONTEXT_CONTRACT_FIELDS,
+    ContextContract,
+    ContextField,
+    ContextFieldType,
+    validate_context_against_contract,
+    validate_policy_context_contract,
+)
 from .coverage import (
     POLICY_COVERAGE_VERSION,
     PolicyCoverageError,
@@ -43,6 +52,7 @@ from .diagnostics import (
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
     AuditLogError,
+    ContextContractValidationError,
     EvaluationError,
     InputValidationError,
     PolicyCompositionError,
@@ -62,11 +72,19 @@ from .gate import (
     build_tool_context,
     fingerprint_tool_call,
 )
-from .io import append_audit_record, load_context, load_policy, write_policy
+from .io import (
+    MAX_CONTEXT_CONTRACT_BYTES,
+    append_audit_record,
+    load_context,
+    load_context_contract,
+    load_policy,
+    write_policy,
+)
 from .models import MAX_POLICY_RULES, Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
 from .provenance import POLICY_FINGERPRINT_VERSION, fingerprint_policy
 from .schema import (
     get_audit_record_schema,
+    get_context_contract_schema,
     get_policy_comparison_schema,
     get_policy_composition_schema,
     get_policy_coverage_schema,
@@ -101,8 +119,11 @@ __version__ = "0.1.0"
 
 __all__ = [
     "AUDIT_RECORD_VERSION",
+    "CONTEXT_CONTRACT_VERSION",
     "MAX_BATCH_ITEMS",
     "MAX_COMPOSED_POLICIES",
+    "MAX_CONTEXT_CONTRACT_BYTES",
+    "MAX_CONTEXT_CONTRACT_FIELDS",
     "MAX_POLICY_RULES",
     "MAX_POLICY_TEST_BYTES",
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
@@ -120,6 +141,10 @@ __all__ = [
     "AuditRecord",
     "AuditSink",
     "BoundToolGate",
+    "ContextContract",
+    "ContextContractValidationError",
+    "ContextField",
+    "ContextFieldType",
     "Decision",
     "Effect",
     "EvaluationError",
@@ -170,6 +195,7 @@ __all__ = [
     "fingerprint_policy",
     "fingerprint_tool_call",
     "get_audit_record_schema",
+    "get_context_contract_schema",
     "get_policy_comparison_schema",
     "get_policy_composition_schema",
     "get_policy_coverage_schema",
@@ -181,10 +207,13 @@ __all__ = [
     "get_tool_context_schema",
     "lint_policy",
     "load_context",
+    "load_context_contract",
     "load_policy",
     "load_policy_test_suite",
     "measure_policy_coverage",
     "run_policy_tests",
     "validate_context",
+    "validate_context_against_contract",
+    "validate_policy_context_contract",
     "write_policy",
 ]

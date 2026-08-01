@@ -21,12 +21,39 @@ Validates an in-memory object against the same depth, item-count, string-length,
 finite-number contract used for parsed input. Embedding applications can use it at their own input
 boundary. `PolicyEngine.evaluate` calls it automatically.
 
-### `PolicyEngine(policy).evaluate(context) -> Decision`
+### `load_context_contract(path) -> ContextContract`
+
+Loads a bounded UTF-8 JSON application contract and returns an immutable `ContextContract`.
+Contract files are limited to `MAX_CONTEXT_CONTRACT_BYTES` (256 KiB) and contain at most
+`MAX_CONTEXT_CONTRACT_FIELDS` (1,000) declared dotted paths. Malformed contracts raise
+`ContextContractValidationError`.
+
+### `validate_policy_context_contract(policy, contract) -> None`
+
+Rejects undeclared policy `field`/`$ref` paths and operator uses that are incompatible with declared
+JSON types. `integer` and `number` are compatible; booleans remain distinct. The function returns
+`None` after success and raises `ContextContractValidationError` on incompatibility.
+
+### `validate_context_against_contract(context, contract) -> Mapping[str, Any]`
+
+Applies normal bounded JSON validation, then enforces required declared paths, declared types, and
+optional array-item types. Undeclared request fields are retained and accepted. Contract failures
+raise `InputValidationError` and must be treated as non-authorization.
+
+`ContextContract.from_dict(...)` and `.to_dict()` provide strict in-memory parsing and canonical
+serialization. `ContextFieldType` contains `array`, `boolean`, `integer`, `null`, `number`,
+`object`, and `string`. See [CONTEXT_CONTRACTS.md](CONTEXT_CONTRACTS.md).
+
+### `PolicyEngine(policy, *, context_contract=None).evaluate(context) -> Decision`
 
 Evaluates every rule deterministically. Raises `InputValidationError` when the context is not a
 bounded JSON object and `EvaluationError` if an operator cannot safely evaluate the supplied types
 or a `$ref` is missing. Construction computes `policy_fingerprint` once for reuse by every
 decision.
+
+When a contract is supplied, construction validates policy compatibility and every evaluation
+enforces the contract before rule matching. The immutable contract is exposed as
+`engine.context_contract`.
 
 ### `PolicyEngine(policy).evaluate_many(contexts) -> tuple[Decision, ...]`
 
@@ -145,9 +172,13 @@ fingerprint with constant-time comparisons of both ID and digest before adding t
 approval to `context`. A `tool_call_id` without approval is rejected rather than silently ignored.
 The `context.approval` field is reserved and cannot be injected through ordinary context metadata.
 
-### `ToolGate(policy, *, audit_log=None, audit_sink=None)`
+### `ToolGate(policy, *, context_contract=None, audit_log=None, audit_sink=None)`
 
 Provides a fail-closed boundary immediately before an in-process side effect:
+
+When `context_contract` is supplied, gate construction validates the policy and every normalized
+tool-call context is checked before evaluation. `ToolGate.context_contract` and
+`BoundToolGate.context_contract` expose the same immutable value.
 
 - `bind(tool_name, *, capabilities=()) -> BoundToolGate` validates and freezes trusted
   registration metadata once;
@@ -200,12 +231,16 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_policy_composition_schema()`, `get_policy_coverage_schema()`, `get_policy_lint_schema()`, `get_policy_shadow_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
+### `get_policy_schema()`, `get_context_contract_schema()`, and other schema accessors
 
-Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
-suites, comparison, composition, coverage, lint, and shadow reports, the normalized tool-call context,
-bound approval records, and metadata-only audit records. These calls perform no network access and
-callers may mutate the returned value without changing future calls.
+Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, application
+context contracts, regression suites, comparison, composition, coverage, lint and shadow reports,
+the normalized tool-call context, bound approval records, and metadata-only audit records. The
+other accessors are `get_policy_test_schema`, `get_policy_comparison_schema`,
+`get_policy_composition_schema`, `get_policy_coverage_schema`, `get_policy_lint_schema`,
+`get_policy_shadow_schema`, `get_tool_context_schema`, `get_tool_approval_schema`, and
+`get_audit_record_schema`. These calls perform no network access and callers may mutate a returned
+value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`
 
@@ -234,7 +269,9 @@ objects with a `PolicyLintCode`, rule ID, and zero-based condition indices.
 
 The analyzer reports default/unconditional allow, provably contradictory same-field conditions,
 semantically duplicate conditions, and missing authored messages. It does not serialize condition
-values or rule messages, infer an application schema, or guess about dynamic `$ref` equality.
+values or rule messages, infer an application schema, or guess about dynamic `$ref` equality. Use
+an explicit `ContextContract` for supported path/type validation; the linter itself remains
+contract-independent.
 
 The CLI equivalent is `samsarix-ethics lint POLICY --fail-on SEVERITY`. It exits `0` when the
 selected gate passes, `1` for blocking findings, and `2` for invalid input or invocation. See

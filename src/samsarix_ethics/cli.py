@@ -24,11 +24,19 @@ from .coverage import PolicyCoverageReport, measure_policy_coverage
 from .diagnostics import PolicyLintReport, PolicyLintSeverity, lint_policy
 from .engine import PolicyEngine
 from .errors import PolicyCompositionError, SamsarixEthicsError
-from .io import append_audit_record, load_context, load_policy, write_policy, write_sample_policy
+from .io import (
+    append_audit_record,
+    load_context,
+    load_context_contract,
+    load_policy,
+    write_policy,
+    write_sample_policy,
+)
 from .models import Decision, Outcome
 from .provenance import fingerprint_policy
 from .schema import (
     get_audit_record_schema,
+    get_context_contract_schema,
     get_policy_comparison_schema,
     get_policy_composition_schema,
     get_policy_coverage_schema,
@@ -70,6 +78,9 @@ def _parser() -> argparse.ArgumentParser:
     check = subparsers.add_parser("check", help="evaluate one JSON action context")
     check.add_argument("--policy", required=True, help="path to a JSON policy")
     check.add_argument(
+        "--context-contract", help="validate policy and input against this application contract"
+    )
+    check.add_argument(
         "--input", default="-", help="path to a JSON input object; default: standard input"
     )
     check.add_argument("--audit-log", help="append metadata-only JSONL to this path")
@@ -79,6 +90,9 @@ def _parser() -> argparse.ArgumentParser:
         "validate", help="validate a JSON policy without evaluating it"
     )
     validate.add_argument("policy", help="path to a JSON policy")
+    validate.add_argument(
+        "--context-contract", help="validate policy references against this application contract"
+    )
     validate.add_argument("--format", choices=("json", "text"), default="text")
 
     test_suite = subparsers.add_parser("test", help="run a JSON policy regression suite")
@@ -161,6 +175,7 @@ def _parser() -> argparse.ArgumentParser:
             "policy-coverage",
             "policy-lint",
             "policy-shadow",
+            "context-contract",
             "tool-context",
             "tool-approval",
             "audit-record",
@@ -399,6 +414,7 @@ def main(
                 "policy-coverage": get_policy_coverage_schema,
                 "policy-lint": get_policy_lint_schema,
                 "policy-shadow": get_policy_shadow_schema,
+                "context-contract": get_context_contract_schema,
                 "tool-context": get_tool_context_schema,
                 "tool-approval": get_tool_approval_schema,
                 "audit-record": get_audit_record_schema,
@@ -453,6 +469,12 @@ def main(
             return EXIT_ALLOWED if coverage_report.threshold_met else EXIT_TEST_FAILED
 
         if arguments.command == "validate":
+            context_contract = (
+                load_context_contract(arguments.context_contract)
+                if arguments.context_contract
+                else None
+            )
+            PolicyEngine(policy, context_contract=context_contract)
             policy_fingerprint = fingerprint_policy(policy)
             result = {
                 "valid": True,
@@ -462,13 +484,24 @@ def main(
                 "default_effect": policy.default_effect.value,
                 "rule_count": len(policy.rules),
             }
+            if context_contract is not None:
+                result["context_contract"] = {
+                    "format_version": context_contract.context_contract_version,
+                    "id": context_contract.id,
+                    "version": context_contract.version,
+                }
             if arguments.format == "json":
                 print(json.dumps(result, indent=2, sort_keys=True), file=output)
             else:
+                contract_suffix = (
+                    f", contract={context_contract.id}@{context_contract.version}"
+                    if context_contract is not None
+                    else ""
+                )
                 print(
                     f"Valid policy {policy.id}@{policy.version}: "
                     f"{len(policy.rules)} rules, default={policy.default_effect.value}, "
-                    f"fingerprint={policy_fingerprint}",
+                    f"fingerprint={policy_fingerprint}{contract_suffix}",
                     file=output,
                 )
             return EXIT_ALLOWED
@@ -480,7 +513,12 @@ def main(
             return EXIT_ALLOWED if test_report.successful else EXIT_TEST_FAILED
 
         context = load_context(arguments.input, stdin=binary_input)
-        decision = PolicyEngine(policy).evaluate(context)
+        context_contract = (
+            load_context_contract(arguments.context_contract)
+            if arguments.context_contract
+            else None
+        )
+        decision = PolicyEngine(policy, context_contract=context_contract).evaluate(context)
         if arguments.audit_log:
             append_audit_record(Path(arguments.audit_log), decision)
         print(_render_decision(decision, arguments.format), file=output)

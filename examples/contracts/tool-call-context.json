@@ -1,0 +1,16 @@
+{
+  "context_contract_version": 1,
+  "id": "tool-call-context",
+  "version": "1.0.0",
+  "description": "Policy-visible facts supplied by the Samsarix tool-call boundary.",
+  "fields": {
+    "tool_context_version": {"type": "integer"},
+    "actor": {"type": "object"},
+    "action": {"type": "object"},
+    "action.kind": {"type": "string"},
+    "action.capabilities": {"type": "array", "items": "string"},
+    "context": {"type": "object"},
+    "context.approval": {"type": "object", "required": false},
+    "context.approval.approved": {"type": "boolean", "required": false}
+  }
+}

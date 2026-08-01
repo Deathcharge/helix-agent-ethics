@@ -33,6 +33,8 @@ adoption remain separate evidence-based decisions.
   permissions, with exact source provenance and one ordinary deployable policy artifact.
 - [x] Add baseline-authoritative shadow evaluation so live candidate changes/errors can be
   measured without granting the candidate enforcement authority or serializing action input.
+- [x] Add application context contracts that reject undeclared policy facts and incompatible
+  operator types before deployment, then enforce required fact types at the runtime boundary.
 
 ## Release candidate
 

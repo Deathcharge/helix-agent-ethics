@@ -131,6 +131,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy_coverage = _run_cli("schema", "policy-coverage")
     policy_lint = _run_cli("schema", "policy-lint")
     policy_shadow = _run_cli("schema", "policy-shadow")
+    context_contract = _run_cli("schema", "context-contract")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     audit_record = _run_cli("schema", "audit-record")
@@ -149,12 +150,91 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_lint.stdout)["$id"].endswith("/policy-lint/v1.json")
     assert policy_shadow.returncode == 0
     assert json.loads(policy_shadow.stdout)["$id"].endswith("/policy-shadow/v1.json")
+    assert context_contract.returncode == 0
+    assert json.loads(context_contract.stdout)["$id"].endswith("/context-contract/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
     assert json.loads(tool_approval.stdout)["$id"].endswith("/tool-approval/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
+
+
+def test_context_contract_validates_policy_and_live_input(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_path = write_json("contract-policy.json", policy_document)
+    contract_path = write_json(
+        "context-contract.json",
+        {
+            "context_contract_version": 1,
+            "id": "cli-context",
+            "version": "1",
+            "fields": {
+                "action": {"type": "object"},
+                "action.operation": {"type": "string"},
+            },
+        },
+    )
+
+    validated = _run_cli(
+        "validate",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        "--format",
+        "json",
+    )
+    allowed = _run_cli(
+        "check",
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        stdin='{"action":{"operation":"read"},"extra":"accepted"}',
+    )
+    mistyped = _run_cli(
+        "check",
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        stdin='{"action":{"operation":1}}',
+    )
+
+    assert validated.returncode == 0
+    assert json.loads(validated.stdout)["context_contract"] == {
+        "format_version": 1,
+        "id": "cli-context",
+        "version": "1",
+    }
+    assert allowed.returncode == 0
+    assert mistyped.returncode == 2
+    assert "'action.operation' must have type 'string'" in mistyped.stderr
+
+
+def test_context_contract_rejects_policy_typo_before_cli_evaluation(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_document["rules"][1]["conditions"][0]["field"] = "action.operaton"
+    policy_path = write_json("typo-policy.json", policy_document)
+    contract_path = write_json(
+        "typo-contract.json",
+        {
+            "context_contract_version": 1,
+            "id": "cli-context",
+            "version": "1",
+            "fields": {
+                "action": {"type": "object"},
+                "action.operation": {"type": "string"},
+            },
+        },
+    )
+
+    result = _run_cli("validate", str(policy_path), "--context-contract", str(contract_path))
+
+    assert result.returncode == 2
+    assert "field 'action.operaton' is not declared" in result.stderr
 
 
 def test_compose_command_writes_reusable_policy_and_requires_explicit_overwrite(

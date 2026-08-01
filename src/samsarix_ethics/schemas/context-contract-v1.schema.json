@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/context-contract/v1.json",
+  "title": "Samsarix Context Contract v1",
+  "description": "A bounded declaration of application facts available to Samsarix policies.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context_contract_version", "id", "version", "fields"],
+  "properties": {
+    "context_contract_version": {"const": 1},
+    "id": {"$ref": "#/$defs/identifier"},
+    "version": {"$ref": "#/$defs/identifier"},
+    "description": {"type": "string", "maxLength": 1000},
+    "fields": {
+      "type": "object",
+      "maxProperties": 1000,
+      "propertyNames": {"$ref": "#/$defs/fieldPath"},
+      "additionalProperties": {"$ref": "#/$defs/field"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fieldPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)*$"
+    },
+    "fieldType": {
+      "enum": ["array", "boolean", "integer", "null", "number", "object", "string"]
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {"$ref": "#/$defs/fieldType"},
+        "required": {"type": "boolean", "default": true},
+        "items": {"$ref": "#/$defs/fieldType"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["items"]},
+          "then": {"properties": {"type": {"const": "array"}}}
+        }
+      ]
+    }
+  }
+}

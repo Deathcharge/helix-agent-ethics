@@ -15,6 +15,7 @@ from typing import Any, Generic, TypeVar, cast
 
 from .approval import ToolCallApproval, _fingerprint_prepared_tool_call
 from .audit import AuditSink, JsonlAuditSink, _emit_audit_record, _validated_sink
+from .contracts import ContextContract
 from .engine import PolicyEngine
 from .errors import InputValidationError, ToolCallDeniedError, ToolCallReviewRequiredError
 from .models import Decision, Outcome, Policy
@@ -167,6 +168,7 @@ class ToolGate:
         self,
         policy: Policy,
         *,
+        context_contract: ContextContract | None = None,
         audit_log: str | Path | None = None,
         audit_sink: AuditSink | None = None,
     ) -> None:
@@ -174,7 +176,7 @@ class ToolGate:
             raise TypeError("policy must be a Policy")
         if audit_log is not None and audit_sink is not None:
             raise ValueError("audit_log and audit_sink are mutually exclusive")
-        self._engine = PolicyEngine(policy)
+        self._engine = PolicyEngine(policy, context_contract=context_contract)
         selected_sink: AuditSink | None = None
         if audit_log is not None:
             selected_sink = JsonlAuditSink(audit_log)
@@ -193,6 +195,12 @@ class ToolGate:
         """Return the exact policy fingerprint used by this gate."""
 
         return self._engine.policy_fingerprint
+
+    @property
+    def context_contract(self) -> ContextContract | None:
+        """Return the immutable application context contract, when configured."""
+
+        return self._engine.context_contract
 
     def bind(
         self,
@@ -397,6 +405,12 @@ class BoundToolGate:
         """Return the exact policy fingerprint used by the parent gate."""
 
         return self._gate.policy_fingerprint
+
+    @property
+    def context_contract(self) -> ContextContract | None:
+        """Return the application context contract used by the parent gate."""
+
+        return self._gate.context_contract
 
     @property
     def tool_name(self) -> str:

@@ -52,6 +52,9 @@ All notable product changes are recorded here.
 - Baseline-authoritative shadow policy evaluation API/CLI, strict versioned input-free telemetry,
   exact baseline/candidate provenance and engine durations, candidate error observation, shared
   comparison semantics, and a runnable restricted-data rollout example.
+- Versioned, immutable application context contracts with deployment-time policy path/operator
+  checking, runtime required/type enforcement, `PolicyEngine` and `ToolGate` integration, a bundled
+  Draft 2020-12 schema, and a runnable tool-call contract—all with zero runtime dependencies.
 
 ### Changed
 

@@ -10,6 +10,11 @@ from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any, cast
 
+from .contracts import (
+    ContextContract,
+    validate_context_against_contract,
+    validate_policy_context_contract,
+)
 from .errors import EvaluationError, InputValidationError
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition
 from .provenance import fingerprint_policy
@@ -136,14 +141,23 @@ class PolicyEngine:
     as permission to execute an action.
     """
 
-    def __init__(self, policy: Policy):
+    def __init__(self, policy: Policy, *, context_contract: ContextContract | None = None):
         if not isinstance(policy, Policy):
             raise TypeError("policy must be a Policy")
+        if context_contract is not None:
+            if not isinstance(context_contract, ContextContract):
+                raise TypeError("context_contract must be a ContextContract or None")
+            validate_policy_context_contract(policy, context_contract)
         self.policy = policy
+        self.context_contract = context_contract
         self.policy_fingerprint = fingerprint_policy(policy)
 
     def evaluate(self, context: Mapping[str, Any]) -> Decision:
-        context = validate_context(context)
+        context = (
+            validate_context(context)
+            if self.context_contract is None
+            else validate_context_against_contract(context, self.context_contract)
+        )
 
         matched: list[tuple[int, str, Effect, str]] = []
         for rule in self.policy.rules:

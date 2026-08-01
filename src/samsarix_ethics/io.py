@@ -14,11 +14,13 @@ from typing import Any, BinaryIO
 
 from ._policy_payload import MAX_POLICY_BYTES, serialize_policy_document
 from .audit import AuditRecord, JsonlAuditSink
-from .errors import InputValidationError, PolicyValidationError
+from .contracts import ContextContract
+from .errors import ContextContractValidationError, InputValidationError, PolicyValidationError
 from .models import Decision, Policy
 from .validation import validate_json_shape
 
 MAX_INPUT_BYTES = 262_144
+MAX_CONTEXT_CONTRACT_BYTES = 262_144
 
 SAMPLE_POLICY: dict[str, Any] = {
     "schema_version": 1,
@@ -174,6 +176,23 @@ def load_policy(path: str | Path) -> Policy:
         return Policy.from_dict(data)
     except InputValidationError as exc:
         raise PolicyValidationError(str(exc)) from exc
+
+
+def load_context_contract(path: str | Path) -> ContextContract:
+    """Load and validate a bounded JSON context-contract file."""
+
+    try:
+        data = _parse_json(
+            _read_file(
+                path,
+                max_bytes=MAX_CONTEXT_CONTRACT_BYTES,
+                label="context contract",
+            ),
+            label="context contract",
+        )
+        return ContextContract.from_dict(data)
+    except InputValidationError as exc:
+        raise ContextContractValidationError(str(exc)) from exc
 
 
 def load_context(path: str | Path | None, *, stdin: BinaryIO | None = None) -> dict[str, Any]:

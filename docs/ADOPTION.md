@@ -154,6 +154,23 @@ not infer a consumer domain schema. Dynamic references are skipped unless a cont
 independently certain. This makes the report safe to adopt as an additional consumer gate, but it
 cannot replace consumer-owned authorization tests, review, or least-privilege analysis.
 
+## Implemented gap: application fact contracts
+
+Generic JSON safety and valid policy syntax cannot catch `action.operaton` or prove that a numeric
+operator reads a number. Cedar and AWS Verified Permissions address that class of production error
+with application schemas and strict policy validation. Agent Ethics now provides a smaller
+zero-dependency `ContextContract` that matches its own dotted-fact policy model.
+
+The contract declares up to 1,000 paths as required or optional JSON-native types. Policy
+deployment validation rejects undeclared condition and `$ref` paths plus incompatible
+operator/type combinations. `PolicyEngine` and `ToolGate` can then reject missing or mistyped
+declared facts before rule evaluation. The bundled tool-call contract validates the existing
+twelve-rule baseline and runs through the real gate.
+
+This does not implement Cedar principals/resources/actions, close undeclared request fields, prove
+fact authenticity, or replace a consumer's full application schema. Contract adoption and source
+pin updates in downstream repositories remain separately reviewed changes.
+
 ## Implemented gap: layered policy ownership
 
 One application policy is sufficient for a prototype but forces organization guardrails and
