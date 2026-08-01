@@ -175,6 +175,8 @@ def test_missing_reference_is_an_evaluation_error() -> None:
         ("not_in", "write", ["read", "list"], True),
         ("contains", ["admin", "user"], "admin", True),
         ("not_contains", ["user"], "admin", True),
+        ("subset_of", ["read", "sensitive"], ["read", "sensitive", "write"], True),
+        ("subset_of", ["read", "shell"], ["read", "write"], False),
         ("starts_with", "system.admin", "system.", True),
         ("ends_with", "report.json", ".json", True),
         ("gt", 5, 4, True),
@@ -323,6 +325,7 @@ def test_review_and_warning_rules_are_explained() -> None:
     ("operator", "actual", "expected", "message"),
     [
         ("contains", "read", "r", "input field to be an array"),
+        ("subset_of", "read", ["read"], "input field to be an array"),
         ("starts_with", 10, "1", "requires two strings"),
         ("gt", True, True, "does not accept booleans"),
     ],

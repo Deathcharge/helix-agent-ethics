@@ -80,6 +80,7 @@ true.
 | `exists`, `not_exists` | dotted field presence |
 | `in`, `not_in` | input field is/is not a member of the policy array; literal values must be arrays |
 | `contains`, `not_contains` | input array contains/does not contain the policy value |
+| `subset_of` | every item in the input array is present in the policy array |
 | `starts_with`, `ends_with` | string prefix or suffix |
 | `gt`, `gte`, `lt`, `lte` | numeric comparison across integers/floats, or string comparison; booleans rejected |
 

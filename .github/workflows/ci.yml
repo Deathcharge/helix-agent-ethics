@@ -49,6 +49,16 @@ jobs:
       - name: Type check
         if: matrix.python-version == '3.11'
         run: python -m mypy
+      - name: Smoke-test source examples
+        if: matrix.python-version == '3.11'
+        run: |
+          samsarix-ethics test \
+            --policy examples/policies/safe-agent-actions.json \
+            examples/tests/safe-agent-actions.tests.json
+          samsarix-ethics test \
+            --policy examples/policies/tool-call-baseline.json \
+            examples/tests/tool-call-baseline.tests.json
+          python examples/tool_gate_demo.py
       - name: Build distributions
         if: matrix.python-version == '3.11'
         run: python -m build --no-isolation
@@ -62,20 +72,30 @@ jobs:
           python -m venv /tmp/samsarix-wheel
           /tmp/samsarix-wheel/bin/python -m pip install --no-deps "$wheel"
           /tmp/samsarix-wheel/bin/samsarix-ethics --version
-          /tmp/samsarix-wheel/bin/samsarix-ethics validate examples/policies/safe-agent-actions.json
+          /tmp/samsarix-wheel/bin/samsarix-ethics init /tmp/wheel-policy.json
+          /tmp/samsarix-wheel/bin/samsarix-ethics validate /tmp/wheel-policy.json
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
-          /tmp/samsarix-wheel/bin/samsarix-ethics test \
-            --policy examples/policies/safe-agent-actions.json \
-            examples/tests/safe-agent-actions.tests.json
-          /tmp/samsarix-wheel/bin/samsarix-ethics test \
-            --policy examples/policies/tool-call-baseline.json \
-            examples/tests/tool-call-baseline.tests.json
           /tmp/samsarix-wheel/bin/python - <<'PY'
-          from samsarix_ethics import ToolGate, load_policy
+          from samsarix_ethics import Policy, ToolGate
 
-          gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
+          policy = Policy.from_dict({
+              "schema_version": 1,
+              "id": "wheel-smoke",
+              "version": "1",
+              "default_effect": "deny",
+              "rules": [{
+                  "id": "allow-read",
+                  "effect": "allow",
+                  "conditions": [{
+                      "field": "action.capabilities",
+                      "operator": "contains",
+                      "value": "resource:read",
+                  }],
+              }],
+          })
+          gate = ToolGate(policy)
           result = gate.execute(
               "read_ticket",
               {"ticket_id": "T-100"},
@@ -85,4 +105,3 @@ jobs:
           assert result.value == "executed T-100"
           assert result.decision.allowed
           PY
-          /tmp/samsarix-wheel/bin/python examples/tool_gate_demo.py

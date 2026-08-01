@@ -22,7 +22,7 @@ All notable product changes are recorded here.
 - Bundled Draft 2020-12 policy and policy-test schemas, an executable regression-suite API/CLI,
   privacy-minimized test reports, and a five-case real policy example.
 - Dependency-free `ToolGate` enforcement for sync and async callbacks, typed deny/review errors,
-  a detached versioned context builder and schema, and a thirteen-case baseline tool policy pack.
+  a detached versioned context builder and schema, and a fourteen-case baseline tool policy pack.
 
 ### Changed
 
@@ -34,6 +34,7 @@ All notable product changes are recorded here.
   containers, preventing retained source documents from mutating live policy behavior.
 - Frozen policy-test inputs are thawed into fresh JSON before evaluation, preserving array support
   without weakening the public in-memory JSON contract.
+- The bounded `subset_of` operator lets allow rules reject mixed known and unknown capability sets.
 
 ### Removed
 

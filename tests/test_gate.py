@@ -240,13 +240,67 @@ def test_tool_gate_executes_async_callback() -> None:
     assert result.decision.allowed is True
 
 
+def test_tool_gate_execute_async_denial_never_awaits_executor() -> None:
+    called = False
+    gate = ToolGate(_gate_policy())
+
+    async def execute(_validated: dict[str, Any]) -> None:
+        nonlocal called
+        called = True
+
+    with pytest.raises(ToolCallDeniedError):
+        asyncio.run(gate.execute_async("delete_resource", {}, execute, capabilities=["delete"]))
+
+    assert called is False
+
+
+def test_tool_gate_execute_async_review_never_awaits_executor() -> None:
+    called = False
+    gate = ToolGate(_gate_policy())
+
+    async def execute(_validated: dict[str, Any]) -> None:
+        nonlocal called
+        called = True
+
+    with pytest.raises(ToolCallReviewRequiredError):
+        asyncio.run(gate.execute_async("unknown_tool", {}, execute))
+
+    assert called is False
+
+
+def test_tool_gate_execute_async_audit_failure_never_awaits_executor(tmp_path: Path) -> None:
+    called = False
+    gate = ToolGate(_gate_policy(), audit_log=tmp_path / "missing" / "audit.jsonl")
+
+    async def execute(_validated: dict[str, Any]) -> None:
+        nonlocal called
+        called = True
+
+    with pytest.raises(AuditLogError):
+        asyncio.run(gate.execute_async("read_resource", {}, execute, capabilities=["read"]))
+
+    assert called is False
+
+
 def test_tool_gate_rejects_programmer_errors() -> None:
     with pytest.raises(TypeError, match="policy must be"):
         ToolGate(object())  # type: ignore[arg-type]
 
     gate = ToolGate(_gate_policy())
-    with pytest.raises(TypeError, match="executor must be callable"):
+    with pytest.raises(TypeError, match="synchronous callable"):
         gate.execute("read_resource", {}, None, capabilities=["read"])  # type: ignore[arg-type]
+
+    async def async_executor(_validated: dict[str, Any]) -> None:
+        return None
+
+    class AsyncCallable:
+        async def __call__(self, _validated: dict[str, Any]) -> None:
+            return None
+
+    for executor in (async_executor, AsyncCallable()):
+        with pytest.raises(TypeError, match="use execute_async"):
+            gate.execute("read_resource", {}, executor, capabilities=["read"])
+
     with pytest.raises(TypeError, match="executor must be callable"):
         asyncio.run(
             gate.execute_async(

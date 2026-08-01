@@ -42,7 +42,9 @@ recognizes:
 
 Applications may add namespaced labels such as `filesystem:write`, `shell:execute`, or
 `billing:refund`. Unknown capabilities fall through to the policy default; the bundled baseline
-uses `review`.
+uses `review`. Its allow rules also require the complete capability array to be a subset of the
+recognized baseline labels, so adding an unknown label to an otherwise allowed call cannot inherit
+that allow.
 
 ## Synchronous enforcement
 

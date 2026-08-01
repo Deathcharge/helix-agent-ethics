@@ -205,6 +205,23 @@
       "expected_warning_count": 1
     },
     {
+      "name": "mixed read and unknown capability requires review",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "read_and_execute",
+          "capabilities": ["resource:read", "shell:execute"],
+          "arguments": {}
+        },
+        "context": {}
+      },
+      "expected_outcome": "review",
+      "expected_matched_rules": [],
+      "expected_warning_count": 0
+    },
+    {
       "name": "unknown capability defaults to review",
       "input": {
         "tool_context_version": 1,

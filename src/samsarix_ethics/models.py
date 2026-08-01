@@ -90,6 +90,7 @@ class PolicyCondition:
             "not_exists",
             "not_in",
             "starts_with",
+            "subset_of",
         }
     )
 
@@ -128,7 +129,7 @@ class PolicyCondition:
                 )
             if len(expected["$ref"]) > 256 or not _FIELD_PATH.fullmatch(expected["$ref"]):
                 raise PolicyValidationError(f"{location}.value.$ref is not a valid field path")
-        if operator in {"in", "not_in"} and not isinstance(expected, (list, dict)):
+        if operator in {"in", "not_in", "subset_of"} and not isinstance(expected, (list, dict)):
             raise PolicyValidationError(
                 f"{location}.value must be a JSON array or '$ref' for operator {operator!r}"
             )

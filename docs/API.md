@@ -66,7 +66,8 @@ Provides a fail-closed boundary immediately before an in-process side effect:
 - `evaluate(...) -> Decision` evaluates the normalized call and optionally appends audit metadata;
 - `enforce(...) -> Decision` returns only an allow decision, otherwise raising a typed block;
 - `execute(..., executor, ...) -> ToolExecutionResult[T]` invokes a callback with the detached,
-  evaluated argument dictionary only after allow;
+  evaluated argument dictionary only after allow; it rejects coroutine functions and async
+  callable objects, which must use `execute_async`;
 - `await execute_async(..., executor, ...) -> ToolExecutionResult[T]` does the same for an async
   callback.
 

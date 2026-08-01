@@ -88,7 +88,7 @@ result = gate.execute(
 assert result.decision.allowed
 ```
 
-Run the thirteen-case compatibility fixture:
+Run the fourteen-case compatibility fixture:
 
 ```bash
 samsarix-ethics test --policy examples/policies/tool-call-baseline.json examples/tests/tool-call-baseline.tests.json

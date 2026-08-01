@@ -88,6 +88,11 @@
       "message": "The destructive tool call has explicit approval.",
       "conditions": [
         {"field": "action.capabilities", "operator": "contains", "value": "destructive"},
+        {
+          "field": "action.capabilities",
+          "operator": "subset_of",
+          "value": ["resource:read", "destructive", "external:write", "data:sensitive"]
+        },
         {"field": "context.human_approved", "operator": "eq", "value": true}
       ]
     },
@@ -98,6 +103,11 @@
       "message": "The external side effect has explicit approval.",
       "conditions": [
         {"field": "action.capabilities", "operator": "contains", "value": "external:write"},
+        {
+          "field": "action.capabilities",
+          "operator": "subset_of",
+          "value": ["resource:read", "destructive", "external:write", "data:sensitive"]
+        },
         {"field": "context.human_approved", "operator": "eq", "value": true}
       ]
     },
@@ -107,7 +117,12 @@
       "priority": 100,
       "message": "Read-only tool calls are allowed.",
       "conditions": [
-        {"field": "action.capabilities", "operator": "contains", "value": "resource:read"}
+        {"field": "action.capabilities", "operator": "contains", "value": "resource:read"},
+        {
+          "field": "action.capabilities",
+          "operator": "subset_of",
+          "value": ["resource:read", "destructive", "external:write", "data:sensitive"]
+        }
       ]
     },
     {

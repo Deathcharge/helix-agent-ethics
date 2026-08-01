@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import inspect
 import re
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
@@ -160,6 +161,26 @@ class ToolGate:
         )
         return self._require_allow(decision)
 
+    def _authorize(
+        self,
+        tool_name: str,
+        arguments: Mapping[str, Any],
+        *,
+        capabilities: Iterable[str],
+        actor: Mapping[str, Any] | None,
+        context: Mapping[str, Any] | None,
+    ) -> tuple[Decision, dict[str, Any]]:
+        prepared = build_tool_context(
+            tool_name,
+            arguments,
+            capabilities=capabilities,
+            actor=actor,
+            context=context,
+        )
+        decision = self._require_allow(self._evaluate_context(prepared))
+        action = cast(dict[str, Any], prepared["action"])
+        return decision, cast(dict[str, Any], action["arguments"])
+
     def execute(
         self,
         tool_name: str,
@@ -173,17 +194,23 @@ class ToolGate:
         """Authorize and execute a callback with the detached validated arguments."""
 
         if not callable(executor):
-            raise TypeError("executor must be callable")
-        prepared = build_tool_context(
+            raise TypeError(
+                "executor must be a synchronous callable; use execute_async for async callbacks"
+            )
+        async_call = inspect.iscoroutinefunction(executor) or inspect.iscoroutinefunction(
+            type(executor).__call__
+        )
+        if async_call:
+            raise TypeError(
+                "executor must be a synchronous callable; use execute_async for async callbacks"
+            )
+        decision, prepared_arguments = self._authorize(
             tool_name,
             arguments,
             capabilities=capabilities,
             actor=actor,
             context=context,
         )
-        decision = self._require_allow(self._evaluate_context(prepared))
-        action = cast(dict[str, Any], prepared["action"])
-        prepared_arguments = cast(dict[str, Any], action["arguments"])
         return ToolExecutionResult(decision=decision, value=executor(prepared_arguments))
 
     async def execute_async(
@@ -200,16 +227,13 @@ class ToolGate:
 
         if not callable(executor):
             raise TypeError("executor must be callable")
-        prepared = build_tool_context(
+        decision, prepared_arguments = self._authorize(
             tool_name,
             arguments,
             capabilities=capabilities,
             actor=actor,
             context=context,
         )
-        decision = self._require_allow(self._evaluate_context(prepared))
-        action = cast(dict[str, Any], prepared["action"])
-        prepared_arguments = cast(dict[str, Any], action["arguments"])
         return ToolExecutionResult(
             decision=decision,
             value=await executor(prepared_arguments),
