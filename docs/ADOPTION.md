@@ -126,3 +126,16 @@ This gives consumer maintainers a deterministic artifact to review before updati
 pin. It does not modify the private Agent Framework integration or claim exhaustive equivalence:
 the consumer must still update its own pin and rerun its compatibility matrix in a separately
 scoped repository change.
+
+## Implemented gap: policy rule coverage
+
+A passing suite can still leave newly added or rarely used branches unexercised. Following OPA's
+coverage gate and OpenFGA's recommendation to test every application relation, Agent Ethics now
+unions the matched rule IDs from successful bounded cases and reports declaration-ordered covered
+and uncovered rules, all three outcome counts, and input-free errors. An explicit integer threshold
+turns the report into a CI gate; errors always fail it.
+
+This is deliberately rule-match coverage rather than a stronger safety claim. One case may satisfy
+an entire rule without testing each condition boundary, and overridden rules count as covered when
+they match. The consumer must retain its compatibility assertions and negative/boundary cases; any
+consumer adoption of this new contract remains a separately scoped source-pin update.

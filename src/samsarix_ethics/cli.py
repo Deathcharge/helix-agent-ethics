@@ -1,7 +1,7 @@
 # Copyright 2024-2026 Samsarix LLC
 # SPDX-License-Identifier: Apache-2.0
 
-"""Command-line interface for policy validation, comparison, testing, and action checks."""
+"""Command-line interface for policy authoring, testing, and action checks."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from .comparison import (
     PolicyComparisonStatus,
     compare_policies,
 )
+from .coverage import PolicyCoverageReport, measure_policy_coverage
 from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .io import append_audit_record, load_context, load_policy, write_sample_policy
@@ -27,6 +28,7 @@ from .provenance import fingerprint_policy
 from .schema import (
     get_audit_record_schema,
     get_policy_comparison_schema,
+    get_policy_coverage_schema,
     get_policy_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
@@ -39,6 +41,16 @@ EXIT_TEST_FAILED = 1
 EXIT_ERROR = 2
 EXIT_DENIED = 3
 EXIT_REVIEW = 4
+
+
+def _coverage_threshold(value: str) -> int:
+    try:
+        threshold = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be an integer from 0 to 100") from exc
+    if not 0 <= threshold <= 100:
+        raise argparse.ArgumentTypeError("must be an integer from 0 to 100")
+    return threshold
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -68,6 +80,20 @@ def _parser() -> argparse.ArgumentParser:
     test_suite.add_argument("suite", help="path to a JSON policy-test suite")
     test_suite.add_argument("--format", choices=("json", "text"), default="text")
 
+    coverage = subparsers.add_parser(
+        "coverage", help="measure rule coverage over a policy regression suite"
+    )
+    coverage.add_argument("--policy", required=True, help="path to a JSON policy")
+    coverage.add_argument("suite", help="path to a JSON policy-test suite")
+    coverage.add_argument(
+        "--threshold",
+        type=_coverage_threshold,
+        default=0,
+        metavar="PERCENT",
+        help="minimum integer rule coverage percentage; default: 0",
+    )
+    coverage.add_argument("--format", choices=("json", "text"), default="text")
+
     compare = subparsers.add_parser(
         "compare", help="compare baseline and candidate behavior over a regression suite"
     )
@@ -84,6 +110,7 @@ def _parser() -> argparse.ArgumentParser:
             "policy",
             "policy-test",
             "policy-comparison",
+            "policy-coverage",
             "tool-context",
             "tool-approval",
             "audit-record",
@@ -187,6 +214,32 @@ def _render_comparison_report(report: PolicyComparisonReport, output_format: str
     return "\n".join(lines)
 
 
+def _render_coverage_report(report: PolicyCoverageReport, output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(report.to_dict(), indent=2, sort_keys=True)
+    lines = [
+        f"Policy: {report.policy_id}@{report.policy_version} ({report.policy_fingerprint})",
+        f"Rules: {report.covered_rules}/{report.total_rules} covered "
+        f"({report.coverage_percent:.2f}%; required {report.required_coverage_percent}%)",
+        f"Outcomes: {report.allow_cases} allow, {report.deny_cases} deny, "
+        f"{report.review_cases} review",
+    ]
+    if report.uncovered_rule_ids:
+        lines.append("Uncovered rules:")
+        lines.extend(f"  - {rule_id}" for rule_id in report.uncovered_rule_ids)
+    else:
+        lines.append("Uncovered rules: none")
+    if report.error_cases:
+        lines.append("Errors:")
+        lines.extend(f"  - {error.name}: {error.error}" for error in report.error_cases)
+    status = "met" if report.threshold_met else "NOT MET"
+    lines.append(
+        f"Summary: threshold {status}; {report.evaluated_cases}/{report.total_cases} cases "
+        f"evaluated, {report.errors} errors"
+    )
+    return "\n".join(lines)
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -212,6 +265,7 @@ def main(
                 "policy": get_policy_schema,
                 "policy-test": get_policy_test_schema,
                 "policy-comparison": get_policy_comparison_schema,
+                "policy-coverage": get_policy_coverage_schema,
                 "tool-context": get_tool_context_schema,
                 "tool-approval": get_tool_approval_schema,
                 "audit-record": get_audit_record_schema,
@@ -229,6 +283,12 @@ def main(
             return EXIT_ALLOWED if comparison_report.identical else EXIT_TEST_FAILED
 
         policy = load_policy(arguments.policy)
+        if arguments.command == "coverage":
+            suite = load_policy_test_suite(arguments.suite)
+            coverage_report = measure_policy_coverage(policy, suite, threshold=arguments.threshold)
+            print(_render_coverage_report(coverage_report, arguments.format), file=output)
+            return EXIT_ALLOWED if coverage_report.threshold_met else EXIT_TEST_FAILED
+
         if arguments.command == "validate":
             policy_fingerprint = fingerprint_policy(policy)
             result = {

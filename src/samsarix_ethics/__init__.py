@@ -19,6 +19,12 @@ from .comparison import (
     PolicyComparisonStatus,
     compare_policies,
 )
+from .coverage import (
+    POLICY_COVERAGE_VERSION,
+    PolicyCoverageError,
+    PolicyCoverageReport,
+    measure_policy_coverage,
+)
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
     AuditLogError,
@@ -46,6 +52,7 @@ from .provenance import POLICY_FINGERPRINT_VERSION, fingerprint_policy
 from .schema import (
     get_audit_record_schema,
     get_policy_comparison_schema,
+    get_policy_coverage_schema,
     get_policy_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
@@ -72,6 +79,7 @@ __all__ = [
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
     "MAX_TOOL_CAPABILITIES",
     "POLICY_COMPARISON_VERSION",
+    "POLICY_COVERAGE_VERSION",
     "POLICY_FINGERPRINT_VERSION",
     "TOOL_CALL_APPROVAL_VERSION",
     "TOOL_CALL_FINGERPRINT_VERSION",
@@ -93,6 +101,8 @@ __all__ = [
     "PolicyComparisonSnapshot",
     "PolicyComparisonStatus",
     "PolicyCondition",
+    "PolicyCoverageError",
+    "PolicyCoverageReport",
     "PolicyEngine",
     "PolicyRule",
     "PolicyTestCase",
@@ -116,6 +126,7 @@ __all__ = [
     "fingerprint_tool_call",
     "get_audit_record_schema",
     "get_policy_comparison_schema",
+    "get_policy_coverage_schema",
     "get_policy_schema",
     "get_policy_test_schema",
     "get_tool_approval_schema",
@@ -123,6 +134,7 @@ __all__ = [
     "load_context",
     "load_policy",
     "load_policy_test_suite",
+    "measure_policy_coverage",
     "run_policy_tests",
     "validate_context",
 ]

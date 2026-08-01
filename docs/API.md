@@ -144,10 +144,10 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
+### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_policy_coverage_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
-suites, comparison reports, the normalized tool-call context, bound approval records, and
+suites, comparison and coverage reports, the normalized tool-call context, bound approval records, and
 metadata-only audit records. These calls perform no network access and callers may mutate the
 returned value without changing future calls.
 
@@ -165,6 +165,27 @@ every raw case input. `successful` is true only when all cases pass.
 
 `PolicyTestCase`, `PolicyTestSuite`, `PolicyTestResult`, and `PolicyTestReport` are frozen public
 models with JSON-serializable `to_dict()` methods.
+
+## Policy rule coverage
+
+### `measure_policy_coverage(policy, suite, *, threshold=0) -> PolicyCoverageReport`
+
+Evaluates each bounded suite input against one policy and records which rule IDs matched. The
+integer threshold must be from `0` to `100`. `threshold_met` is true only when exact covered/total
+counts meet that threshold and every case evaluated successfully. `complete` requires every rule
+to be covered and no errors. The suite's `expected_*` assertions are not checked; use
+`run_policy_tests` for correctness. With zero policy rules, rule coverage is vacuously 100%.
+
+The frozen report includes `POLICY_COVERAGE_VERSION` (currently `1`), suite and policy identity,
+the exact policy fingerprint, declaration-ordered covered/uncovered IDs, rule counts, a two-decimal
+display percentage, allow/deny/review case counts, and input-free `PolicyCoverageError` objects.
+Overridden authorization rules and warning rules count as covered when they match. Default outcomes
+count as evaluated cases but do not cover a rule.
+
+The CLI equivalent is `samsarix-ethics coverage --policy ... SUITE --threshold N`. It exits `0`
+when the threshold is met, `1` when it is missed or evaluation errors occur, and `2` for invalid
+input or invocation. Coverage is branch evidence over supplied cases, not proof that all condition
+boundaries or possible inputs were exercised. See [POLICY_COVERAGE.md](POLICY_COVERAGE.md).
 
 ## Policy impact comparison
 

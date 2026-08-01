@@ -25,6 +25,8 @@ adoption remain separate evidence-based decisions.
   operator-authored policy ID/version labels.
 - [x] Reuse bounded regression suites for deterministic, input-free baseline/candidate impact
   reports before policy rollout.
+- [x] Reuse the same suites for input-free rule coverage and explicit CI thresholds so passing
+  expectations cannot silently leave policy branches unexercised.
 
 ## Release candidate
 

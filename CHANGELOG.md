@@ -42,6 +42,8 @@ All notable product changes are recorded here.
   policy-test reports, CLI validation, and privacy-minimized audit record v1.
 - Versioned, privacy-minimized baseline-versus-candidate policy impact comparison API, CLI, schema,
   CI exit behavior, and a runnable sensitive-read rollout example.
+- Versioned, privacy-minimized policy rule-coverage API, CLI, schema, exact CI threshold behavior,
+  and a 100%-covered twelve-rule tool-policy example.
 
 ### Changed
 
