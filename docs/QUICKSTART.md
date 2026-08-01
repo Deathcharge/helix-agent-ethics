@@ -69,7 +69,34 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 `decisions.jsonl` receives decision metadata only. The input document is not copied. Decide access,
 rotation, retention, and deletion policy before enabling this in a real application.
 
-## 7. Start a policy of your own
+## 7. Enforce a real tool callback
+
+The bundled tool policy treats read-only work as allowed, destructive work without approval as
+denied, external writes as reviewable, and unknown capabilities as reviewable:
+
+```python
+from samsarix_ethics import ToolGate, load_policy
+
+gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
+result = gate.execute(
+    "read_ticket",
+    {"ticket_id": "T-100"},
+    lambda arguments: {"ticket_id": arguments["ticket_id"], "status": "open"},
+    capabilities=["resource:read"],
+    actor={"id": "support-agent"},
+)
+assert result.decision.allowed
+```
+
+Run the fourteen-case compatibility fixture:
+
+```bash
+samsarix-ethics test --policy examples/policies/tool-call-baseline.json examples/tests/tool-call-baseline.tests.json
+```
+
+See [tool-call integrations](TOOL_CALLS.md) before connecting an agent runtime.
+
+## 8. Start a policy of your own
 
 ```bash
 samsarix-ethics init my-policy.json
@@ -84,4 +111,5 @@ To configure an editor or external validator, export the versioned schemas:
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
+samsarix-ethics schema tool-context > tool-context-v1.schema.json
 ```

@@ -63,7 +63,8 @@
             "not_contains",
             "not_exists",
             "not_in",
-            "starts_with"
+            "starts_with",
+            "subset_of"
           ]
         },
         "value": {"$ref": "#/$defs/expected_value"}
@@ -79,7 +80,7 @@
         },
         {
           "if": {
-            "properties": {"operator": {"enum": ["in", "not_in"]}},
+            "properties": {"operator": {"enum": ["in", "not_in", "subset_of"]}},
             "required": ["operator"]
           },
           "then": {

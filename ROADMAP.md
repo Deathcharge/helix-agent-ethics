@@ -17,7 +17,8 @@ adoption remain separate evidence-based decisions.
 - Versioned policy/test schemas, policy regression suites, and bounded batch evaluation are in the
   release candidate; preserve their compatibility fixtures as the language evolves.
 - Review priority: add one fail-closed downstream integration with a consumer-owned contract test.
-- Review priority: publish focused policy packs for high-value agent tool boundaries.
+- A fail-closed in-process tool gate and baseline tool-capability policy pack are implemented;
+  next prove them against a consumer-owned contract in a downstream repository.
 
 ## Release candidate
 

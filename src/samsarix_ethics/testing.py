@@ -281,7 +281,7 @@ def run_policy_tests(policy: Policy, suite: PolicyTestSuite) -> PolicyTestReport
     results: list[PolicyTestResult] = []
     for case in suite.cases:
         try:
-            decision = engine.evaluate(case.input)
+            decision = engine.evaluate(thaw_json_value(case.input))
         except SamsarixEthicsError as exc:
             results.append(
                 PolicyTestResult(

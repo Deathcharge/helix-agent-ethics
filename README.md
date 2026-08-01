@@ -68,7 +68,7 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--format text|json]
-samsarix-ethics schema [policy|policy-test]
+samsarix-ethics schema [policy|policy-test|tool-context]
 samsarix-ethics test --policy POLICY.json TESTS.json [--format text|json]
 samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
@@ -101,6 +101,7 @@ Print the versioned Draft 2020-12 schemas for editors, CI, or code generation:
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
+samsarix-ethics schema tool-context > tool-context-v1.schema.json
 ```
 
 The bundled regression suite proves allow, deny, review, missing-approval, and warning behavior
@@ -133,8 +134,29 @@ batch = PolicyEngine(policy).evaluate_many(
 )
 ```
 
-The application remains responsible for enforcing the decision immediately before the protected
-operation. See [API reference](docs/API.md) and [policy format](docs/POLICY_FORMAT.md).
+For an in-process tool boundary, `ToolGate` turns non-allow outcomes into typed exceptions and
+invokes the callback only after an allow decision:
+
+```python
+from samsarix_ethics import ToolGate, load_policy
+
+gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
+result = gate.execute(
+    "read_ticket",
+    {"ticket_id": "T-100"},
+    lambda arguments: ticket_store.read(arguments["ticket_id"]),
+    capabilities=["resource:read"],
+    actor={"id": "support-agent"},
+)
+print(result.decision.decision_id, result.value)
+```
+
+`execute_async` provides the same fail-closed boundary for async callbacks. Denials raise
+`ToolCallDeniedError`; review outcomes raise `ToolCallReviewRequiredError`; neither invokes the
+tool. See the [tool-call integration guide](docs/TOOL_CALLS.md), [API reference](docs/API.md), and
+[policy format](docs/POLICY_FORMAT.md).
+
+Run the dependency-free demonstration with `python examples/tool_gate_demo.py`.
 
 ## Decision semantics
 
@@ -158,6 +180,7 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
+- `ToolGate` audits before execution when configured; an audit failure prevents the callback.
 - Audit retention, access controls, rotation, and tamper resistance belong to the embedding
   application. A successful append is flushed to disk but is not a cryptographic ledger.
 
@@ -200,8 +223,8 @@ environment as described in [docs/PRODUCTIZATION.md](docs/PRODUCTIZATION.md) bef
 ## Architecture and limitations
 
 The product is a library plus CLI; it has no server or cloud component. The package separates
-validated immutable models, deterministic evaluation, versioned schemas, bounded I/O, regression
-testing, and presentation/exit codes.
+validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
+versioned schemas, bounded I/O, regression testing, and presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
 Deliberate limitations:

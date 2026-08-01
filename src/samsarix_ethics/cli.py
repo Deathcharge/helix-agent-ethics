@@ -17,7 +17,7 @@ from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .io import append_audit_record, load_context, load_policy, write_sample_policy
 from .models import Decision, Outcome
-from .schema import get_policy_schema, get_policy_test_schema
+from .schema import get_policy_schema, get_policy_test_schema, get_tool_context_schema
 from .testing import PolicyTestReport, load_policy_test_suite, run_policy_tests
 
 EXIT_ALLOWED = 0
@@ -58,7 +58,7 @@ def _parser() -> argparse.ArgumentParser:
     schema.add_argument(
         "kind",
         nargs="?",
-        choices=("policy", "policy-test"),
+        choices=("policy", "policy-test", "tool-context"),
         default="policy",
         help="schema to print; default: policy",
     )
@@ -132,7 +132,12 @@ def main(
             return EXIT_ALLOWED
 
         if arguments.command == "schema":
-            schema = get_policy_schema() if arguments.kind == "policy" else get_policy_test_schema()
+            schema_loaders = {
+                "policy": get_policy_schema,
+                "policy-test": get_policy_test_schema,
+                "tool-context": get_tool_context_schema,
+            }
+            schema = schema_loaders[arguments.kind]()
             print(json.dumps(schema, indent=2, sort_keys=True), file=output)
             return EXIT_ALLOWED
 

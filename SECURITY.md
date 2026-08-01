@@ -21,14 +21,17 @@ Policy files are trusted developer/operator configuration. Evaluation inputs may
 are bounded and type-checked. The embedding application remains responsible for:
 
 - authenticating the actor and supplying trustworthy facts;
-- enforcing the returned decision immediately before the protected side effect;
+- assigning tool capability labels outside model control;
+- enforcing the returned decision immediately before the protected side effect, either with
+  `ToolGate` or an equivalent boundary;
 - treating every exception and nonzero CLI exit as non-authorization;
 - preventing time-of-check/time-of-use races;
 - protecting and reviewing policy files;
 - controlling audit-file access, rotation, retention, integrity, and deletion.
 
-The package makes no network requests, executes no policy code, loads no plugins, and stores no raw
-evaluation input in its built-in audit record.
+`ToolGate` invokes only the explicit callback supplied by the embedding application and only after
+an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
+code, loads no plugins, and stores no raw evaluation input in its built-in audit record.
 
 ## Relevant vulnerability classes
 

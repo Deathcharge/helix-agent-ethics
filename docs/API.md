@@ -49,6 +49,33 @@ closed. An empty batch returns an empty tuple.
 
 `Decision.to_dict()` returns a JSON-serializable dictionary and still excludes the raw input.
 
+## Tool-call enforcement
+
+### `build_tool_context(tool_name, arguments, *, capabilities=(), actor=None, context=None)`
+
+Builds a detached, bounded JSON context using the versioned shape documented in
+[TOOL_CALLS.md](TOOL_CALLS.md). Tool and capability identifiers are 1-128 characters; each call
+may declare up to `MAX_TOOL_CAPABILITIES` (64) unique capabilities. The returned context uses
+`tool_context_version = TOOL_CONTEXT_VERSION` (currently `1`), uses
+`action.kind = "tool_call"`, and never retains the caller's mutable dictionaries.
+
+### `ToolGate(policy, *, audit_log=None)`
+
+Provides a fail-closed boundary immediately before an in-process side effect:
+
+- `evaluate(...) -> Decision` evaluates the normalized call and optionally appends audit metadata;
+- `enforce(...) -> Decision` returns only an allow decision, otherwise raising a typed block;
+- `execute(..., executor, ...) -> ToolExecutionResult[T]` invokes a callback with the detached,
+  evaluated argument dictionary only after allow; it rejects coroutine functions and async
+  callable objects, which must use `execute_async`;
+- `await execute_async(..., executor, ...) -> ToolExecutionResult[T]` does the same for an async
+  callback.
+
+`ToolExecutionResult` contains the authorizing `decision` and callback `value`. A deny raises
+`ToolCallDeniedError`; review raises `ToolCallReviewRequiredError`. Both derive from
+`ToolCallBlockedError`, retain the metadata-only `decision`, and omit tool arguments from their
+messages. If configured audit persistence fails, `AuditLogError` propagates before execution.
+
 ## Models
 
 - `Policy.from_dict(value)` and `Policy.to_dict()`
@@ -64,10 +91,11 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()` and `get_policy_test_schema()`
+### `get_policy_schema()`, `get_policy_test_schema()`, and `get_tool_context_schema()`
 
-Return fresh dictionaries containing the bundled Draft 2020-12 schemas. These calls perform no
-network access and callers may mutate the returned value without changing future calls.
+Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
+suites, and the normalized tool-call context. These calls perform no network access and callers
+may mutate the returned value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`
 
@@ -95,8 +123,9 @@ does not include evaluation input, rule messages, or secrets. Raises `AuditLogEr
 ## Error hierarchy
 
 `PolicyValidationError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
-and `AuditLogError` derive from `SamsarixEthicsError`. The base class and specialized errors are
-exported from `samsarix_ethics` and defined in `samsarix_ethics.errors`.
+`AuditLogError`, and the tool-call enforcement errors derive from `SamsarixEthicsError`. The base
+class and specialized errors are exported from `samsarix_ethics` and defined in
+`samsarix_ethics.errors`.
 
 ## Compatibility
 

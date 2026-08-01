@@ -88,6 +88,7 @@ def test_policy_shape_errors(document: Any, message: str) -> None:
         ({"field": "bad path!", "operator": "eq", "value": 1}, "valid dotted"),
         ({"field": "value", "operator": "eq"}, "value is required"),
         ({"field": "value", "operator": "in", "value": "read"}, "JSON array"),
+        ({"field": "value", "operator": "subset_of", "value": "read"}, "JSON array"),
         (
             {"field": "value", "operator": "eq", "value": {"$ref": "bad path!"}},
             "value.\\$ref",

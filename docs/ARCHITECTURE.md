@@ -10,7 +10,8 @@ responsible for enforcement immediately before the protected operation.
 trusted policy JSON ──> bounded parser ──> immutable Policy ─┐
                                                             ├─> PolicyEngine ─> Decision
 untrusted action JSON ─> bounded parser ──> context object ──┘                  │
-                                                                               └─> optional metadata-only JSONL
+                                                                               ├─> optional metadata-only JSONL
+                                                                               └─> ToolGate ─> callback or typed block
 ```
 
 There is no network service, identity provider, database, model provider, or dependency on
@@ -24,6 +25,7 @@ the legacy `helix-unified` repository.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and audit append.
 - `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
+- `gate.py`: normalized tool-call contexts and fail-closed sync/async callback enforcement.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
 - `__init__.py`: deliberate public Python API.
 
@@ -64,12 +66,23 @@ Raw action context can contain credentials or personal data, so the built-in aud
 only decision metadata. Audit durability is local best effort (`append` plus `fsync`), not an
 immutable or cross-process ordered ledger.
 
+### Enforcement remains local and immediate
+
+`ToolGate` closes the common integration gap between receiving a decision and invoking an
+in-process tool. It evaluates a detached context, writes the optional audit record, and calls a
+callback with the evaluated detached arguments only for `allow`. Deny and review outcomes are
+distinct typed exceptions.
+Applications with durable approval workflows should store their own pending-call state, then
+re-evaluate with fresh trusted facts immediately before execution.
+
 ## Trust boundaries
 
 - **Policy authors/operators** are trusted to define correct rules and secure policy files.
 - **Evaluation input** may be attacker-controlled and is bounded and type-checked.
 - **Embedding application** owns authentication, authorization, fact integrity, enforcement,
   concurrency, and the protected side effect.
+- **Tool capability labels** are trusted application facts; model output must not assign its own
+  permissions or approval state.
 - **Filesystem/audit operator** owns access control, rotation, retention, backups, and tamper
   detection for audit files.
 

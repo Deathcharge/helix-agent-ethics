@@ -17,8 +17,10 @@ from samsarix_ethics import (
     PolicyTestStatus,
     PolicyTestSuite,
     PolicyTestValidationError,
+    build_tool_context,
     get_policy_schema,
     get_policy_test_schema,
+    get_tool_context_schema,
     load_policy_test_suite,
     run_policy_tests,
 )
@@ -34,18 +36,38 @@ def _suite(*cases: dict[str, Any]) -> PolicyTestSuite:
 def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     policy_schema = get_policy_schema()
     test_schema = get_policy_test_schema()
-    example_suite = json.loads(
-        (Path(__file__).parents[1] / "examples/tests/safe-agent-actions.tests.json").read_text(
-            encoding="utf-8"
-        )
+    tool_context_schema = get_tool_context_schema()
+    root = Path(__file__).parents[1]
+    example_policies = [
+        SAMPLE_POLICY,
+        json.loads(
+            (root / "examples/policies/tool-call-baseline.json").read_text(encoding="utf-8")
+        ),
+    ]
+    example_suites = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted((root / "examples/tests").glob("*.json"))
+    ]
+    tool_context_suite = json.loads(
+        (root / "examples/tests/tool-call-baseline.tests.json").read_text(encoding="utf-8")
+    )
+    tool_context_example = next(
+        case["input"]
+        for case in tool_context_suite["cases"]
+        if case["name"] == "read-only tool is allowed"
     )
 
     Draft202012Validator.check_schema(policy_schema)
     Draft202012Validator.check_schema(test_schema)
-    Draft202012Validator(policy_schema).validate(SAMPLE_POLICY)
-    Draft202012Validator(test_schema).validate(example_suite)
+    Draft202012Validator.check_schema(tool_context_schema)
+    for policy in example_policies:
+        Draft202012Validator(policy_schema).validate(policy)
+    for suite in example_suites:
+        Draft202012Validator(test_schema).validate(suite)
+    Draft202012Validator(tool_context_schema).validate(tool_context_example)
     assert policy_schema["$id"].endswith("/policy/v1.json")
     assert test_schema["$id"].endswith("/policy-test/v1.json")
+    assert tool_context_schema["$id"].endswith("/tool-context/v1.json")
 
 
 def test_policy_schema_matches_strict_condition_contract() -> None:
@@ -61,11 +83,44 @@ def test_policy_schema_matches_strict_condition_contract() -> None:
         Draft202012Validator(schema).validate(scalar_membership)
 
 
+def test_tool_context_schema_matches_builder_contract() -> None:
+    schema = get_tool_context_schema()
+    validator = Draft202012Validator(schema)
+    valid = build_tool_context(
+        "files.read",
+        {"path": "README.md"},
+        capabilities=("resource:read",),
+    )
+    invalid_values: list[dict[str, Any]] = []
+    for update in (
+        {"tool_context_version": 2},
+        {"action": {**valid["action"], "kind": "workflow"}},
+        {
+            "action": {
+                **valid["action"],
+                "capabilities": ["resource:read", "resource:read"],
+            }
+        },
+        {**valid, "unexpected": True},
+    ):
+        invalid = copy.deepcopy(valid)
+        invalid.update(update)
+        invalid_values.append(invalid)
+
+    validator.validate(valid)
+    for invalid in invalid_values:
+        with pytest.raises(ValidationError):
+            validator.validate(invalid)
+
+
 def test_schema_access_returns_fresh_values() -> None:
     changed = get_policy_schema()
     changed["title"] = "changed"
+    changed_tool_context = get_tool_context_schema()
+    changed_tool_context["title"] = "changed"
 
     assert get_policy_schema()["title"] != "changed"
+    assert get_tool_context_schema()["title"] != "changed"
 
 
 def test_policy_test_report_preserves_pass_fail_and_privacy(
@@ -239,6 +294,37 @@ def test_policy_test_inputs_are_recursively_immutable() -> None:
 
     assert suite.cases[0].input == {"action": {"operation": "read"}}
     assert suite.to_dict()["cases"][0]["input"] == {"action": {"operation": "read"}}
+
+
+def test_policy_test_runner_thaws_frozen_input_arrays() -> None:
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "array-input",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "allow-read",
+                    "effect": "allow",
+                    "conditions": [
+                        {"field": "capabilities", "operator": "contains", "value": "read"}
+                    ],
+                }
+            ],
+        }
+    )
+    suite = _suite(
+        {
+            "name": "array input",
+            "input": {"capabilities": ["read"]},
+            "expected_outcome": "allow",
+        }
+    )
+
+    report = run_policy_tests(policy, suite)
+
+    assert report.successful is True
 
 
 def test_policy_test_container_limit_is_applied_per_case() -> None:

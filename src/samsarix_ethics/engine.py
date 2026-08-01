@@ -95,6 +95,14 @@ def _evaluate_condition(context: Mapping[str, Any], condition: PolicyCondition) 
         collection = _sequence_for_membership(actual, operator=operator, role="the input field")
         matched = any(_json_equal(expected, item) for item in collection)
         return not matched if operator == "not_contains" else matched
+    if operator == "subset_of":
+        actual_items = _sequence_for_membership(actual, operator=operator, role="the input field")
+        allowed_items = _sequence_for_membership(
+            expected, operator=operator, role="the policy value"
+        )
+        return all(
+            any(_json_equal(item, allowed) for allowed in allowed_items) for item in actual_items
+        )
     if operator in {"starts_with", "ends_with"}:
         if not isinstance(actual, str) or not isinstance(expected, str):
             raise EvaluationError(f"operator {operator!r} requires two strings")
