@@ -158,6 +158,21 @@ tool. See the [tool-call integration guide](docs/TOOL_CALLS.md), [API reference]
 
 Run the dependency-free demonstration with `python examples/tool_gate_demo.py`.
 
+Applications can route the same versioned metadata-only record to their own durable store or
+telemetry pipeline with a synchronous sink:
+
+```python
+from samsarix_ethics import AuditRecord, ToolGate
+
+records: list[AuditRecord] = []
+gate = ToolGate(policy, audit_sink=records.append)
+```
+
+The sink runs once after each decision is computed and before the decision can authorize a callback.
+It must return `None`; an exception or other return becomes `AuditLogError` and fails closed. Use
+either `audit_sink=` or the existing local `audit_log=` path, not both. Agent Ethics never retries
+delivery or includes evaluation input in `AuditRecord`.
+
 ## Downstream adoption
 
 Samsarix Agent Framework is the first verified downstream consumer. Its optional policy registry
@@ -193,6 +208,7 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
+- Caller-owned audit sinks receive the same versioned metadata-only record and no raw input.
 - `ToolGate` audits before execution when configured; an audit failure prevents the callback.
 - Audit retention, access controls, rotation, and tamper resistance belong to the embedding
   application. A successful append is flushed to disk but is not a cryptographic ledger.

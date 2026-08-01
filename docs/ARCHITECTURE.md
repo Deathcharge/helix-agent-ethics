@@ -10,7 +10,7 @@ responsible for enforcement immediately before the protected operation.
 trusted policy JSON ──> bounded parser ──> immutable Policy ─┐
                                                             ├─> PolicyEngine ─> Decision
 untrusted action JSON ─> bounded parser ──> context object ──┘                  │
-                                                                               ├─> optional metadata-only JSONL
+                                                                               ├─> optional metadata-only audit sink
                                                                                └─> ToolGate ─> callback or typed block
 ```
 
@@ -20,9 +20,10 @@ the legacy `helix-unified` repository.
 ## Components
 
 - `models.py`: strict schema validation and immutable policy/decision values.
+- `audit.py`: versioned metadata-only records, the caller sink contract, and local JSONL sink.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `engine.py`: dotted-field resolution, typed condition operators, rule matching, and precedence.
-- `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and audit append.
+- `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and the legacy audit helper.
 - `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
 - `gate.py`: normalized tool-call contexts and fail-closed sync/async callback enforcement.
@@ -62,9 +63,10 @@ analysis risk. Cross-field comparison uses the explicit `{"$ref": "path.to.field
 
 ### Privacy-minimized audit
 
-Raw action context can contain credentials or personal data, so the built-in audit record stores
-only decision metadata. Audit durability is local best effort (`append` plus `fsync`), not an
-immutable or cross-process ordered ledger.
+Raw action context can contain credentials or personal data, so the versioned `AuditRecord` stores
+only decision metadata. The built-in JSONL sink is local best effort (`append` plus `fsync`), not
+an immutable or cross-process ordered ledger. A caller-owned sink receives the same frozen record,
+runs once before authorization, and owns transport, retries, idempotency, and durable retention.
 
 ### Enforcement remains local and immediate
 
@@ -83,8 +85,8 @@ re-evaluate with fresh trusted facts immediately before execution.
   concurrency, and the protected side effect.
 - **Tool capability labels** are trusted application facts; model output must not assign its own
   permissions or approval state.
-- **Filesystem/audit operator** owns access control, rotation, retention, backups, and tamper
-  detection for audit files.
+- **Filesystem/audit operator** owns access control, transport, idempotency, rotation, retention,
+  backups, and tamper detection for audit destinations.
 
 ## Distribution
 

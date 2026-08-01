@@ -59,7 +59,7 @@ may declare up to `MAX_TOOL_CAPABILITIES` (64) unique capabilities. The returned
 `tool_context_version = TOOL_CONTEXT_VERSION` (currently `1`), uses
 `action.kind = "tool_call"`, and never retains the caller's mutable dictionaries.
 
-### `ToolGate(policy, *, audit_log=None)`
+### `ToolGate(policy, *, audit_log=None, audit_sink=None)`
 
 Provides a fail-closed boundary immediately before an in-process side effect:
 
@@ -75,6 +75,9 @@ Provides a fail-closed boundary immediately before an in-process side effect:
 `ToolCallDeniedError`; review raises `ToolCallReviewRequiredError`. Both derive from
 `ToolCallBlockedError`, retain the metadata-only `decision`, and omit tool arguments from their
 messages. If configured audit persistence fails, `AuditLogError` propagates before execution.
+`audit_log` and `audit_sink` are mutually exclusive. A custom sink must be a synchronous callable
+that accepts one `AuditRecord` and returns `None`; any other return or raised exception prevents the
+decision from authorizing a callback. The package invokes the sink exactly once and never retries.
 
 ## Models
 
@@ -112,13 +115,32 @@ all cases pass.
 `PolicyTestCase`, `PolicyTestSuite`, `PolicyTestResult`, and `PolicyTestReport` are frozen public
 models with JSON-serializable `to_dict()` methods.
 
-## Audit helper
+## Audit records and sinks
+
+### `AuditRecord.from_decision(decision) -> AuditRecord`
+
+Creates a frozen `audit_record_version = AUDIT_RECORD_VERSION` record (currently version `1`) with
+decision/policy identity, evaluation time, outcome, matched rule IDs, and warning count. Raw input,
+reasons, and warning text are absent. `to_dict()` returns a detached JSON-compatible dictionary.
+
+### `AuditSink`
+
+A structural typing protocol for a synchronous callable with the signature
+`sink(record: AuditRecord) -> None`. Normal `None` return means delivery succeeded. `ToolGate`
+converts an ordinary sink exception to `AuditLogError` using only its type name; it does not retry.
+An application that retries an uncertain external commit must deduplicate by `decision_id` if its
+destination requires exactly-once storage.
+
+### `JsonlAuditSink(path)`
+
+The built-in local sink appends one compact record and calls `fsync`. Its destination parent must
+already exist. It is also what `ToolGate(..., audit_log=path)` uses.
 
 ### `append_audit_record(path, decision) -> None`
 
 Appends one compact JSONL record and calls `fsync`. The destination's parent must already exist.
-The record includes decision and policy identity, outcome, matched rule IDs, and warning count. It
-does not include evaluation input, rule messages, or secrets. Raises `AuditLogError` on failure.
+This compatibility helper converts the decision to `AuditRecord` and invokes `JsonlAuditSink`.
+Raises `AuditLogError` on failure.
 
 ## Error hierarchy
 

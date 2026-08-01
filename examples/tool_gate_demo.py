@@ -4,12 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from samsarix_ethics import ToolCallDeniedError, ToolGate, load_policy
+from samsarix_ethics import AuditRecord, ToolCallDeniedError, ToolGate, load_policy
 
 
 def main() -> None:
     root = Path(__file__).parent
-    gate = ToolGate(load_policy(root / "policies/tool-call-baseline.json"))
+    audit_records: list[AuditRecord] = []
+    gate = ToolGate(
+        load_policy(root / "policies/tool-call-baseline.json"),
+        audit_sink=audit_records.append,
+    )
 
     read = gate.execute(
         "read_ticket",
@@ -30,6 +34,8 @@ def main() -> None:
         )
     except ToolCallDeniedError as exc:
         print(f"blocked {exc.decision.decision_id}: {exc.decision.outcome.value}")
+
+    print(f"exported {len(audit_records)} metadata-only audit records")
 
 
 if __name__ == "__main__":

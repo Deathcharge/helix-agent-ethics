@@ -19,8 +19,8 @@ adoption remain separate evidence-based decisions.
 - [x] Add one fail-closed downstream integration with a consumer-owned contract test.
 - A fail-closed in-process tool gate and baseline tool-capability policy pack are integrated into
   Samsarix Agent Framework at an exact Agent Ethics commit.
-- Next priority: expose one immutable metadata-only audit record to a caller-supplied sink while
-  preserving the existing JSONL API and fail-closed behavior.
+- [x] Expose one immutable metadata-only audit record to a caller-supplied sink while preserving
+  the existing JSONL API and fail-closed behavior.
 
 ## Release candidate
 
@@ -37,6 +37,8 @@ Current hardening backlog:
   are not yet configured.
 - The “ethics” name may still overpromise relative to a deterministic authorization/policy gate.
 - Local audit logs are operational records, not tamper-evident compliance evidence.
+- Caller-owned sinks provide a delivery seam, not built-in HTTP, queues, retries, exactly-once
+  storage, retention, or a hosted audit service.
 - Migration from any surviving `helix_ethics` callers is destructive; old compatibility imports are not retained.
 
 ## Samsarix adoption

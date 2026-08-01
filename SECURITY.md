@@ -27,11 +27,15 @@ are bounded and type-checked. The embedding application remains responsible for:
 - treating every exception and nonzero CLI exit as non-authorization;
 - preventing time-of-check/time-of-use races;
 - protecting and reviewing policy files;
-- controlling audit-file access, rotation, retention, integrity, and deletion.
+- controlling audit destination credentials, network egress, idempotency, access, rotation,
+  retention, integrity, and deletion.
 
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
 code, loads no plugins, and stores no raw evaluation input in its built-in audit record.
+Caller-supplied audit sinks are trusted application code invoked synchronously before authorization;
+their failures prevent tool execution, but their transport and downstream storage are outside this
+package's boundary.
 
 ## Relevant vulnerability classes
 

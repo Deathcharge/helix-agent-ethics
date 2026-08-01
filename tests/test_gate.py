@@ -13,6 +13,7 @@ from samsarix_ethics import (
     MAX_TOOL_CAPABILITIES,
     TOOL_CONTEXT_VERSION,
     AuditLogError,
+    AuditRecord,
     InputValidationError,
     Outcome,
     Policy,
@@ -224,6 +225,107 @@ def test_tool_gate_audit_failure_prevents_execution(tmp_path: Path) -> None:
         gate.execute("read_resource", {}, execute, capabilities=["read"])
 
     assert called is False
+
+
+def test_tool_gate_custom_sink_runs_once_before_allow_and_execution() -> None:
+    records: list[AuditRecord] = []
+    events: list[str] = []
+
+    def sink(record: AuditRecord) -> None:
+        records.append(record)
+        events.append("audit")
+
+    def execute(_validated: dict[str, Any]) -> str:
+        events.append("execute")
+        return "complete"
+
+    result = ToolGate(_gate_policy(), audit_sink=sink).execute(
+        "read_resource", {}, execute, capabilities=["read"]
+    )
+
+    assert result.value == "complete"
+    assert records == [AuditRecord.from_decision(result.decision)]
+    assert events == ["audit", "execute"]
+
+
+def test_tool_gate_custom_sink_receives_non_allow_decision() -> None:
+    records: list[AuditRecord] = []
+    gate = ToolGate(_gate_policy(), audit_sink=records.append)
+
+    with pytest.raises(ToolCallDeniedError) as captured:
+        gate.enforce("delete_resource", {}, capabilities=["delete"])
+
+    assert records == [AuditRecord.from_decision(captured.value.decision)]
+    assert records[0].outcome == "deny"
+
+
+@pytest.mark.parametrize("result", [False, 0, "stored", object()])
+def test_tool_gate_rejects_non_none_sink_returns_before_execution(result: Any) -> None:
+    called = False
+    sink_calls = 0
+
+    def sink(_record: AuditRecord) -> Any:
+        nonlocal sink_calls
+        sink_calls += 1
+        return result
+
+    def execute(_validated: dict[str, Any]) -> None:
+        nonlocal called
+        called = True
+
+    gate = ToolGate(_gate_policy(), audit_sink=sink)
+    with pytest.raises(AuditLogError, match="must return None"):
+        gate.execute("read_resource", {}, execute, capabilities=["read"])
+
+    assert sink_calls == 1
+    assert called is False
+
+
+def test_tool_gate_wraps_sink_failure_without_private_details() -> None:
+    called = False
+    sink_calls = 0
+
+    def sink(_record: AuditRecord) -> None:
+        nonlocal sink_calls
+        sink_calls += 1
+        raise RuntimeError("private sink details")
+
+    def execute(_validated: dict[str, Any]) -> None:
+        nonlocal called
+        called = True
+
+    gate = ToolGate(_gate_policy(), audit_sink=sink)
+    with pytest.raises(AuditLogError, match="RuntimeError") as captured:
+        gate.execute("read_resource", {}, execute, capabilities=["read"])
+
+    assert "private sink details" not in str(captured.value)
+    assert sink_calls == 1
+    assert called is False
+
+
+def test_tool_gate_rejects_invalid_or_conflicting_sinks(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        ToolGate(_gate_policy(), audit_log=tmp_path / "audit.jsonl", audit_sink=lambda _: None)
+    with pytest.raises(TypeError, match="synchronous callable"):
+        ToolGate(_gate_policy(), audit_sink=object())  # type: ignore[arg-type]
+
+    async def async_sink(_record: AuditRecord) -> None:
+        return None
+
+    with pytest.raises(TypeError, match="synchronous callable"):
+        ToolGate(_gate_policy(), audit_sink=async_sink)
+
+
+def test_tool_gate_closes_and_rejects_sink_coroutine_result() -> None:
+    async def result() -> None:
+        return None
+
+    def sink(_record: AuditRecord) -> Any:
+        return result()
+
+    gate = ToolGate(_gate_policy(), audit_sink=sink)
+    with pytest.raises(AuditLogError, match="must return None"):
+        gate.evaluate("read_resource", {}, capabilities=["read"])
 
 
 def test_tool_gate_executes_async_callback() -> None:
