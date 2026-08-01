@@ -3,7 +3,7 @@
 
 """Public API for the Samsarix Agent Ethics policy gate."""
 
-from .engine import PolicyEngine
+from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
     AuditLogError,
     EvaluationError,
@@ -13,10 +13,12 @@ from .errors import (
 )
 from .io import append_audit_record, load_context, load_policy
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
+from .validation import validate_context
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "MAX_BATCH_ITEMS",
     "AuditLogError",
     "Decision",
     "Effect",
@@ -32,4 +34,5 @@ __all__ = [
     "append_audit_record",
     "load_context",
     "load_policy",
+    "validate_context",
 ]

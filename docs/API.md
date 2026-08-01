@@ -15,10 +15,23 @@ policy failures.
 Loads a bounded JSON object from a file, or from a binary stream when `path` is `None` or `"-"`.
 Raises `InputValidationError`.
 
+### `validate_context(value, *, label="evaluation input") -> Mapping[str, Any]`
+
+Validates an in-memory object against the same depth, item-count, string-length, JSON-type, and
+finite-number contract used for parsed input. Embedding applications can use it at their own input
+boundary. `PolicyEngine.evaluate` calls it automatically.
+
 ### `PolicyEngine(policy).evaluate(context) -> Decision`
 
-Evaluates every rule deterministically. Raises `InputValidationError` for a non-object context and
-`EvaluationError` if an operator cannot safely evaluate the supplied types or a `$ref` is missing.
+Evaluates every rule deterministically. Raises `InputValidationError` when the context is not a
+bounded JSON object and `EvaluationError` if an operator cannot safely evaluate the supplied types
+or a `$ref` is missing.
+
+### `PolicyEngine(policy).evaluate_many(contexts) -> tuple[Decision, ...]`
+
+Evaluates up to `MAX_BATCH_ITEMS` (1,000) contexts in input order. The first malformed context
+raises `InputValidationError` with its zero-based batch index; policy evaluation errors still fail
+closed. An empty batch returns an empty tuple.
 
 `Decision` fields:
 

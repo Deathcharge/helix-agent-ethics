@@ -19,13 +19,12 @@ from samsarix_ethics import (
 )
 from samsarix_ethics.io import (
     MAX_INPUT_BYTES,
-    MAX_JSON_DEPTH,
-    MAX_STRING_LENGTH,
     append_audit_record,
     load_context,
     load_policy,
     write_sample_policy,
 )
+from samsarix_ethics.validation import MAX_JSON_DEPTH, MAX_STRING_LENGTH
 
 
 def test_duplicate_policy_key_is_rejected(tmp_path: Path) -> None:

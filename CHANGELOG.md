@@ -18,6 +18,7 @@ All notable product changes are recorded here.
 - Public support guidance, issue forms, code ownership, and a security-aware pull request template.
 - Reproducible hashed development lock, commit-pinned CI actions, and installed-wheel CI smoke test.
 - Fail-closed sample policy coverage for missing destructive-action approval.
+- Bounded batch evaluation and shared validation for parsed and in-memory JSON contexts.
 
 ### Changed
 

@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import math
+from itertools import repeat
 from typing import Any
 
 import pytest
 
-from samsarix_ethics import EvaluationError, InputValidationError, Outcome, Policy, PolicyEngine
+from samsarix_ethics import (
+    MAX_BATCH_ITEMS,
+    EvaluationError,
+    InputValidationError,
+    Outcome,
+    Policy,
+    PolicyEngine,
+)
 
 
 def test_explicit_allow(policy_document: dict[str, Any]) -> None:
@@ -192,6 +201,50 @@ def test_invalid_comparison_type_fails_closed() -> None:
 def test_non_object_context_is_rejected(policy_document: dict[str, Any]) -> None:
     with pytest.raises(InputValidationError, match="JSON object"):
         PolicyEngine(Policy.from_dict(policy_document)).evaluate([])  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("context", "message"),
+    [
+        ({"nested": {1: "value"}}, "non-string object key"),
+        ({"value": ("not", "json")}, "non-JSON value of type tuple"),
+        ({"value": math.inf}, "non-finite number"),
+    ],
+)
+def test_in_memory_context_uses_json_contract(
+    context: dict[str, Any], message: str, policy_document: dict[str, Any]
+) -> None:
+    with pytest.raises(InputValidationError, match=message):
+        PolicyEngine(Policy.from_dict(policy_document)).evaluate(context)
+
+
+def test_bounded_batch_evaluation_preserves_order(policy_document: dict[str, Any]) -> None:
+    engine = PolicyEngine(Policy.from_dict(policy_document))
+
+    decisions = engine.evaluate_many(
+        [
+            {"action": {"operation": "read"}},
+            {"action": {"operation": "delete"}},
+            {"action": {"operation": "write"}},
+        ]
+    )
+
+    assert tuple(decision.outcome for decision in decisions) == (
+        Outcome.ALLOW,
+        Outcome.DENY,
+        Outcome.REVIEW,
+    )
+
+
+def test_batch_evaluation_reports_item_and_size_errors(policy_document: dict[str, Any]) -> None:
+    engine = PolicyEngine(Policy.from_dict(policy_document))
+
+    with pytest.raises(InputValidationError, match="batch must be iterable"):
+        engine.evaluate_many(None)  # type: ignore[arg-type]
+    with pytest.raises(InputValidationError, match=r"batch item 1.*non-finite"):
+        engine.evaluate_many([{}, {"value": math.nan}])
+    with pytest.raises(InputValidationError, match=f"limit of {MAX_BATCH_ITEMS}"):
+        engine.evaluate_many(repeat({}, MAX_BATCH_ITEMS + 1))
 
 
 def test_review_and_warning_rules_are_explained() -> None:

@@ -19,6 +19,7 @@ the legacy `helix-unified` repository.
 ## Components
 
 - `models.py`: strict schema validation and immutable policy/decision values.
+- `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `engine.py`: dotted-field resolution, typed condition operators, rule matching, and precedence.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and audit append.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
@@ -33,9 +34,9 @@ reproducible, offline, testable, and cost-free. It also means the caller must su
 
 ### Validation before evaluation
 
-Unknown fields/operators, duplicate IDs, invalid references, malformed JSON, and bounded-resource
-violations are rejected before a decision. Operator type errors stop the evaluation. An embedding
-application must treat errors as non-authorization.
+Unknown fields/operators, duplicate IDs, invalid references, malformed JSON, non-finite numbers,
+non-JSON in-memory values, and bounded-resource violations are rejected before a decision. Operator
+type errors stop the evaluation. An embedding application must treat errors as non-authorization.
 
 ### Deny and review override allow
 
