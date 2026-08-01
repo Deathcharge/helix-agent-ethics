@@ -158,15 +158,47 @@ samsarix-ethics test --policy composed-policy.json examples/tests/tool-call-base
 
 See [tool-call integrations](TOOL_CALLS.md) before connecting an agent runtime.
 
-## 13. Activate a reviewed candidate without rebuilding live gates
+## 13. Package exact deployment artifacts as one file
+
+```bash
+samsarix-ethics deployment create \
+  --policy composed-policy.json \
+  --context-contract examples/contracts/tool-call-context.json \
+  --output composed-policy.deployment.json
+samsarix-ethics deployment verify composed-policy.deployment.json
+samsarix-ethics check \
+  --deployment composed-policy.deployment.json \
+  --input examples/actions/tool-read-config.json
+
+samsarix-ethics compose \
+  --id tool-call-candidate \
+  --version 1.1.0-candidate \
+  --policy composed-policy.json \
+  --policy examples/policies/restricted-read-candidate-guardrail.json \
+  --output candidate-policy.json
+samsarix-ethics deployment create \
+  --policy candidate-policy.json \
+  --context-contract examples/contracts/tool-call-context-candidate.json \
+  --output candidate.deployment.json
+samsarix-ethics deployment verify candidate.deployment.json
+```
+
+The result contains the complete policy, optional contract, and a mandatory matching lock. One
+bounded read cannot observe a mixed local artifact set. The file is internally consistent but
+unsigned. The primary evaluation commands accept it directly and reject separate contract or lock
+arguments that could create an ambiguous configuration. See
+[single-file policy deployments](POLICY_DEPLOYMENTS.md).
+
+## 14. Activate a reviewed candidate without rebuilding live gates
 
 ```python
-from samsarix_ethics import PolicyRuntime, ToolGate, load_policy
+from samsarix_ethics import PolicyRuntime, ToolGate, load_policy_deployment
 
-runtime = PolicyRuntime(load_policy("examples/policies/safe-agent-actions.json"))
+deployment = load_policy_deployment("composed-policy.deployment.json")
+runtime = PolicyRuntime.from_deployment(deployment)
 read = ToolGate(runtime).bind("read", capabilities=["resource:read"])
-runtime.activate(
-    load_policy("examples/policies/safe-agent-actions-candidate.json"),
+runtime.activate_deployment(
+    load_policy_deployment("candidate.deployment.json"),
     expected_generation=runtime.status.generation,
 )
 assert read.runtime_status is runtime.status
@@ -176,7 +208,7 @@ The complete candidate is validated before one atomic in-process swap. A stale g
 invalid candidate leaves the last successful policy active. See
 [atomic policy runtime](POLICY_RUNTIME.md).
 
-## 14. Start a policy of your own
+## 15. Start a policy of your own
 
 ```bash
 samsarix-ethics init my-policy.json
@@ -200,6 +232,7 @@ samsarix-ethics schema policy-runtime-status > policy-runtime-status-v1.schema.j
 samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
 samsarix-ethics schema context-contract > context-contract-v1.schema.json
 samsarix-ethics schema deployment-lock > deployment-lock-v1.schema.json
+samsarix-ethics schema policy-deployment > policy-deployment-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json

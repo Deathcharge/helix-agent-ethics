@@ -18,6 +18,9 @@ untrusted action JSON ─> bounded parser ─> context object ──────
 validated policy + optional contract/lock ─> PolicyRuntime generation N ─> live gates
 validated complete candidate ─> compare-and-swap atomic activation ──────┘
 
+policy + optional contract ─> mandatory exact lock ─> one PolicyDeployment JSON
+one bounded deployment read ─> verified complete artifacts ─> PolicyRuntime
+
 ordered trusted policy sources ─> composition validation ─> ordinary immutable Policy
 
 approved baseline ─> authoritative Decision ───────────────────────────────> caller enforcement
@@ -34,6 +37,7 @@ the legacy `helix-unified` repository.
 - `approval.py`: immutable approval records and bounded exact-call fingerprints.
 - `provenance.py`: canonical, domain-separated policy and context-contract fingerprints.
 - `deployment.py`: strict immutable deployment locks and exact artifact verification.
+- `policy_deployment.py`: complete single-file enforcement units and internal lock verification.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `contracts.py`: immutable application fact declarations, policy compatibility, and runtime type
   enforcement.
@@ -84,6 +88,14 @@ silently. Lock verification is an activation precondition for `PolicyEngine`, `T
 locked CLI decision paths; mismatch raises a typed validation error before authorization. The lock
 is deliberately a detached artifact so repository review or an external signing system can protect
 the policy, contract, and lock as one deployment set.
+
+A `PolicyDeployment` makes that set one deterministic JSON document. Its embedded lock is mandatory
+and is recomputed during parsing, so the complete policy and optional contract cannot drift inside
+the unit. Bounded single-read loading avoids observing separately replaced local files; atomic
+writing avoids partial output and implicit overwrite. The format carries no timestamps, remote
+locations, signatures, or mutable tags, so identical source artifacts produce identical content.
+Origin authentication and distribution remain composable external controls such as protected Git,
+immutable OCI digests, Sigstore, or an organization release system.
 
 ### Schemas plus executable examples
 

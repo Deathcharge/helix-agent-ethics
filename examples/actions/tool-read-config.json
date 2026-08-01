@@ -1,0 +1,12 @@
+{
+  "tool_context_version": 1,
+  "actor": {
+    "id": "configuration-agent"
+  },
+  "action": {
+    "kind": "tool_call",
+    "name": "read_config",
+    "capabilities": ["resource:read"]
+  },
+  "context": {}
+}

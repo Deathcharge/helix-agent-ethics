@@ -20,14 +20,18 @@ from .errors import (
     ContextContractValidationError,
     DeploymentLockValidationError,
     InputValidationError,
+    PolicyDeploymentValidationError,
     PolicyValidationError,
+    SamsarixEthicsError,
 )
 from .models import Decision, Policy
+from .policy_deployment import PolicyDeployment
 from .validation import validate_json_shape
 
 MAX_INPUT_BYTES = 262_144
 MAX_CONTEXT_CONTRACT_BYTES = 262_144
 MAX_DEPLOYMENT_LOCK_BYTES = 65_536
+MAX_POLICY_DEPLOYMENT_BYTES = 4_194_304
 
 SAMPLE_POLICY: dict[str, Any] = {
     "schema_version": 1,
@@ -219,6 +223,23 @@ def load_deployment_lock(path: str | Path) -> DeploymentLock:
         raise DeploymentLockValidationError(str(exc)) from exc
 
 
+def load_policy_deployment(path: str | Path) -> PolicyDeployment:
+    """Load and internally verify one bounded single-file policy deployment."""
+
+    try:
+        data = _parse_json(
+            _read_file(
+                path,
+                max_bytes=MAX_POLICY_DEPLOYMENT_BYTES,
+                label="policy deployment",
+            ),
+            label="policy deployment",
+        )
+        return PolicyDeployment.from_dict(data)
+    except InputValidationError as exc:
+        raise PolicyDeploymentValidationError(str(exc)) from exc
+
+
 def load_context(path: str | Path | None, *, stdin: BinaryIO | None = None) -> dict[str, Any]:
     """Load a bounded evaluation object from a path or binary standard input."""
 
@@ -245,6 +266,31 @@ def write_policy(path: str | Path, policy: Policy, *, force: bool = False) -> Pa
     return _write_policy_payload(path, policy.to_dict(), force=force, label="policy")
 
 
+def write_policy_deployment(
+    path: str | Path,
+    deployment: PolicyDeployment,
+    *,
+    force: bool = False,
+) -> Path:
+    """Atomically write one verified deployment, refusing implicit overwrite."""
+
+    if not isinstance(deployment, PolicyDeployment):
+        raise TypeError("deployment must be a PolicyDeployment")
+    payload = serialize_policy_document(
+        deployment.to_dict(),
+        label="policy deployment",
+        max_bytes=MAX_POLICY_DEPLOYMENT_BYTES,
+        error_type=PolicyDeploymentValidationError,
+    )
+    return _write_atomic_payload(
+        path,
+        payload,
+        force=force,
+        label="policy deployment",
+        error_type=PolicyDeploymentValidationError,
+    )
+
+
 def _write_policy_payload(
     path: str | Path,
     value: dict[str, Any],
@@ -252,12 +298,31 @@ def _write_policy_payload(
     force: bool,
     label: str,
 ) -> Path:
+    payload = serialize_policy_document(value, label=label)
+    return _write_atomic_payload(
+        path,
+        payload,
+        force=force,
+        label=label,
+        error_type=PolicyValidationError,
+    )
+
+
+def _write_atomic_payload(
+    path: str | Path,
+    payload: bytes,
+    *,
+    force: bool,
+    label: str,
+    error_type: type[SamsarixEthicsError],
+) -> Path:
+    """Durably replace or exclusively create one already serialized JSON payload."""
+
     target = Path(path)
     if target.exists() and not force:
-        raise PolicyValidationError(f"refusing to overwrite existing file: {target}")
+        raise error_type(f"refusing to overwrite existing file: {target}")
     if not target.parent.exists():
-        raise PolicyValidationError(f"parent directory does not exist: {target.parent}")
-    payload = serialize_policy_document(value, label=label)
+        raise error_type(f"parent directory does not exist: {target.parent}")
     temporary_name: str | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -273,12 +338,10 @@ def _write_policy_payload(
             try:
                 os.link(temporary_name, target)
             except FileExistsError as exc:
-                raise PolicyValidationError(
-                    f"refusing to overwrite existing file: {target}"
-                ) from exc
+                raise error_type(f"refusing to overwrite existing file: {target}") from exc
             Path(temporary_name).unlink()
         temporary_name = None
-    except PolicyValidationError:
+    except SamsarixEthicsError:
         if temporary_name:
             with suppress(OSError):
                 Path(temporary_name).unlink(missing_ok=True)
@@ -287,7 +350,7 @@ def _write_policy_payload(
         if temporary_name:
             with suppress(OSError):
                 Path(temporary_name).unlink(missing_ok=True)
-        raise PolicyValidationError(f"cannot write {label} {target}: {exc}") from exc
+        raise error_type(f"cannot write {label} {target}: {exc}") from exc
     return target.resolve()
 
 

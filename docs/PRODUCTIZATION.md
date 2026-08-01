@@ -218,6 +218,8 @@ certification or ethics truth.
   value-minimized source provenance, and an ordinary deployable policy result.
 - [x] Add atomic last-known-good in-process policy activation with compare-and-swap generations,
   coherent status, and live tool-gate integration.
+- [x] Add one bounded deterministic deployment document for policy, optional contract, and
+  mandatory lock, with atomic output and direct runtime activation.
 - [ ] Add policy-format version migration only after a second format and adopter need exist.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
 
@@ -255,10 +257,11 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 248 real tests; latest local run: 248 passed, 96.44% total coverage with branch measurement.
-- Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
-  an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
-  review exited `4`, and the audit record excluded raw input.
+- Added 379 real tests; latest local `python -m pytest` pytest-cov terminal report: 379 passed and
+  97.04% total branch-aware coverage under the configured `--cov-branch` gate.
+- Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an
+  isolated no-dependency environment: install/import/version/schema/deployment verification and a
+  deployed allow decision all succeeded, and runtime construction used the packaged API.
 - Completed a schema-sealed security review of the 34-file product core with complete coverage, no
   deferred surfaces, and no reportable findings. The subsequent 41-file Samsarix/legal/public-repo
   delta added no runtime capability and passed the full local release suite and clean-wheel checks.
@@ -302,6 +305,10 @@ certification or ethics truth.
   swapping them into live gates, retains the last good generation after failure, rejects stale
   concurrent activation, and pins batches to one generation. Distribution and durable desired
   state remain external control-plane responsibilities.
+- Added a strict `PolicyDeployment` format/API/CLI/schema and checked-in baseline artifact. One
+  bounded read and mandatory embedded lock prevent mixed policy/contract/lock snapshots; atomic
+  exclusive output prevents partial and implicit replacement. External systems still own origin
+  authentication, immutable transport, signing, replication, and promotion approval.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -340,6 +347,8 @@ External validation gates:
   still requires external authorization and does not coordinate processes or hosts.
 - Runtime generation numbers are process-local and reset at restart; they are not global freshness
   or rollback-prevention evidence.
+- A policy deployment contains full trusted policy content and proves only internal consistency;
+  its storage and transport need stronger controls than metadata-minimized reports.
 - The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own

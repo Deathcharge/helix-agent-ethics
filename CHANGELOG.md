@@ -66,6 +66,10 @@ All notable product changes are recorded here.
 - Atomic last-known-good `PolicyRuntime` activation with optional compare-and-swap generations,
   whole-batch generation pinning, coherent privacy-minimized status/schema, verified
   policy/contract/lock swaps, and live `ToolGate`/`BoundToolGate` integration.
+- Strict deterministic `PolicyDeployment` documents containing one complete policy, optional
+  contract, and mandatory matching lock; bounded single-read loading, atomic exclusive/forced
+  output, CLI create/verify, self-contained schema, runtime activation, and a drift-checked real
+  deployment fixture.
 
 ### Changed
 

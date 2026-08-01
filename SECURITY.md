@@ -32,6 +32,8 @@ are bounded and type-checked. The embedding application remains responsible for:
 - protecting and reviewing policy files;
 - creating, reviewing, authenticating, and enforcing a deployment lock when exact policy and
   context-contract provenance matters;
+- authenticating the source and transport of a single-file `PolicyDeployment`; its embedded lock
+  proves internal equality but not who approved or delivered it;
 - enforcing only the authoritative baseline decision during shadow rollout and separately
   monitoring candidate status, latency, changes, and errors;
 - authenticating deployment actors, protecting desired state, and coordinating activation across
@@ -98,6 +100,15 @@ rollback control. Anyone able to replace both the artifacts and lock can create 
 set. Protect them together with repository review, deployment access controls, independently
 trusted release identity, and organization-required signing. Lock metadata can act as an equality
 oracle and should receive the same operational access controls as policy fingerprints.
+
+A `PolicyDeployment` places the complete policy, optional contract, and mandatory matching lock in
+one bounded JSON document. This prevents mixed local file reads and the built-in writer prevents
+partial or implicit replacement, but anyone able to create artifacts can make a self-consistent
+deployment. Verify expected repository/OCI identity, immutable digest, signature or attestation,
+and deployment authorization before loading. The package does not fetch artifacts, run signing
+tools, manage trust roots, prevent mutable-tag substitution, persist desired state, or coordinate
+hosts. Deployment documents contain complete policy rules, values, descriptions, and messages;
+protect the file more strictly than metadata-only status, audit, or comparison reports.
 
 `PolicyRuntime` constructs and verifies a complete candidate before an atomic in-process swap and
 retains the last successful generation after candidate failure. Optional compare-and-swap protects

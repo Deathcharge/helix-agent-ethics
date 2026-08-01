@@ -43,6 +43,8 @@ adoption remain separate evidence-based decisions.
   action input, policy values, and authored messages.
 - [x] Add last-known-good atomic in-process activation with coherent generation status,
   compare-and-swap conflict detection, whole-batch consistency, and live `ToolGate` integration.
+- [x] Package a policy, optional contract, and mandatory matching lock as one strict bounded
+  deployment unit for coherent transport, restart, atomic output, and runtime activation.
 
 ## Release candidate
 
@@ -64,6 +66,8 @@ Current hardening backlog:
   storage, retention, or a hosted audit service.
 - Atomic runtime generations are process-local; durable desired state, artifact distribution,
   authenticated deployment, restart recovery, and multi-host convergence remain caller-owned.
+- Single-file deployments prevent mixed local reads but remain unsigned; OCI/repository identity,
+  immutable transport digests, signature policy, and promotion authorization remain caller-owned.
 - Migration from any surviving `helix_ethics` callers is destructive; old compatibility imports are not retained.
 
 ## Samsarix adoption

@@ -130,6 +130,37 @@ Loads a strict UTF-8 JSON lock with the 64 KiB `MAX_DEPLOYMENT_LOCK_BYTES` limit
 structural limits. File and model errors are reported as `DeploymentLockValidationError`. See
 [DEPLOYMENT_LOCKS.md](DEPLOYMENT_LOCKS.md) for the rollout and trust model.
 
+## Single-file policy deployments
+
+### `create_policy_deployment(policy, context_contract=None) -> PolicyDeployment`
+
+Creates an immutable version 1 deployment containing the complete policy, optional complete
+contract, and a newly derived mandatory `DeploymentLock`. Incorrect Python argument types raise
+`TypeError`. `PolicyDeployment.to_dict()` returns a fresh complete JSON document;
+`PolicyDeployment.from_dict(value)` strictly parses all nested models and raises
+`PolicyDeploymentValidationError` unless the embedded lock exactly matches them.
+
+### `load_policy_deployment(path) -> PolicyDeployment`
+
+Reads one UTF-8 JSON object under the 4 MiB `MAX_POLICY_DEPLOYMENT_BYTES` limit, shared structural
+limits, and duplicate-key rejection, then parses and verifies it. A single read prevents mixed
+policy/contract/lock snapshots during local rollout. File, nested-model, and lock failures are
+reported as `PolicyDeploymentValidationError`.
+
+### `write_policy_deployment(path, deployment, *, force=False) -> Path`
+
+Serializes the complete deployment deterministically, flushes a temporary file, and atomically
+installs it. It refuses an existing or concurrently won target unless `force=True`; forced output
+uses atomic replacement. The parent directory must already exist.
+
+`samsarix-ethics deployment create/verify` exposes the same workflow with value-minimized text or
+JSON metadata, while `check` and `explain` can consume the deployment directly with
+`--deployment`. Those evaluation commands reject separate contract or lock arguments in
+deployment mode. The CLI reports only exact artifact metadata and lock status, not policy content.
+The deployment proves internal equality, not authorship, freshness, transport security, or
+approval. See
+[POLICY_DEPLOYMENTS.md](POLICY_DEPLOYMENTS.md).
+
 ## Atomic live policy runtime
 
 ### `PolicyRuntime(policy, *, context_contract=None, deployment_lock=None)`
@@ -138,6 +169,10 @@ Constructs generation `1` from one complete enforcement configuration. Construct
 policy/contract compatibility and exact deployment-lock checks as `PolicyEngine`. `evaluate`,
 `explain`, and the `policy`, fingerprint, contract, and lock properties mirror the engine API.
 `evaluate_many` captures one generation for the whole bounded batch.
+
+`PolicyRuntime.from_deployment(deployment)` constructs generation `1` from a verified
+`PolicyDeployment`; `activate_deployment(deployment, expected_generation=None)` activates one
+through the same compare-and-swap, last-known-good path.
 
 Every call captures one immutable engine under a short lock and evaluates after releasing it. An
 in-flight call therefore finishes on its original generation while later calls can use a newly
@@ -321,13 +356,13 @@ runs.
 ### `get_policy_schema()`, `get_context_contract_schema()`, and other schema accessors
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, application
-context contracts, deployment locks, regression suites, comparison, composition, coverage,
-explanation, lint, runtime-status, and shadow reports,
-the normalized tool-call context, bound approval records, and metadata-only audit records. The
-other accessors are `get_policy_test_schema`, `get_policy_comparison_schema`,
-`get_policy_composition_schema`, `get_policy_coverage_schema`, `get_policy_explanation_schema`, `get_policy_lint_schema`,
-`get_policy_runtime_status_schema`,
-`get_policy_shadow_schema`, `get_deployment_lock_schema`, `get_tool_context_schema`, `get_tool_approval_schema`, and
+context contracts, deployment locks, policy deployments, regression suites, comparison,
+composition, coverage, explanation, lint, runtime-status, and shadow reports, the normalized
+tool-call context, bound approval records, and metadata-only audit records. The other accessors are
+`get_policy_test_schema`, `get_policy_comparison_schema`, `get_policy_composition_schema`,
+`get_policy_coverage_schema`, `get_policy_explanation_schema`, `get_policy_lint_schema`,
+`get_policy_runtime_status_schema`, `get_policy_shadow_schema`, `get_deployment_lock_schema`,
+`get_policy_deployment_schema`, `get_tool_context_schema`, `get_tool_approval_schema`, and
 `get_audit_record_schema`. These calls perform no network access and callers may mutate a returned
 value without changing future calls.
 
@@ -455,10 +490,11 @@ Raises `AuditLogError` on failure.
 
 ## Error hierarchy
 
-`PolicyValidationError`, `PolicyActivationError`, `PolicyCompositionError`, `PolicyTestValidationError`,
-`InputValidationError`, `EvaluationError`, `AuditLogError`, and the tool-call enforcement errors
-derive from `SamsarixEthicsError`. The base class and specialized errors are exported from
-`samsarix_ethics` and defined in `samsarix_ethics.errors`.
+`PolicyValidationError`, `PolicyDeploymentValidationError`, `PolicyActivationError`,
+`PolicyCompositionError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
+`AuditLogError`, and the tool-call enforcement errors derive from `SamsarixEthicsError`. The base
+class and specialized errors are exported from `samsarix_ethics` and defined in
+`samsarix_ethics.errors`.
 
 ## Compatibility
 

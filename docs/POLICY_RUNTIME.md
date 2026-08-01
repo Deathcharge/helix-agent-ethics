@@ -50,6 +50,21 @@ status = runtime.activate(
 The deployment lock is verified while the candidate engine is built. Any policy, contract,
 contract-presence, or fingerprint mismatch prevents the swap.
 
+When artifacts travel or persist together, prefer the single-file deployment API:
+
+```python
+from samsarix_ethics import PolicyRuntime, load_policy_deployment
+
+runtime = PolicyRuntime.from_deployment(load_policy_deployment("baseline.deployment.json"))
+status = runtime.activate_deployment(
+    load_policy_deployment("candidate.deployment.json"),
+    expected_generation=runtime.status.generation,
+)
+```
+
+The mandatory embedded lock is checked during the bounded single-file load and again while the
+runtime constructs the engine. See [single-file policy deployments](POLICY_DEPLOYMENTS.md).
+
 ## Evaluation consistency
 
 `evaluate` and `explain` capture one engine reference under the runtime lock, release the lock, and
