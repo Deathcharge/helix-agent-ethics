@@ -221,6 +221,26 @@ def test_policy_test_suite_load_and_round_trip(tmp_path: Path) -> None:
     assert PolicyTestSuite.from_dict(suite.to_dict()) == suite
 
 
+def test_policy_test_inputs_are_recursively_immutable() -> None:
+    source = {
+        "schema_version": 1,
+        "cases": [
+            {
+                "name": "immutable input",
+                "input": {"action": {"operation": "read"}},
+                "expected_outcome": "allow",
+            }
+        ],
+    }
+    suite = PolicyTestSuite.from_dict(source)
+    source["cases"][0]["input"]["action"]["operation"] = "delete"
+    serialized = suite.to_dict()
+    serialized["cases"][0]["input"]["action"]["operation"] = "publish"
+
+    assert suite.cases[0].input == {"action": {"operation": "read"}}
+    assert suite.to_dict()["cases"][0]["input"] == {"action": {"operation": "read"}}
+
+
 def test_direct_policy_test_case_rejects_non_string_key() -> None:
     with pytest.raises(PolicyTestValidationError, match="non-string object key"):
         PolicyTestCase.from_dict(

@@ -6,14 +6,13 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from enum import StrEnum
-from types import MappingProxyType
 from typing import Any, ClassVar
 
 from .errors import InputValidationError, PolicyValidationError
-from .validation import validate_json_shape
+from .validation import freeze_json_value, thaw_json_value, validate_json_shape
 
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _FIELD_PATH = re.compile(r"^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$")
@@ -50,22 +49,6 @@ def _validate_policy_json_shape(value: Any, location: str) -> None:
         validate_json_shape(value, label=location)
     except InputValidationError as exc:
         raise PolicyValidationError(str(exc)) from exc
-
-
-def _freeze_json(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return MappingProxyType({key: _freeze_json(item) for key, item in value.items()})
-    if isinstance(value, list):
-        return tuple(_freeze_json(item) for item in value)
-    return value
-
-
-def _thaw_json(value: Any) -> Any:
-    if isinstance(value, Mapping):
-        return {key: _thaw_json(item) for key, item in value.items()}
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-        return [_thaw_json(item) for item in value]
-    return value
 
 
 def _check_keys(
@@ -149,12 +132,12 @@ class PolicyCondition:
             raise PolicyValidationError(
                 f"{location}.value must be a JSON array or '$ref' for operator {operator!r}"
             )
-        return cls(field=field, operator=operator, value=_freeze_json(expected))
+        return cls(field=field, operator=operator, value=freeze_json_value(expected))
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {"field": self.field, "operator": self.operator}
         if self.operator not in {"exists", "not_exists"}:
-            data["value"] = _thaw_json(self.value)
+            data["value"] = thaw_json_value(self.value)
         return data
 
 
@@ -248,7 +231,7 @@ class Policy:
             optional={"description"},
             location="policy",
         )
-        if data["schema_version"] != 1:
+        if isinstance(data["schema_version"], bool) or data["schema_version"] != 1:
             raise PolicyValidationError("policy.schema_version must be 1")
         policy_id = _identifier(data["id"], "policy.id")
         version = _identifier(data["version"], "policy.version")

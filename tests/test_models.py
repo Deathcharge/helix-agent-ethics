@@ -122,6 +122,13 @@ def test_policy_round_trip(policy_document: dict[str, Any]) -> None:
     assert Policy.from_dict(policy.to_dict()) == policy
 
 
+def test_boolean_policy_schema_version_is_rejected(policy_document: dict[str, Any]) -> None:
+    policy_document["schema_version"] = True
+
+    with pytest.raises(PolicyValidationError, match="schema_version must be 1"):
+        Policy.from_dict(policy_document)
+
+
 def test_exists_condition_serializes_without_value() -> None:
     condition = PolicyCondition.from_dict(
         {"field": "actor.id", "operator": "exists"}, location="condition"

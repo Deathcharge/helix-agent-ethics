@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -15,7 +16,12 @@ from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import InputValidationError, PolicyTestValidationError, SamsarixEthicsError
 from .io import _parse_json, _read_file
 from .models import Outcome, Policy
-from .validation import validate_context, validate_json_shape
+from .validation import (
+    freeze_json_value,
+    thaw_json_value,
+    validate_context,
+    validate_json_shape,
+)
 
 MAX_POLICY_TEST_BYTES = 4_194_304
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
@@ -49,7 +55,7 @@ class PolicyTestCase:
     """One expected policy decision without retaining it in the report."""
 
     name: str
-    input: dict[str, Any]
+    input: Mapping[str, Any]
     expected_outcome: Outcome
     expected_matched_rules: tuple[str, ...] | None = None
     expected_warning_count: int | None = None
@@ -115,7 +121,7 @@ class PolicyTestCase:
             )
         return cls(
             name=name,
-            input=input_value,
+            input=freeze_json_value(input_value),
             expected_outcome=expected_outcome,
             expected_matched_rules=expected_matched_rules,
             expected_warning_count=warning_count,
@@ -124,7 +130,7 @@ class PolicyTestCase:
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
             "name": self.name,
-            "input": self.input,
+            "input": thaw_json_value(self.input),
             "expected_outcome": self.expected_outcome.value,
         }
         if self.expected_matched_rules is not None:
