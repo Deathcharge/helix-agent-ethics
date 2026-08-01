@@ -185,3 +185,30 @@ def test_membership_condition_accepts_array_reference() -> None:
     )
 
     assert condition.value == {"$ref": "allowed.actions"}
+
+
+def test_policy_condition_values_are_recursively_immutable() -> None:
+    source = ["read", {"nested": ["value"]}]
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "immutable-values",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "allow-listed",
+                    "effect": "allow",
+                    "conditions": [{"field": "action", "operator": "in", "value": source}],
+                }
+            ],
+        }
+    )
+    source.append("delete")
+    serialized = policy.to_dict()
+    serialized["rules"][0]["conditions"][0]["value"].append("publish")
+
+    condition = policy.rules[0].conditions[0]
+    assert condition.value == ("read", {"nested": ("value",)})
+    assert condition.to_dict()["value"] == ["read", {"nested": ["value"]}]
+    assert Policy.from_dict(policy.to_dict()) == policy

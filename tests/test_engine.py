@@ -57,6 +57,34 @@ def test_boolean_approval_does_not_accept_integer_one() -> None:
     assert decision.outcome is Outcome.DENY
 
 
+def test_nested_json_arrays_and_objects_compare_after_policy_freezing() -> None:
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "structured-equality",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "allow-structured",
+                    "effect": "allow",
+                    "conditions": [
+                        {
+                            "field": "value",
+                            "operator": "eq",
+                            "value": [1, {"enabled": True}],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    decision = PolicyEngine(policy).evaluate({"value": [1.0, {"enabled": True}]})
+
+    assert decision.outcome is Outcome.ALLOW
+
+
 def test_deny_overrides_allow(policy_document: dict[str, Any]) -> None:
     policy_document["rules"][1]["conditions"] = []
 

@@ -28,6 +28,8 @@ All notable product changes are recorded here.
   supported, decision sequences serialize as JSON arrays, and file reads remain bounded if a file
   grows during loading.
 - Existence conditions reject unused values so runtime validation and the published schema agree.
+- Policy condition values are recursively immutable and serialization returns fresh JSON
+  containers, preventing retained source documents from mutating live policy behavior.
 
 ### Removed
 

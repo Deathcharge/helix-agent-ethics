@@ -6,8 +6,10 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from enum import StrEnum
+from types import MappingProxyType
 from typing import Any, ClassVar
 
 from .errors import InputValidationError, PolicyValidationError
@@ -48,6 +50,22 @@ def _validate_policy_json_shape(value: Any, location: str) -> None:
         validate_json_shape(value, label=location)
     except InputValidationError as exc:
         raise PolicyValidationError(str(exc)) from exc
+
+
+def _freeze_json(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze_json(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze_json(item) for item in value)
+    return value
+
+
+def _thaw_json(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {key: _thaw_json(item) for key, item in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_thaw_json(item) for item in value]
+    return value
 
 
 def _check_keys(
@@ -120,7 +138,7 @@ class PolicyCondition:
         if operator not in {"exists", "not_exists"} and "value" not in data:
             raise PolicyValidationError(f"{location}.value is required for operator {operator!r}")
         expected = data.get("value")
-        if isinstance(expected, dict):
+        if isinstance(expected, Mapping):
             if set(expected) != {"$ref"} or not isinstance(expected["$ref"], str):
                 raise PolicyValidationError(
                     f"{location}.value objects must contain only a string '$ref' field"
@@ -131,12 +149,12 @@ class PolicyCondition:
             raise PolicyValidationError(
                 f"{location}.value must be a JSON array or '$ref' for operator {operator!r}"
             )
-        return cls(field=field, operator=operator, value=expected)
+        return cls(field=field, operator=operator, value=_freeze_json(expected))
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {"field": self.field, "operator": self.operator}
         if self.operator not in {"exists", "not_exists"}:
-            data["value"] = self.value
+            data["value"] = _thaw_json(self.value)
         return data
 
 

@@ -29,7 +29,7 @@ def _field_value(context: Mapping[str, Any], path: str) -> Any:
 
 def _resolved_expected(context: Mapping[str, Any], condition: PolicyCondition) -> Any:
     expected = condition.value
-    if isinstance(expected, dict) and set(expected) == {"$ref"}:
+    if isinstance(expected, Mapping) and set(expected) == {"$ref"}:
         referenced = _field_value(context, expected["$ref"])
         if referenced is _MISSING:
             raise EvaluationError(
@@ -52,17 +52,23 @@ def _json_equal(left: Any, right: Any) -> bool:
         return type(left) is type(right) and left == right
     if isinstance(left, (int, float)) and isinstance(right, (int, float)):
         return bool(left == right)
-    if type(left) is not type(right):
-        return False
-    if isinstance(left, list):
+    left_array = isinstance(left, Sequence) and not isinstance(left, (str, bytes, bytearray))
+    right_array = isinstance(right, Sequence) and not isinstance(right, (str, bytes, bytearray))
+    if left_array or right_array:
+        if not (left_array and right_array):
+            return False
         return len(left) == len(right) and all(
             _json_equal(left_item, right_item)
             for left_item, right_item in zip(left, right, strict=True)
         )
-    if isinstance(left, Mapping):
+    if isinstance(left, Mapping) or isinstance(right, Mapping):
+        if not (isinstance(left, Mapping) and isinstance(right, Mapping)):
+            return False
         return left.keys() == right.keys() and all(
             _json_equal(left[key], right[key]) for key in left
         )
+    if type(left) is not type(right):
+        return False
     return bool(left == right)
 
 

@@ -57,8 +57,10 @@ closed. An empty batch returns an empty tuple.
 - `Effect`: `allow`, `deny`, `review`, `warn`, `audit`
 - `Outcome`: `allow`, `deny`, `review`
 
-Models are frozen dataclasses. Construct policies through `from_dict` or `load_policy` so validation
-always runs.
+Models are frozen dataclasses. Policy condition arrays and objects are recursively frozen, and
+`to_dict()` returns fresh JSON containers, so retaining or serializing a source document cannot
+mutate a live policy. Construct policies through `from_dict` or `load_policy` so validation always
+runs.
 
 ## Schemas and policy regression tests
 
