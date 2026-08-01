@@ -65,8 +65,8 @@ def build_tool_context(
     if not isinstance(tool_name, str) or not _TOOL_IDENTIFIER.fullmatch(tool_name):
         raise InputValidationError("tool name must be a 1-128 character identifier")
     arguments_value = _json_object(arguments, label="tool arguments")
-    actor_value = _json_object(actor or {}, label="tool actor")
-    context_value = _json_object(context or {}, label="tool context")
+    actor_value = _json_object({} if actor is None else actor, label="tool actor")
+    context_value = _json_object({} if context is None else context, label="tool context")
     value = {
         "tool_context_version": TOOL_CONTEXT_VERSION,
         "actor": actor_value,

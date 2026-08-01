@@ -111,6 +111,13 @@ def test_build_tool_context_bounds_capabilities() -> None:
         )
 
 
+def test_build_tool_context_rejects_falsey_non_object_metadata() -> None:
+    with pytest.raises(InputValidationError, match="tool actor must be a JSON object"):
+        build_tool_context("tool", {}, actor=[])  # type: ignore[arg-type]
+    with pytest.raises(InputValidationError, match="tool context must be a JSON object"):
+        build_tool_context("tool", {}, context=False)  # type: ignore[arg-type]
+
+
 def test_tool_gate_executes_only_allow_decisions() -> None:
     called: list[str] = []
     gate = ToolGate(_gate_policy())
