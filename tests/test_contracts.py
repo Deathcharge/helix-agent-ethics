@@ -151,8 +151,7 @@ def test_contract_rejects_malformed_documents(mutate: Any, message: str) -> None
 def test_contract_rejects_non_json_and_field_limit() -> None:
     document = _contract_document()
     document["fields"] = {
-        f"field_{index}": {"type": "string"}
-        for index in range(MAX_CONTEXT_CONTRACT_FIELDS + 1)
+        f"field_{index}": {"type": "string"} for index in range(MAX_CONTEXT_CONTRACT_FIELDS + 1)
     }
     with pytest.raises(ContextContractValidationError, match="exceeds the limit"):
         ContextContract.from_dict(document)
@@ -214,9 +213,7 @@ def test_runtime_contract_rejects_missing_or_mistyped_facts(
     context: dict[str, Any], message: str
 ) -> None:
     with pytest.raises(InputValidationError, match=message):
-        validate_context_against_contract(
-            context, ContextContract.from_dict(_contract_document())
-        )
+        validate_context_against_contract(context, ContextContract.from_dict(_contract_document()))
 
 
 def test_runtime_contract_type_argument_is_checked() -> None:

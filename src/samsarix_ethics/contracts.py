@@ -43,9 +43,7 @@ def _check_keys(
     if missing:
         raise ContextContractValidationError(f"{location} is missing: {', '.join(missing)}")
     if unknown:
-        raise ContextContractValidationError(
-            f"{location} has unknown fields: {', '.join(unknown)}"
-        )
+        raise ContextContractValidationError(f"{location} has unknown fields: {', '.join(unknown)}")
 
 
 def _identifier(value: Any, location: str) -> str:
@@ -61,9 +59,7 @@ def _field_type(value: Any, location: str) -> ContextFieldType:
         return ContextFieldType(value)
     except (TypeError, ValueError) as exc:
         supported = ", ".join(item.value for item in ContextFieldType)
-        raise ContextContractValidationError(
-            f"{location} must be one of: {supported}"
-        ) from exc
+        raise ContextContractValidationError(f"{location} must be one of: {supported}") from exc
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,8 +138,7 @@ class ContextContract:
             raise ContextContractValidationError("context contract.fields must be a JSON object")
         if len(fields_value) > MAX_CONTEXT_CONTRACT_FIELDS:
             raise ContextContractValidationError(
-                "context contract.fields exceeds the limit of "
-                f"{MAX_CONTEXT_CONTRACT_FIELDS} fields"
+                f"context contract.fields exceeds the limit of {MAX_CONTEXT_CONTRACT_FIELDS} fields"
             )
         fields: dict[str, ContextField] = {}
         for path, field_value in fields_value.items():
@@ -274,9 +269,7 @@ def _condition_error(location: str, message: str) -> ContextContractValidationEr
     )
 
 
-def _declared_field(
-    contract: ContextContract, path: str, *, location: str
-) -> ContextField:
+def _declared_field(contract: ContextContract, path: str, *, location: str) -> ContextField:
     field = contract.fields.get(path)
     if field is None:
         raise _condition_error(location, f"field {path!r} is not declared")
@@ -371,9 +364,7 @@ def _validate_condition(
             equality_items = () if referenced.items is None else (referenced.items,)
         else:
             equality_items = _literal_array_item_types(expected, location=location)
-        if any(
-            not _types_compatible(actual.items, item_type) for item_type in equality_items
-        ):
+        if any(not _types_compatible(actual.items, item_type) for item_type in equality_items):
             raise _condition_error(location, "policy value type does not match array item type")
 
 

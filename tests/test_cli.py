@@ -231,9 +231,7 @@ def test_context_contract_rejects_policy_typo_before_cli_evaluation(
         },
     )
 
-    result = _run_cli(
-        "validate", str(policy_path), "--context-contract", str(contract_path)
-    )
+    result = _run_cli("validate", str(policy_path), "--context-contract", str(contract_path))
 
     assert result.returncode == 2
     assert "field 'action.operaton' is not declared" in result.stderr
