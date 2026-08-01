@@ -19,10 +19,13 @@ from samsarix_ethics import (
     PolicyTestStatus,
     PolicyTestSuite,
     PolicyTestValidationError,
+    ToolCallApproval,
     build_tool_context,
+    fingerprint_tool_call,
     get_audit_record_schema,
     get_policy_schema,
     get_policy_test_schema,
+    get_tool_approval_schema,
     get_tool_context_schema,
     load_policy_test_suite,
     run_policy_tests,
@@ -40,6 +43,7 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     audit_record_schema = get_audit_record_schema()
     policy_schema = get_policy_schema()
     test_schema = get_policy_test_schema()
+    tool_approval_schema = get_tool_approval_schema()
     tool_context_schema = get_tool_context_schema()
     root = Path(__file__).parents[1]
     example_policies = [
@@ -63,20 +67,28 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     audit_record = AuditRecord.from_decision(
         PolicyEngine(Policy.from_dict(SAMPLE_POLICY)).evaluate({"action": {"operation": "read"}})
     ).to_dict()
+    tool_approval = ToolCallApproval(
+        "call-1",
+        True,
+        fingerprint_tool_call("call-1", "read_file", {"path": "README.md"}),
+    ).to_dict()
 
     Draft202012Validator.check_schema(audit_record_schema)
     Draft202012Validator.check_schema(policy_schema)
     Draft202012Validator.check_schema(test_schema)
+    Draft202012Validator.check_schema(tool_approval_schema)
     Draft202012Validator.check_schema(tool_context_schema)
     for policy in example_policies:
         Draft202012Validator(policy_schema).validate(policy)
     for suite in example_suites:
         Draft202012Validator(test_schema).validate(suite)
     Draft202012Validator(tool_context_schema).validate(tool_context_example)
+    Draft202012Validator(tool_approval_schema).validate(tool_approval)
     Draft202012Validator(audit_record_schema).validate(audit_record)
     assert audit_record_schema["$id"].endswith("/audit-record/v1.json")
     assert policy_schema["$id"].endswith("/policy/v1.json")
     assert test_schema["$id"].endswith("/policy-test/v1.json")
+    assert tool_approval_schema["$id"].endswith("/tool-approval/v1.json")
     assert tool_context_schema["$id"].endswith("/tool-context/v1.json")
 
 
@@ -130,9 +142,12 @@ def test_schema_access_returns_fresh_values() -> None:
     changed["title"] = "changed"
     changed_tool_context = get_tool_context_schema()
     changed_tool_context["title"] = "changed"
+    changed_tool_approval = get_tool_approval_schema()
+    changed_tool_approval["title"] = "changed"
 
     assert get_policy_schema()["title"] != "changed"
     assert get_audit_record_schema()["title"] != "changed"
+    assert get_tool_approval_schema()["title"] != "changed"
     assert get_tool_context_schema()["title"] != "changed"
 
 

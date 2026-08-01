@@ -116,6 +116,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy = _run_cli("schema")
     policy_tests = _run_cli("schema", "policy-test")
     tool_context = _run_cli("schema", "tool-context")
+    tool_approval = _run_cli("schema", "tool-approval")
     audit_record = _run_cli("schema", "audit-record")
 
     assert policy.returncode == 0
@@ -124,6 +125,8 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_tests.stdout)["$id"].endswith("/policy-test/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
+    assert tool_approval.returncode == 0
+    assert json.loads(tool_approval.stdout)["$id"].endswith("/tool-approval/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
 

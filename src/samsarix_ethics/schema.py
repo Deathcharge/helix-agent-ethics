@@ -40,3 +40,9 @@ def get_tool_context_schema() -> dict[str, Any]:
     """Return a fresh copy of the tool-call context version 1 JSON Schema."""
 
     return _load_schema("tool-context-v1.schema.json")
+
+
+def get_tool_approval_schema() -> dict[str, Any]:
+    """Return a fresh copy of the tool-approval version 1 JSON Schema."""
+
+    return _load_schema("tool-approval-v1.schema.json")

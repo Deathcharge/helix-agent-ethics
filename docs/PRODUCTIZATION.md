@@ -80,6 +80,12 @@ Bounded review used current primary sources:
 - [Mozilla's MPL 2.0 FAQ](https://www.mozilla.org/en-US/MPL/2.0/FAQ/) confirms that MPL's file-level
   copyleft requires distributed modifications to covered files to remain available. Apache-2.0 was
   selected instead to minimize obligations for applications embedding this small library.
+- [OpenAI Agents SDK guardrails](https://openai.github.io/openai-agents-python/guardrails/) rerun
+  tool guardrails after approval and immediately before execution.
+- [Pydantic AI deferred tools](https://pydantic.dev/docs/ai/tools-toolsets/deferred-tools/) model
+  paused tool calls while warning that human approval is not itself application authorization.
+- [MCP client security guidance](https://modelcontextprotocol.io/docs/develop/clients/client-best-practices)
+  emphasizes per-call confirmation and keeping authorization decisions outside model control.
 
 Consequent decisions: validate before use; deny/review override allow; expose reasons and a decision
 ID; omit raw input from audit records; preserve a first-class human-review outcome; do not claim
@@ -149,6 +155,8 @@ certification or ethics truth.
 - [ ] Add property-based precedence/parser tests if another dependency is justified.
 - [x] Add an optional caller-supplied audit sink interface for centralized logging while preserving
   JSONL compatibility and failing closed on configured sink errors.
+- [x] Bind structured human-review evidence to the exact tool-call ID, normalized arguments,
+  capabilities, and actor before allowing a resumed call.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [ ] Add policy-set composition/version migration after real adopter feedback.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
@@ -187,7 +195,7 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 166 real tests; latest local run: 166 passed, 94.88% total coverage with branch measurement.
+- Added 184 real tests; latest local run: 184 passed, 95.33% total coverage with branch measurement.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
@@ -210,6 +218,8 @@ certification or ethics truth.
   and async `ToolGate`, a fourteen-case capability policy pack, and the `subset_of` operator.
 - Added immutable versioned audit records plus one synchronous caller-owned sink seam; sink delivery
   runs before authorization, fails closed, does not retry, and preserves the JSONL path API.
+- Added bounded versioned tool-call fingerprints and immutable structured approvals; a mutation to
+  the call ID, tool, arguments, capabilities, or actor now fails before policy, audit, or execution.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -232,6 +242,8 @@ External validation gates:
 - Policy correctness is only as good as operator rules and caller-supplied facts.
 - The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
+- Approval binding does not authenticate reviewers or prevent replay; embedding applications own
+  protected pending-call storage, expiry, and atomic one-time consumption.
 - File permissions and retention vary by operating system and are caller responsibilities.
 - Python dependency tooling resolves transitive development dependencies; exact direct pins reduce
   drift but do not constitute a fully hashed supply-chain lock.

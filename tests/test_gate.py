@@ -17,10 +17,12 @@ from samsarix_ethics import (
     InputValidationError,
     Outcome,
     Policy,
+    ToolCallApproval,
     ToolCallDeniedError,
     ToolCallReviewRequiredError,
     ToolGate,
     build_tool_context,
+    fingerprint_tool_call,
     load_policy,
 )
 
@@ -117,6 +119,90 @@ def test_build_tool_context_rejects_falsey_non_object_metadata() -> None:
         build_tool_context("tool", {}, actor=[])  # type: ignore[arg-type]
     with pytest.raises(InputValidationError, match="tool context must be a JSON object"):
         build_tool_context("tool", {}, context=False)  # type: ignore[arg-type]
+
+
+def test_build_tool_context_verifies_and_injects_bound_approval() -> None:
+    arguments = {"to": "person@example.com"}
+    actor = {"id": "agent-1"}
+    fingerprint = fingerprint_tool_call(
+        "call-1",
+        "send_email",
+        arguments,
+        capabilities=["external:write"],
+        actor=actor,
+    )
+    approval = ToolCallApproval("call-1", True, fingerprint)
+
+    value = build_tool_context(
+        "send_email",
+        arguments,
+        capabilities=["external:write"],
+        actor=actor,
+        context={"request_id": "request-1"},
+        tool_call_id="call-1",
+        approval=approval,
+    )
+
+    assert value["context"] == {
+        "request_id": "request-1",
+        "approval": approval.to_dict(),
+    }
+
+
+def test_build_tool_context_reserves_approval_metadata_and_rejects_wrong_type() -> None:
+    with pytest.raises(InputValidationError, match="field 'approval' is reserved"):
+        build_tool_context("tool", {}, context={"approval": {"approved": True}})
+    with pytest.raises(TypeError, match="approval must be a ToolCallApproval"):
+        build_tool_context("tool", {}, approval=object())  # type: ignore[arg-type]
+    with pytest.raises(InputValidationError, match="requires a tool-call approval"):
+        build_tool_context("tool", {}, tool_call_id="call-1")
+
+
+def test_build_tool_context_requires_the_current_framework_call_id() -> None:
+    approval = ToolCallApproval(
+        "call-1",
+        True,
+        fingerprint_tool_call("call-1", "tool", {}),
+    )
+    with pytest.raises(InputValidationError, match="is required"):
+        build_tool_context("tool", {}, approval=approval)
+    with pytest.raises(InputValidationError, match="does not match"):
+        build_tool_context("tool", {}, tool_call_id="call-2", approval=approval)
+
+
+def test_tool_gate_rejects_argument_swap_before_decision_or_execution() -> None:
+    called = False
+    records: list[AuditRecord] = []
+    approval = ToolCallApproval(
+        "call-1",
+        True,
+        fingerprint_tool_call(
+            "call-1",
+            "read_resource",
+            {"resource_id": "R-1"},
+            capabilities=["read"],
+            actor={"id": "agent-1"},
+        ),
+    )
+
+    def execute(_arguments: dict[str, Any]) -> None:
+        nonlocal called
+        called = True
+
+    gate = ToolGate(_gate_policy(), audit_sink=records.append)
+    with pytest.raises(InputValidationError, match="does not match"):
+        gate.execute(
+            "read_resource",
+            {"resource_id": "R-2"},
+            execute,
+            capabilities=["read"],
+            actor={"id": "agent-1"},
+            tool_call_id="call-1",
+            approval=approval,
+        )
+
+    assert called is False
+    assert records == []
 
 
 def test_tool_gate_executes_only_allow_decisions() -> None:
@@ -419,12 +505,72 @@ def test_baseline_tool_policy_matches_gate_contract() -> None:
     gate = ToolGate(load_policy(root / "examples/policies/tool-call-baseline.json"))
 
     denied = gate.evaluate("delete_record", {"record_id": "R-1"}, capabilities=["destructive"])
+    arguments = {"record_id": "R-1"}
+    approval = ToolCallApproval(
+        "delete-call-1",
+        True,
+        fingerprint_tool_call(
+            "delete-call-1",
+            "delete_record",
+            arguments,
+            capabilities=["destructive"],
+        ),
+    )
     approved = gate.evaluate(
         "delete_record",
-        {"record_id": "R-1"},
+        arguments,
         capabilities=["destructive"],
-        context={"human_approved": True},
+        tool_call_id="delete-call-1",
+        approval=approval,
+    )
+    rejected = gate.evaluate(
+        "delete_record",
+        arguments,
+        capabilities=["destructive"],
+        tool_call_id="delete-call-1",
+        approval=ToolCallApproval(
+            approval.tool_call_id,
+            False,
+            approval.tool_call_fingerprint,
+        ),
     )
 
     assert denied.outcome is Outcome.DENY
+    assert rejected.outcome is Outcome.DENY
     assert approved.outcome is Outcome.ALLOW
+
+
+def test_bound_approval_supports_async_execution() -> None:
+    root = Path(__file__).parents[1]
+    gate = ToolGate(load_policy(root / "examples/policies/tool-call-baseline.json"))
+    arguments = {"to": "customer@example.com"}
+    actor = {"id": "support-agent"}
+    approval = ToolCallApproval(
+        "email-call-1",
+        True,
+        fingerprint_tool_call(
+            "email-call-1",
+            "send_email",
+            arguments,
+            capabilities=["external:write"],
+            actor=actor,
+        ),
+    )
+
+    async def send(prepared: dict[str, Any]) -> str:
+        return f"sent to {prepared['to']}"
+
+    result = asyncio.run(
+        gate.execute_async(
+            "send_email",
+            arguments,
+            send,
+            capabilities=["external:write"],
+            actor=actor,
+            tool_call_id="email-call-1",
+            approval=approval,
+        )
+    )
+
+    assert result.value == "sent to customer@example.com"
+    assert result.decision.outcome is Outcome.ALLOW

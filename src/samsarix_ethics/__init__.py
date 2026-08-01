@@ -3,6 +3,12 @@
 
 """Public API for the Samsarix Agent Ethics policy gate."""
 
+from .approval import (
+    MAX_TOOL_CALL_FINGERPRINT_BYTES,
+    TOOL_CALL_APPROVAL_VERSION,
+    TOOL_CALL_FINGERPRINT_VERSION,
+    ToolCallApproval,
+)
 from .audit import AUDIT_RECORD_VERSION, AuditRecord, AuditSink, JsonlAuditSink
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
@@ -22,6 +28,7 @@ from .gate import (
     ToolExecutionResult,
     ToolGate,
     build_tool_context,
+    fingerprint_tool_call,
 )
 from .io import append_audit_record, load_context, load_policy
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
@@ -29,6 +36,7 @@ from .schema import (
     get_audit_record_schema,
     get_policy_schema,
     get_policy_test_schema,
+    get_tool_approval_schema,
     get_tool_context_schema,
 )
 from .testing import (
@@ -49,7 +57,10 @@ __all__ = [
     "AUDIT_RECORD_VERSION",
     "MAX_BATCH_ITEMS",
     "MAX_POLICY_TEST_BYTES",
+    "MAX_TOOL_CALL_FINGERPRINT_BYTES",
     "MAX_TOOL_CAPABILITIES",
+    "TOOL_CALL_APPROVAL_VERSION",
+    "TOOL_CALL_FINGERPRINT_VERSION",
     "TOOL_CONTEXT_VERSION",
     "AuditLogError",
     "AuditRecord",
@@ -72,6 +83,7 @@ __all__ = [
     "PolicyTestValidationError",
     "PolicyValidationError",
     "SamsarixEthicsError",
+    "ToolCallApproval",
     "ToolCallBlockedError",
     "ToolCallDeniedError",
     "ToolCallReviewRequiredError",
@@ -79,9 +91,11 @@ __all__ = [
     "ToolGate",
     "append_audit_record",
     "build_tool_context",
+    "fingerprint_tool_call",
     "get_audit_record_schema",
     "get_policy_schema",
     "get_policy_test_schema",
+    "get_tool_approval_schema",
     "get_tool_context_schema",
     "load_context",
     "load_policy",

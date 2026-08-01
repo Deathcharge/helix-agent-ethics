@@ -112,4 +112,6 @@ To configure an editor or external validator, export the versioned schemas:
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
+samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
+samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```

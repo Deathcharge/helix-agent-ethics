@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from samsarix_ethics import AuditRecord, ToolCallDeniedError, ToolGate, load_policy
+from samsarix_ethics import (
+    AuditRecord,
+    ToolCallApproval,
+    ToolCallDeniedError,
+    ToolGate,
+    fingerprint_tool_call,
+    load_policy,
+)
 
 
 def main() -> None:
@@ -34,6 +41,26 @@ def main() -> None:
         )
     except ToolCallDeniedError as exc:
         print(f"blocked {exc.decision.decision_id}: {exc.decision.outcome.value}")
+
+    delete_arguments = {"ticket_id": "T-100"}
+    delete_actor = {"id": "support-agent"}
+    fingerprint = fingerprint_tool_call(
+        "delete-call-100",
+        "delete_ticket",
+        delete_arguments,
+        capabilities=["destructive"],
+        actor=delete_actor,
+    )
+    approved = gate.execute(
+        "delete_ticket",
+        delete_arguments,
+        lambda arguments: {"deleted": arguments["ticket_id"]},
+        capabilities=["destructive"],
+        actor=delete_actor,
+        tool_call_id="delete-call-100",
+        approval=ToolCallApproval("delete-call-100", True, fingerprint),
+    )
+    print(f"approved {approved.decision.decision_id}: {approved.value}")
 
     print(f"exported {len(audit_records)} metadata-only audit records")
 

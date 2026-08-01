@@ -48,7 +48,7 @@
       "message": "Destructive tool calls require explicit human approval.",
       "conditions": [
         {"field": "action.capabilities", "operator": "contains", "value": "destructive"},
-        {"field": "context.human_approved", "operator": "not_exists"}
+        {"field": "context.approval.approved", "operator": "not_exists"}
       ]
     },
     {
@@ -58,7 +58,7 @@
       "message": "The destructive tool call was not approved.",
       "conditions": [
         {"field": "action.capabilities", "operator": "contains", "value": "destructive"},
-        {"field": "context.human_approved", "operator": "eq", "value": false}
+        {"field": "context.approval.approved", "operator": "eq", "value": false}
       ]
     },
     {
@@ -68,7 +68,7 @@
       "message": "External side effects require human review.",
       "conditions": [
         {"field": "action.capabilities", "operator": "contains", "value": "external:write"},
-        {"field": "context.human_approved", "operator": "not_exists"}
+        {"field": "context.approval.approved", "operator": "not_exists"}
       ]
     },
     {
@@ -78,7 +78,7 @@
       "message": "The external side effect was rejected.",
       "conditions": [
         {"field": "action.capabilities", "operator": "contains", "value": "external:write"},
-        {"field": "context.human_approved", "operator": "eq", "value": false}
+        {"field": "context.approval.approved", "operator": "eq", "value": false}
       ]
     },
     {
@@ -93,7 +93,7 @@
           "operator": "subset_of",
           "value": ["resource:read", "destructive", "external:write", "data:sensitive"]
         },
-        {"field": "context.human_approved", "operator": "eq", "value": true}
+        {"field": "context.approval.approved", "operator": "eq", "value": true}
       ]
     },
     {
@@ -108,7 +108,7 @@
           "operator": "subset_of",
           "value": ["resource:read", "destructive", "external:write", "data:sensitive"]
         },
-        {"field": "context.human_approved", "operator": "eq", "value": true}
+        {"field": "context.approval.approved", "operator": "eq", "value": true}
       ]
     },
     {

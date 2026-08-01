@@ -68,7 +68,7 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|tool-context|audit-record]
+samsarix-ethics schema [policy|policy-test|tool-context|tool-approval|audit-record]
 samsarix-ethics test --policy POLICY.json TESTS.json [--format text|json]
 samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
@@ -102,6 +102,7 @@ Print the versioned Draft 2020-12 schemas for editors, CI, or code generation:
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
+samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```
 
@@ -151,6 +152,43 @@ result = gate.execute(
 )
 print(result.decision.decision_id, result.value)
 ```
+
+For a paused human-review flow, bind the authenticated decision to the exact framework call ID,
+tool name, arguments, capabilities, and actor that were displayed for review:
+
+```python
+from samsarix_ethics import ToolCallApproval, fingerprint_tool_call
+
+call_id = "email-call-100"
+arguments = {"to": "customer@example.com", "subject": "Case update"}
+actor = {"id": "support-agent"}
+
+# Persist this server-side with the pending call before requesting review.
+pending_fingerprint = fingerprint_tool_call(
+    call_id,
+    "send_email",
+    arguments,
+    capabilities=["external:write"],
+    actor=actor,
+)
+
+# Construct this only from an authenticated reviewer decision and stored fingerprint.
+approval = ToolCallApproval(call_id, True, pending_fingerprint)
+result = gate.execute(
+    "send_email",
+    arguments,
+    lambda prepared: mailer.send(**prepared),
+    capabilities=["external:write"],
+    actor=actor,
+    tool_call_id=call_id,
+    approval=approval,
+)
+```
+
+`ToolGate` recomputes the bounded versioned fingerprint and rejects any changed call before policy
+evaluation, audit delivery, or execution. The application still owns reviewer authentication,
+expiration, atomic one-time consumption, and protected pending-call storage. A parsed
+`ToolCallApproval` is evidence supplied by the caller, not proof that its source is authentic.
 
 `execute_async` provides the same fail-closed boundary for async callbacks. Denials raise
 `ToolCallDeniedError`; review outcomes raise `ToolCallReviewRequiredError`; neither invokes the

@@ -21,6 +21,7 @@ the legacy `helix-unified` repository.
 
 - `models.py`: strict schema validation and immutable policy/decision values.
 - `audit.py`: versioned metadata-only records, the caller sink contract, and local JSONL sink.
+- `approval.py`: immutable approval records and bounded exact-call fingerprints.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `engine.py`: dotted-field resolution, typed condition operators, rule matching, and precedence.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and the legacy audit helper.
@@ -74,17 +75,24 @@ runs once before authorization, and owns transport, retries, idempotency, and du
 in-process tool. It evaluates a detached context, writes the optional audit record, and calls a
 callback with the evaluated detached arguments only for `allow`. Deny and review outcomes are
 distinct typed exceptions.
-Applications with durable approval workflows should store their own pending-call state, then
-re-evaluate with fresh trusted facts immediately before execution.
+Applications with durable approval workflows store an exact-call fingerprint with pending-call
+state. On resume, `ToolGate` verifies a structured approval against the normalized call before
+policy evaluation, audit delivery, or callback execution, then re-evaluates fresh trusted facts.
+The fingerprint binds the framework call ID, context-contract version, tool name, arguments,
+canonical capabilities, and actor. It intentionally excludes general runtime context so current
+authorization and risk facts can be re-read.
 
 ## Trust boundaries
 
 - **Policy authors/operators** are trusted to define correct rules and secure policy files.
 - **Evaluation input** may be attacker-controlled and is bounded and type-checked.
 - **Embedding application** owns authentication, authorization, fact integrity, enforcement,
-  concurrency, and the protected side effect.
+  approval expiry and atomic one-time consumption, concurrency, and the protected side effect.
 - **Tool capability labels** are trusted application facts; model output must not assign its own
   permissions or approval state.
+- **Bound approval records** prove only that application-supplied approval evidence matches the
+  exact proposed call. The application authenticates the reviewer and protects durable approval
+  state against forgery and replay.
 - **Filesystem/audit operator** owns access control, transport, idempotency, rotation, retention,
   backups, and tamper detection for audit destinations.
 
