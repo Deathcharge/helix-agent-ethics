@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import pytest
@@ -121,12 +122,92 @@ def test_policy_round_trip(policy_document: dict[str, Any]) -> None:
     assert Policy.from_dict(policy.to_dict()) == policy
 
 
+def test_boolean_policy_schema_version_is_rejected(policy_document: dict[str, Any]) -> None:
+    policy_document["schema_version"] = True
+
+    with pytest.raises(PolicyValidationError, match="schema_version must be 1"):
+        Policy.from_dict(policy_document)
+
+
+def test_policy_container_limit_is_applied_per_rule() -> None:
+    conditions = [
+        {"field": f"facts.value_{index}", "operator": "eq", "value": index} for index in range(32)
+    ]
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "large-policy",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": f"rule-{index}",
+                    "effect": "allow",
+                    "conditions": conditions,
+                }
+                for index in range(80)
+            ],
+        }
+    )
+
+    assert len(policy.rules) == 80
+    assert len(policy.rules[0].conditions) == 32
+
+
 def test_exists_condition_serializes_without_value() -> None:
     condition = PolicyCondition.from_dict(
         {"field": "actor.id", "operator": "exists"}, location="condition"
     )
 
     assert condition.to_dict() == {"field": "actor.id", "operator": "exists"}
+
+
+def test_exists_condition_rejects_unused_value() -> None:
+    with pytest.raises(PolicyValidationError, match="value is not allowed"):
+        PolicyCondition.from_dict(
+            {"field": "actor.id", "operator": "exists", "value": True},
+            location="condition",
+        )
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        (("not", "json"), "non-JSON value"),
+        (math.inf, "non-finite number"),
+    ],
+)
+def test_in_memory_policy_uses_json_contract(
+    value: Any, message: str, policy_document: dict[str, Any]
+) -> None:
+    policy_document["rules"][0]["conditions"][0]["value"] = value
+
+    with pytest.raises(PolicyValidationError, match=message):
+        Policy.from_dict(policy_document)
+
+
+def test_reference_path_length_is_bounded() -> None:
+    with pytest.raises(PolicyValidationError, match="not a valid field path"):
+        PolicyCondition.from_dict(
+            {"field": "actor.id", "operator": "eq", "value": {"$ref": "x" * 257}},
+            location="condition",
+        )
+
+
+def test_direct_condition_constructor_rejects_non_json_value() -> None:
+    with pytest.raises(PolicyValidationError, match="non-JSON value"):
+        PolicyCondition.from_dict(
+            {"field": "actor.id", "operator": "eq", "value": ("not", "json")},
+            location="condition",
+        )
+
+
+def test_direct_rule_constructor_rejects_non_string_key() -> None:
+    with pytest.raises(PolicyValidationError, match="non-string object key"):
+        PolicyRule.from_dict(
+            {"id": "rule", "effect": "deny", "conditions": [], 1: "bad"},
+            index=0,
+        )
 
 
 def test_membership_condition_accepts_array_reference() -> None:
@@ -136,3 +217,30 @@ def test_membership_condition_accepts_array_reference() -> None:
     )
 
     assert condition.value == {"$ref": "allowed.actions"}
+
+
+def test_policy_condition_values_are_recursively_immutable() -> None:
+    source = ["read", {"nested": ["value"]}]
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "immutable-values",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "allow-listed",
+                    "effect": "allow",
+                    "conditions": [{"field": "action", "operator": "in", "value": source}],
+                }
+            ],
+        }
+    )
+    source.append("delete")
+    serialized = policy.to_dict()
+    serialized["rules"][0]["conditions"][0]["value"].append("publish")
+
+    condition = policy.rules[0].conditions[0]
+    assert condition.value == ("read", {"nested": ("value",)})
+    assert condition.to_dict()["value"] == ["read", {"nested": ["value"]}]
+    assert Policy.from_dict(policy.to_dict()) == policy

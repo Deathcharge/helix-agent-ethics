@@ -10,3 +10,5 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.PolicyEngine.__module__ == "samsarix_ethics.engine"
     assert "PolicyValidationError" in samsarix_ethics.__all__
     assert "SamsarixEthicsError" in samsarix_ethics.__all__
+    assert "validate_context" in samsarix_ethics.__all__
+    assert samsarix_ethics.MAX_BATCH_ITEMS == 1_000

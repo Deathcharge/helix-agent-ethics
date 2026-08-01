@@ -6,11 +6,13 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from typing import Any, ClassVar
 
-from .errors import PolicyValidationError
+from .errors import InputValidationError, PolicyValidationError
+from .validation import freeze_json_value, thaw_json_value, validate_json_shape
 
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _FIELD_PATH = re.compile(r"^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$")
@@ -40,6 +42,13 @@ def _expect_mapping(value: Any, location: str) -> dict[str, Any]:
     if not all(isinstance(key, str) for key in value):
         raise PolicyValidationError(f"{location} contains a non-string key")
     return value
+
+
+def _validate_policy_json_shape(value: Any, location: str) -> None:
+    try:
+        validate_json_shape(value, label=location)
+    except InputValidationError as exc:
+        raise PolicyValidationError(str(exc)) from exc
 
 
 def _check_keys(
@@ -90,6 +99,7 @@ class PolicyCondition:
 
     @classmethod
     def from_dict(cls, value: Any, *, location: str) -> PolicyCondition:
+        _validate_policy_json_shape(value, location)
         data = _expect_mapping(value, location)
         _check_keys(
             data,
@@ -104,26 +114,30 @@ class PolicyCondition:
         if not isinstance(operator, str) or operator not in cls.SUPPORTED_OPERATORS:
             supported = ", ".join(sorted(cls.SUPPORTED_OPERATORS))
             raise PolicyValidationError(f"{location}.operator must be one of: {supported}")
+        if operator in {"exists", "not_exists"} and "value" in data:
+            raise PolicyValidationError(
+                f"{location}.value is not allowed for operator {operator!r}"
+            )
         if operator not in {"exists", "not_exists"} and "value" not in data:
             raise PolicyValidationError(f"{location}.value is required for operator {operator!r}")
         expected = data.get("value")
-        if isinstance(expected, dict):
+        if isinstance(expected, Mapping):
             if set(expected) != {"$ref"} or not isinstance(expected["$ref"], str):
                 raise PolicyValidationError(
                     f"{location}.value objects must contain only a string '$ref' field"
                 )
-            if not _FIELD_PATH.fullmatch(expected["$ref"]):
+            if len(expected["$ref"]) > 256 or not _FIELD_PATH.fullmatch(expected["$ref"]):
                 raise PolicyValidationError(f"{location}.value.$ref is not a valid field path")
         if operator in {"in", "not_in"} and not isinstance(expected, (list, dict)):
             raise PolicyValidationError(
                 f"{location}.value must be a JSON array or '$ref' for operator {operator!r}"
             )
-        return cls(field=field, operator=operator, value=expected)
+        return cls(field=field, operator=operator, value=freeze_json_value(expected))
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {"field": self.field, "operator": self.operator}
         if self.operator not in {"exists", "not_exists"}:
-            data["value"] = self.value
+            data["value"] = thaw_json_value(self.value)
         return data
 
 
@@ -140,6 +154,7 @@ class PolicyRule:
     @classmethod
     def from_dict(cls, value: Any, *, index: int) -> PolicyRule:
         location = f"rules[{index}]"
+        _validate_policy_json_shape(value, location)
         data = _expect_mapping(value, location)
         _check_keys(
             data,
@@ -215,7 +230,7 @@ class Policy:
             optional={"description"},
             location="policy",
         )
-        if data["schema_version"] != 1:
+        if isinstance(data["schema_version"], bool) or data["schema_version"] != 1:
             raise PolicyValidationError("policy.schema_version must be 1")
         policy_id = _identifier(data["id"], "policy.id")
         version = _identifier(data["version"], "policy.version")

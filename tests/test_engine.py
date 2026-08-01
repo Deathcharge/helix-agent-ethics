@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+import math
+from itertools import repeat
 from typing import Any
 
 import pytest
 
-from samsarix_ethics import EvaluationError, InputValidationError, Outcome, Policy, PolicyEngine
+from samsarix_ethics import (
+    MAX_BATCH_ITEMS,
+    EvaluationError,
+    InputValidationError,
+    Outcome,
+    Policy,
+    PolicyEngine,
+)
 
 
 def test_explicit_allow(policy_document: dict[str, Any]) -> None:
@@ -46,6 +55,34 @@ def test_boolean_approval_does_not_accept_integer_one() -> None:
     decision = PolicyEngine(policy).evaluate({"approved": 1, "roles": [1]})
 
     assert decision.outcome is Outcome.DENY
+
+
+def test_nested_json_arrays_and_objects_compare_after_policy_freezing() -> None:
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "structured-equality",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "allow-structured",
+                    "effect": "allow",
+                    "conditions": [
+                        {
+                            "field": "value",
+                            "operator": "eq",
+                            "value": [1, {"enabled": True}],
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    decision = PolicyEngine(policy).evaluate({"value": [1.0, {"enabled": True}]})
+
+    assert decision.outcome is Outcome.ALLOW
 
 
 def test_deny_overrides_allow(policy_document: dict[str, Any]) -> None:
@@ -192,6 +229,71 @@ def test_invalid_comparison_type_fails_closed() -> None:
 def test_non_object_context_is_rejected(policy_document: dict[str, Any]) -> None:
     with pytest.raises(InputValidationError, match="JSON object"):
         PolicyEngine(Policy.from_dict(policy_document)).evaluate([])  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("context", "message"),
+    [
+        ({"nested": {1: "value"}}, "non-string object key"),
+        ({"value": ("not", "json")}, "non-JSON value of type tuple"),
+        ({"value": math.inf}, "non-finite number"),
+    ],
+)
+def test_in_memory_context_uses_json_contract(
+    context: dict[str, Any], message: str, policy_document: dict[str, Any]
+) -> None:
+    with pytest.raises(InputValidationError, match=message):
+        PolicyEngine(Policy.from_dict(policy_document)).evaluate(context)
+
+
+def test_bounded_batch_evaluation_preserves_order(policy_document: dict[str, Any]) -> None:
+    engine = PolicyEngine(Policy.from_dict(policy_document))
+
+    decisions = engine.evaluate_many(
+        [
+            {"action": {"operation": "read"}},
+            {"action": {"operation": "delete"}},
+            {"action": {"operation": "write"}},
+        ]
+    )
+
+    assert tuple(decision.outcome for decision in decisions) == (
+        Outcome.ALLOW,
+        Outcome.DENY,
+        Outcome.REVIEW,
+    )
+
+
+def test_batch_evaluation_reports_item_and_size_errors(policy_document: dict[str, Any]) -> None:
+    engine = PolicyEngine(Policy.from_dict(policy_document))
+
+    with pytest.raises(InputValidationError, match="batch must be iterable"):
+        engine.evaluate_many(None)  # type: ignore[arg-type]
+    with pytest.raises(InputValidationError, match=r"batch item 1.*non-finite"):
+        engine.evaluate_many([{}, {"value": math.nan}])
+    with pytest.raises(InputValidationError, match=f"limit of {MAX_BATCH_ITEMS}"):
+        engine.evaluate_many(repeat({}, MAX_BATCH_ITEMS + 1))
+
+
+def test_batch_evaluation_indexes_evaluation_errors() -> None:
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "batch-errors",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "numeric-comparison",
+                    "effect": "allow",
+                    "conditions": [{"field": "value", "operator": "gt", "value": 1}],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(EvaluationError, match=r"batch item 1.*does not accept booleans"):
+        PolicyEngine(policy).evaluate_many([{"value": 2}, {"value": True}])
 
 
 def test_review_and_warning_rules_are_explained() -> None:

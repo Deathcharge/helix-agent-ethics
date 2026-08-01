@@ -30,6 +30,8 @@ def test_help_and_version() -> None:
 
     assert help_result.returncode == 0
     assert "check" in help_result.stdout
+    assert "schema" in help_result.stdout
+    assert "test" in help_result.stdout
     assert version_result.returncode == 0
     assert version_result.stdout.strip() == "samsarix-ethics 0.1.0"
 
@@ -108,3 +110,55 @@ def test_text_output_and_audit_log(
     assert "Outcome: ALLOW" in result.stdout
     assert "Reasons:" in result.stdout
     assert json.loads(audit_path.read_text(encoding="utf-8"))["outcome"] == "allow"
+
+
+def test_schema_commands_emit_versioned_json() -> None:
+    policy = _run_cli("schema")
+    policy_tests = _run_cli("schema", "policy-test")
+
+    assert policy.returncode == 0
+    assert json.loads(policy.stdout)["$id"].endswith("/policy/v1.json")
+    assert policy_tests.returncode == 0
+    assert json.loads(policy_tests.stdout)["$id"].endswith("/policy-test/v1.json")
+
+
+def test_policy_test_command_reports_pass_and_fail(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_path = write_json("policy.json", policy_document)
+    passing_path = write_json(
+        "passing.tests.json",
+        {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "name": "read is allowed",
+                    "input": {"action": {"operation": "read"}},
+                    "expected_outcome": "allow",
+                    "expected_matched_rules": ["allow-read"],
+                }
+            ],
+        },
+    )
+    failing_path = write_json(
+        "failing.tests.json",
+        {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "name": "wrong expectation",
+                    "input": {"action": {"operation": "read"}},
+                    "expected_outcome": "deny",
+                }
+            ],
+        },
+    )
+
+    passing = _run_cli("test", "--policy", str(policy_path), str(passing_path), "--format", "json")
+    failing = _run_cli("test", "--policy", str(policy_path), str(failing_path))
+
+    assert passing.returncode == 0
+    assert json.loads(passing.stdout)["successful"] is True
+    assert failing.returncode == 1
+    assert "FAIL wrong expectation" in failing.stdout
+    assert "1 failed" in failing.stdout

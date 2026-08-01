@@ -8,19 +8,16 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from collections.abc import Mapping
 from contextlib import suppress
 from pathlib import Path
 from typing import Any, BinaryIO
 
 from .errors import AuditLogError, InputValidationError, PolicyValidationError
 from .models import Decision, Policy
+from .validation import validate_json_shape
 
 MAX_POLICY_BYTES = 1_048_576
 MAX_INPUT_BYTES = 262_144
-MAX_JSON_DEPTH = 32
-MAX_CONTAINER_ITEMS = 10_000
-MAX_STRING_LENGTH = 65_536
 
 SAMPLE_POLICY: dict[str, Any] = {
     "schema_version": 1,
@@ -119,31 +116,6 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _validate_json_shape(root: Any, *, label: str) -> None:
-    stack: list[tuple[Any, int]] = [(root, 1)]
-    seen_items = 0
-    while stack:
-        value, depth = stack.pop()
-        if depth > MAX_JSON_DEPTH:
-            raise InputValidationError(
-                f"{label} exceeds the maximum JSON depth of {MAX_JSON_DEPTH}"
-            )
-        if isinstance(value, str) and len(value) > MAX_STRING_LENGTH:
-            raise InputValidationError(
-                f"{label} contains a string longer than {MAX_STRING_LENGTH} characters"
-            )
-        if isinstance(value, Mapping):
-            seen_items += len(value)
-            stack.extend((item, depth + 1) for item in value.values())
-        elif isinstance(value, list):
-            seen_items += len(value)
-            stack.extend((item, depth + 1) for item in value)
-        if seen_items > MAX_CONTAINER_ITEMS:
-            raise InputValidationError(
-                f"{label} exceeds the maximum of {MAX_CONTAINER_ITEMS} container items"
-            )
-
-
 def _parse_json(raw: bytes, *, label: str) -> dict[str, Any]:
     try:
         text = raw.decode("utf-8")
@@ -159,7 +131,7 @@ def _parse_json(raw: bytes, *, label: str) -> dict[str, Any]:
         raise InputValidationError(f"{label} is not valid JSON: {exc}") from exc
     if not isinstance(value, dict):
         raise InputValidationError(f"{label} must contain a JSON object")
-    _validate_json_shape(value, label=label)
+    validate_json_shape(value, label=label)
     return value
 
 

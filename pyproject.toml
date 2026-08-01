@@ -33,6 +33,7 @@ dependencies = []
 [project.optional-dependencies]
 dev = [
     "build==1.5.0",
+    "jsonschema==4.26.0",
     "mypy==1.19.1",
     "pytest==9.0.3",
     "pytest-cov==6.3.0",
@@ -53,7 +54,7 @@ Support = "https://github.com/Deathcharge/samsarix-agent-ethics/blob/main/SUPPOR
 where = ["src"]
 
 [tool.setuptools.package-data]
-samsarix_ethics = ["py.typed"]
+samsarix_ethics = ["py.typed", "schemas/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

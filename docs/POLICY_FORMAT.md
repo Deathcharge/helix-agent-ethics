@@ -71,7 +71,8 @@ action.
 ## Conditions
 
 Each condition contains a dotted `field`, an `operator`, and—except for existence checks—a `value`.
-All conditions in a rule must be true.
+Existence checks reject `value` rather than silently ignoring it. All conditions in a rule must be
+true.
 
 | Operator | Meaning |
 | --- | --- |
@@ -102,22 +103,49 @@ No interpolation or expression evaluation occurs.
 ## Resource limits
 
 - policy file: 1 MiB;
+- policy-test suite file: 4 MiB;
 - input object: 256 KiB;
-- JSON nesting: 32 levels;
-- combined container entries: 10,000;
+- JSON nesting: 32 levels per evaluation input, policy rule, or policy-test case;
+- combined container entries: 10,000 per evaluation input, policy rule, or policy-test case;
 - individual strings: 65,536 characters;
 - rules: 1,000 per policy;
 - conditions: 32 per rule.
 
+These bounds are independent; a file-size limit may be reached before a list-count limit.
+
 Duplicate JSON keys, non-UTF-8 input, `NaN`, and infinities are invalid.
+
+## JSON Schema
+
+The wheel contains Draft 2020-12 schemas for both formats. Print fresh copies without a network
+request:
+
+```bash
+samsarix-ethics schema policy > policy-v1.schema.json
+samsarix-ethics schema policy-test > policy-test-v1.schema.json
+```
+
+The runtime model remains authoritative for constraints JSON Schema cannot express conveniently,
+including unique rule IDs, bounded aggregate container size, and unique case names.
 
 ## Testing a policy
 
 Validate structure first, then maintain positive, negative, override, missing-field, and wrong-type
-fixtures for every protected operation:
+cases for every protected operation:
 
 ```bash
 samsarix-ethics validate policy.json
-samsarix-ethics check --policy policy.json --input allowed.json
-samsarix-ethics check --policy policy.json --input denied.json
+samsarix-ethics test --policy policy.json policy.tests.json
 ```
+
+A version 1 test suite is a JSON object with `schema_version`, an optional `name`, and 1-1,000
+uniquely named `cases`. Every case requires:
+
+- `name`: 1-200 character display name;
+- `input`: the bounded JSON object to evaluate;
+- `expected_outcome`: `allow`, `deny`, or `review`.
+
+Cases may also assert the exact ordered `expected_matched_rules` array and an
+`expected_warning_count`. The runner evaluates every case and reports `pass`, `fail`, or `error`;
+reports intentionally exclude raw inputs. Exit `0` means every case passed, while exit `1` means at
+least one expectation failed or evaluation errored. Malformed policies or suites exit `2`.

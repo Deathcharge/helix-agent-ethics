@@ -6,14 +6,16 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any, cast
 
 from .errors import EvaluationError, InputValidationError
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition
+from .validation import validate_context
 
 _MISSING = object()
+MAX_BATCH_ITEMS = 1_000
 
 
 def _field_value(context: Mapping[str, Any], path: str) -> Any:
@@ -27,7 +29,7 @@ def _field_value(context: Mapping[str, Any], path: str) -> Any:
 
 def _resolved_expected(context: Mapping[str, Any], condition: PolicyCondition) -> Any:
     expected = condition.value
-    if isinstance(expected, dict) and set(expected) == {"$ref"}:
+    if isinstance(expected, Mapping) and set(expected) == {"$ref"}:
         referenced = _field_value(context, expected["$ref"])
         if referenced is _MISSING:
             raise EvaluationError(
@@ -50,17 +52,23 @@ def _json_equal(left: Any, right: Any) -> bool:
         return type(left) is type(right) and left == right
     if isinstance(left, (int, float)) and isinstance(right, (int, float)):
         return bool(left == right)
-    if type(left) is not type(right):
-        return False
-    if isinstance(left, list):
+    left_array = isinstance(left, Sequence) and not isinstance(left, (str, bytes, bytearray))
+    right_array = isinstance(right, Sequence) and not isinstance(right, (str, bytes, bytearray))
+    if left_array or right_array:
+        if not (left_array and right_array):
+            return False
         return len(left) == len(right) and all(
             _json_equal(left_item, right_item)
             for left_item, right_item in zip(left, right, strict=True)
         )
-    if isinstance(left, Mapping):
+    if isinstance(left, Mapping) or isinstance(right, Mapping):
+        if not (isinstance(left, Mapping) and isinstance(right, Mapping)):
+            return False
         return left.keys() == right.keys() and all(
             _json_equal(left[key], right[key]) for key in left
         )
+    if type(left) is not type(right):
+        return False
     return bool(left == right)
 
 
@@ -123,8 +131,7 @@ class PolicyEngine:
         self.policy = policy
 
     def evaluate(self, context: Mapping[str, Any]) -> Decision:
-        if not isinstance(context, Mapping):
-            raise InputValidationError("evaluation input must be a JSON object")
+        context = validate_context(context)
 
         matched: list[tuple[int, str, Effect, str]] = []
         for rule in self.policy.rules:
@@ -175,3 +182,25 @@ class PolicyEngine:
             reasons=reasons,
             evaluated_rules=len(self.policy.rules),
         )
+
+    def evaluate_many(self, contexts: Iterable[Mapping[str, Any]]) -> tuple[Decision, ...]:
+        """Evaluate a bounded batch in input order."""
+
+        try:
+            iterator = iter(contexts)
+        except TypeError as exc:
+            raise InputValidationError("evaluation batch must be iterable") from exc
+
+        decisions: list[Decision] = []
+        for index, context in enumerate(iterator):
+            if index >= MAX_BATCH_ITEMS:
+                raise InputValidationError(
+                    f"evaluation batch exceeds the limit of {MAX_BATCH_ITEMS} items"
+                )
+            try:
+                decisions.append(self.evaluate(context))
+            except InputValidationError as exc:
+                raise InputValidationError(f"evaluation batch item {index}: {exc}") from exc
+            except EvaluationError as exc:
+                raise EvaluationError(f"evaluation batch item {index}: {exc}") from exc
+        return tuple(decisions)
