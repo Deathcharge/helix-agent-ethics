@@ -6,6 +6,23 @@
   "default_effect": "review",
   "rules": [
     {
+      "id": "deny-destructive-action-without-approval",
+      "effect": "deny",
+      "priority": 5,
+      "message": "Destructive actions require explicit human approval.",
+      "conditions": [
+        {
+          "field": "action.operation",
+          "operator": "in",
+          "value": ["delete", "destroy", "publish", "release", "send"]
+        },
+        {
+          "field": "context.human_approved",
+          "operator": "not_exists"
+        }
+      ]
+    },
+    {
       "id": "deny-unapproved-destructive-action",
       "effect": "deny",
       "priority": 10,

@@ -30,6 +30,20 @@ SAMPLE_POLICY: dict[str, Any] = {
     "default_effect": "review",
     "rules": [
         {
+            "id": "deny-destructive-action-without-approval",
+            "effect": "deny",
+            "priority": 5,
+            "message": "Destructive actions require explicit human approval.",
+            "conditions": [
+                {
+                    "field": "action.operation",
+                    "operator": "in",
+                    "value": ["delete", "destroy", "publish", "release", "send"],
+                },
+                {"field": "context.human_approved", "operator": "not_exists"},
+            ],
+        },
+        {
             "id": "deny-unapproved-destructive-action",
             "effect": "deny",
             "priority": 10,
@@ -160,7 +174,8 @@ def _read_file(path: str | Path, *, max_bytes: int, label: str) -> bytes:
     if size > max_bytes:
         raise InputValidationError(f"{label} exceeds the byte limit of {max_bytes}")
     try:
-        raw = file_path.read_bytes()
+        with file_path.open("rb") as stream:
+            raw = stream.read(max_bytes + 1)
     except OSError as exc:
         raise InputValidationError(f"cannot read {label} {file_path}: {exc}") from exc
     if len(raw) > max_bytes:

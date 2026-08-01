@@ -12,6 +12,7 @@ import pytest
 from samsarix_ethics import (
     AuditLogError,
     InputValidationError,
+    Outcome,
     Policy,
     PolicyEngine,
     PolicyValidationError,
@@ -92,6 +93,24 @@ def test_context_file_and_missing_stdin(tmp_path: Path) -> None:
         load_context(None)
 
 
+def test_file_read_remains_bounded_if_file_grows(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "input.json"
+    path.write_bytes(b"{}")
+    original_open = Path.open
+
+    def growing_open(file_path: Path, mode: str = "r", *args: Any, **kwargs: Any) -> Any:
+        if file_path == path and mode == "rb":
+            return io.BytesIO(b"x" * (MAX_INPUT_BYTES + 1))
+        return original_open(file_path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", growing_open)
+
+    with pytest.raises(InputValidationError, match="byte limit"):
+        load_context(path)
+
+
 def test_missing_and_non_file_paths_are_rejected(tmp_path: Path) -> None:
     with pytest.raises(PolicyValidationError, match="cannot read policy"):
         load_policy(tmp_path / "missing.json")
@@ -108,6 +127,20 @@ def test_sample_policy_is_valid_and_overwrite_is_explicit(tmp_path: Path) -> Non
     with pytest.raises(PolicyValidationError, match="refusing to overwrite"):
         write_sample_policy(path)
     assert write_sample_policy(path, force=True) == path.resolve()
+
+
+def test_sample_policy_denies_destructive_actions_without_explicit_approval(tmp_path: Path) -> None:
+    path = tmp_path / "policy.json"
+    write_sample_policy(path)
+    engine = PolicyEngine(load_policy(path))
+
+    missing = engine.evaluate({"action": {"operation": "delete"}})
+    false = engine.evaluate(
+        {"action": {"operation": "delete"}, "context": {"human_approved": False}}
+    )
+
+    assert missing.outcome is Outcome.DENY
+    assert false.outcome is Outcome.DENY
 
 
 def test_sample_policy_requires_existing_parent(tmp_path: Path) -> None:

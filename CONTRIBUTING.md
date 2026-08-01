@@ -15,8 +15,13 @@ python -m venv .venv
 Activate the environment, then install the pinned toolchain:
 
 ```bash
-python -m pip install -r requirements-dev.txt
+python -m pip install --require-hashes -r requirements-dev.lock
+python -m pip install --no-deps -e .
 ```
+
+`requirements-dev.txt` is the human-maintained source list. Regenerate the cross-platform lock with
+`uv pip compile --universal --python-version 3.11 --generate-hashes requirements-dev.txt -o requirements-dev.lock`
+and review the resulting dependency changes before committing them.
 
 ## Required checks
 

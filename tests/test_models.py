@@ -86,6 +86,7 @@ def test_policy_shape_errors(document: Any, message: str) -> None:
     [
         ({"field": "bad path!", "operator": "eq", "value": 1}, "valid dotted"),
         ({"field": "value", "operator": "eq"}, "value is required"),
+        ({"field": "value", "operator": "in", "value": "read"}, "JSON array"),
         (
             {"field": "value", "operator": "eq", "value": {"$ref": "bad path!"}},
             "value.\\$ref",
@@ -126,3 +127,12 @@ def test_exists_condition_serializes_without_value() -> None:
     )
 
     assert condition.to_dict() == {"field": "actor.id", "operator": "exists"}
+
+
+def test_membership_condition_accepts_array_reference() -> None:
+    condition = PolicyCondition.from_dict(
+        {"field": "action", "operator": "in", "value": {"$ref": "allowed.actions"}},
+        location="condition",
+    )
+
+    assert condition.value == {"$ref": "allowed.actions"}

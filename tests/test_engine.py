@@ -18,6 +18,9 @@ def test_explicit_allow(policy_document: dict[str, Any]) -> None:
     assert decision.outcome is Outcome.ALLOW
     assert decision.matched_rules == ("allow-read",)
     assert decision.reasons == ("Read is allowed.",)
+    assert decision.to_dict()["matched_rules"] == ["allow-read"]
+    assert decision.to_dict()["warnings"] == []
+    assert decision.to_dict()["reasons"] == ["Read is allowed."]
 
 
 def test_boolean_approval_does_not_accept_integer_one() -> None:
@@ -138,9 +141,13 @@ def test_missing_reference_is_an_evaluation_error() -> None:
         ("starts_with", "system.admin", "system.", True),
         ("ends_with", "report.json", ".json", True),
         ("gt", 5, 4, True),
+        ("gt", 5, 4.5, True),
         ("gte", 5, 5, True),
+        ("gte", 5.0, 5, True),
         ("lt", 4, 5, True),
+        ("lt", 4.5, 5, True),
         ("lte", 5, 5, True),
+        ("lte", 5, 5.0, True),
     ],
 )
 def test_supported_operators(operator: str, actual: Any, expected: Any, result: bool) -> None:
@@ -178,7 +185,7 @@ def test_invalid_comparison_type_fails_closed() -> None:
         }
     )
 
-    with pytest.raises(EvaluationError, match="comparable values"):
+    with pytest.raises(EvaluationError, match="two numbers or two strings"):
         PolicyEngine(policy).evaluate({"risk": "high"})
 
 
@@ -213,7 +220,6 @@ def test_review_and_warning_rules_are_explained() -> None:
 @pytest.mark.parametrize(
     ("operator", "actual", "expected", "message"),
     [
-        ("in", "read", "read", "policy value to be an array"),
         ("contains", "read", "r", "input field to be an array"),
         ("starts_with", 10, "1", "requires two strings"),
         ("gt", True, True, "does not accept booleans"),

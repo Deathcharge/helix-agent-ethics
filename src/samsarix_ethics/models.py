@@ -114,6 +114,10 @@ class PolicyCondition:
                 )
             if not _FIELD_PATH.fullmatch(expected["$ref"]):
                 raise PolicyValidationError(f"{location}.value.$ref is not a valid field path")
+        if operator in {"in", "not_in"} and not isinstance(expected, (list, dict)):
+            raise PolicyValidationError(
+                f"{location}.value must be a JSON array or '$ref' for operator {operator!r}"
+            )
         return cls(field=field, operator=operator, value=expected)
 
     def to_dict(self) -> dict[str, Any]:
@@ -278,4 +282,7 @@ class Decision:
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["outcome"] = self.outcome.value
+        data["matched_rules"] = list(self.matched_rules)
+        data["warnings"] = list(self.warnings)
+        data["reasons"] = list(self.reasons)
         return data

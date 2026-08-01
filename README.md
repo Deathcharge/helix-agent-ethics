@@ -148,7 +148,8 @@ local and CI toolchain:
 
 ```bash
 python -m venv .venv
-python -m pip install -r requirements-dev.txt
+python -m pip install --require-hashes -r requirements-dev.lock
+python -m pip install --no-deps -e .
 python -m ruff format --check .
 python -m ruff check .
 python -m mypy

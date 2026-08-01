@@ -16,6 +16,14 @@ All notable product changes are recorded here.
 - Samsarix LLC ownership metadata, supported contact addresses, Apache-2.0 licensing, NOTICE
   attribution, and explicit trademark guidance.
 - Public support guidance, issue forms, code ownership, and a security-aware pull request template.
+- Reproducible hashed development lock, commit-pinned CI actions, and installed-wheel CI smoke test.
+- Fail-closed sample policy coverage for missing destructive-action approval.
+
+### Changed
+
+- Membership policy literals are validated before evaluation, mixed integer/float comparisons are
+  supported, decision sequences serialize as JSON arrays, and file reads remain bounded if a file
+  grows during loading.
 
 ### Removed
 
