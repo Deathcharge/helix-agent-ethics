@@ -32,6 +32,8 @@ class ConditionExplanation:
     status: ConditionExplanationStatus
 
     def to_dict(self) -> dict[str, Any]:
+        """Return the strict value-free JSON condition representation."""
+
         return {
             "index": self.index,
             "field": self.field,
@@ -52,6 +54,8 @@ class RuleExplanation:
     conditions: tuple[ConditionExplanation, ...]
 
     def to_dict(self) -> dict[str, Any]:
+        """Return the strict value-free JSON rule representation."""
+
         return {
             "rule_id": self.rule_id,
             "effect": self.effect.value,
@@ -78,6 +82,8 @@ class PolicyExplanation:
     explanation_version: int = POLICY_EXPLANATION_VERSION
 
     def to_dict(self) -> dict[str, Any]:
+        """Return the versioned input- and value-free JSON explanation."""
+
         return {
             "explanation_version": self.explanation_version,
             "policy_id": self.policy_id,

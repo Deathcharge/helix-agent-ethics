@@ -66,6 +66,8 @@ All notable product changes are recorded here.
 
 ### Changed
 
+- Text policy explanations now display the configured context-contract fingerprint, matching JSON
+  provenance, and public API/schema inventories include the complete explanation surface.
 - Membership policy literals are validated before evaluation, mixed integer/float comparisons are
   supported, decision sequences serialize as JSON arrays, and file reads remain bounded if a file
   grows during loading.

@@ -239,6 +239,18 @@ def test_deployment_lock_create_verify_and_enforce(
         str(lock_path),
         stdin='{"action":{"operation":"read"}}',
     )
+    explained_text = _run_cli(
+        "explain",
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        "--deployment-lock",
+        str(lock_path),
+        "--format",
+        "text",
+        stdin='{"action":{"operation":"read"}}',
+    )
 
     assert verified.returncode == 0
     assert "Verified deployment lock" in verified.stdout
@@ -249,6 +261,11 @@ def test_deployment_lock_create_verify_and_enforce(
     assert (
         json.loads(explained.stdout)["context_contract_fingerprint"]
         == lock_document["context_contract"]["fingerprint"]
+    )
+    assert explained_text.returncode == 0
+    assert (
+        "Context contract fingerprint: " + lock_document["context_contract"]["fingerprint"]
+        in explained_text.stdout
     )
 
     changed_policy = deepcopy(policy_document)
@@ -307,6 +324,7 @@ def test_explain_command_is_value_minimized_and_uses_decision_exit_codes(
     assert "policy-secret" not in allowed.stdout
     assert denied_text.returncode == 3
     assert "Outcome: DENY" in denied_text.stdout
+    assert "Context contract fingerprint:" not in denied_text.stdout
     assert "[NOT_EVALUATED] #1 action.secret eq" in denied_text.stdout
     assert "private-input" not in denied_text.stdout
 

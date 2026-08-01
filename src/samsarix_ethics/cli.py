@@ -271,6 +271,8 @@ def _decision_exit(outcome: Outcome) -> int:
 
 
 def _render_explanation(explanation: PolicyExplanation, output_format: str) -> str:
+    """Render one value-minimized explanation without adding evaluation data."""
+
     if output_format == "json":
         return json.dumps(explanation.to_dict(), indent=2, sort_keys=True)
     lines = [
@@ -280,6 +282,11 @@ def _render_explanation(explanation: PolicyExplanation, output_format: str) -> s
         f"Default applied: {'yes' if explanation.default_applied else 'no'}",
         "Rules:",
     ]
+    if explanation.context_contract_fingerprint is not None:
+        lines.insert(
+            3,
+            f"Context contract fingerprint: {explanation.context_contract_fingerprint}",
+        )
     for rule in explanation.rules:
         rule_status = "MATCH" if rule.matched else "MISS"
         decisive = ", decisive" if rule.decisive else ""
