@@ -60,6 +60,9 @@ All notable product changes are recorded here.
 - Canonical domain-separated context-contract fingerprints and strict versioned deployment locks
   that bind exact policy/contract content across CLI validation, live checks, `PolicyEngine`, and
   `ToolGate`, with a bundled schema and continuously verified real deployment example.
+- Deterministic value-minimized policy explanations with rule/condition match, miss, and
+  short-circuit status; decisive/default provenance; optional contract fingerprint; CLI/API/schema;
+  and no serialized input, condition values, `$ref` targets, or authored messages.
 
 ### Changed
 

@@ -48,6 +48,11 @@ supplied case matched a rule, not that every condition path or input is safe.
 Lint reports omit condition values, descriptions, and rule messages, but expose rule identifiers
 and zero-based condition locations. A clean lint report covers only documented deterministic
 findings and is not evidence that an allow rule reflects application intent or least privilege.
+Explanation reports additionally expose condition field paths, operators, match/miss/skip status,
+effects, priorities, outcomes, and policy/contract fingerprints. They omit input, policy values,
+messages, UUIDs, and timestamps, but repeated queries remain an authorization oracle. Restrict the
+`explain` CLI/API and its reports to trusted operators; never expose it as an unauthenticated
+production endpoint.
 Composition reports omit source paths, descriptions, rules, conditions, messages, and condition
 values, but expose source and target IDs, versions, rule counts, and exact fingerprints. Treat
 those fingerprints as operational metadata and equality oracles, not author signatures or

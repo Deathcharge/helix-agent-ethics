@@ -39,6 +39,8 @@ adoption remain separate evidence-based decisions.
   workflows so lifecycle evidence cannot silently use weaker input validation than production.
 - [x] Bind exact reviewed policy and context-contract content in a versioned deployment lock and
   fail closed on drift at CLI, engine, and tool-gate activation boundaries.
+- [x] Add operator-facing evaluation explanations that share production semantics while omitting
+  action input, policy values, and authored messages.
 
 ## Release candidate
 

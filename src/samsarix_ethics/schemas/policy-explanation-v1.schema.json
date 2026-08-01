@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/policy-explanation/v1.json",
+  "title": "Samsarix Agent Ethics policy explanation v1",
+  "description": "Value-minimized rule and condition statuses for one policy evaluation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "explanation_version",
+    "policy_id",
+    "policy_version",
+    "policy_fingerprint",
+    "context_contract_fingerprint",
+    "outcome",
+    "default_applied",
+    "matched_rule_ids",
+    "decisive_rule_ids",
+    "evaluated_rules",
+    "rules"
+  ],
+  "properties": {
+    "explanation_version": {"const": 1},
+    "policy_id": {"$ref": "#/$defs/identifier"},
+    "policy_version": {"$ref": "#/$defs/identifier"},
+    "policy_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "context_contract_fingerprint": {
+      "oneOf": [{"type": "null"}, {"$ref": "#/$defs/fingerprint"}]
+    },
+    "outcome": {"enum": ["allow", "deny", "review"]},
+    "default_applied": {"type": "boolean"},
+    "matched_rule_ids": {"$ref": "#/$defs/identifiers"},
+    "decisive_rule_ids": {"$ref": "#/$defs/identifiers"},
+    "evaluated_rules": {"type": "integer", "minimum": 0, "maximum": 1000},
+    "rules": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {"$ref": "#/$defs/rule"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"default_applied": {"const": true}}},
+      "then": {"properties": {"decisive_rule_ids": {"maxItems": 0}}},
+      "else": {"properties": {"decisive_rule_ids": {"minItems": 1}}}
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
+    },
+    "identifiers": {
+      "type": "array",
+      "maxItems": 1000,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/identifier"}
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "field", "operator", "status"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0, "maximum": 63},
+        "field": {"type": "string", "minLength": 1, "maxLength": 256},
+        "operator": {
+          "enum": [
+            "eq", "neq", "in", "not_in", "contains", "not_contains", "subset_of",
+            "exists", "not_exists", "starts_with", "ends_with", "gt", "gte", "lt", "lte"
+          ]
+        },
+        "status": {"enum": ["matched", "not_matched", "not_evaluated"]}
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule_id", "effect", "priority", "matched", "decisive", "conditions"],
+      "properties": {
+        "rule_id": {"$ref": "#/$defs/identifier"},
+        "effect": {"enum": ["allow", "deny", "review", "warn", "audit"]},
+        "priority": {"type": "integer", "minimum": -10000, "maximum": 10000},
+        "matched": {"type": "boolean"},
+        "decisive": {"type": "boolean"},
+        "conditions": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/condition"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"decisive": {"const": true}}},
+          "then": {
+            "properties": {
+              "matched": {"const": true},
+              "effect": {"enum": ["allow", "deny", "review"]}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"matched": {"const": true}}},
+          "then": {
+            "properties": {
+              "conditions": {
+                "items": {
+                  "allOf": [
+                    {"$ref": "#/$defs/condition"},
+                    {"properties": {"status": {"const": "matched"}}}
+                  ]
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "conditions": {
+                "contains": {"properties": {"status": {"const": "not_matched"}}},
+                "minContains": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 
 from .contracts import (
     ContextContract,
@@ -17,12 +17,19 @@ from .contracts import (
 )
 from .deployment import DeploymentLock, verify_deployment_lock
 from .errors import EvaluationError, InputValidationError
+from .explanation import (
+    ConditionExplanation,
+    ConditionExplanationStatus,
+    PolicyExplanation,
+    RuleExplanation,
+)
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition
 from .provenance import fingerprint_context_contract, fingerprint_policy
 from .validation import validate_context
 
 _MISSING = object()
 MAX_BATCH_ITEMS = 1_000
+_MatchedRule: TypeAlias = tuple[int, str, Effect, str]
 
 
 def _field_value(context: Mapping[str, Any], path: str) -> Any:
@@ -133,6 +140,17 @@ def _evaluate_condition(context: Mapping[str, Any], condition: PolicyCondition) 
     raise EvaluationError(f"unsupported operator: {operator}")
 
 
+def _outcome(matched: Sequence[_MatchedRule], default: Outcome) -> Outcome:
+    effects = {item[2] for item in matched}
+    if Effect.DENY in effects:
+        return Outcome.DENY
+    if Effect.REVIEW in effects:
+        return Outcome.REVIEW
+    if Effect.ALLOW in effects:
+        return Outcome.ALLOW
+    return default
+
+
 class PolicyEngine:
     """Evaluate validated policies against caller-supplied JSON objects.
 
@@ -168,35 +186,11 @@ class PolicyEngine:
         )
 
     def evaluate(self, context: Mapping[str, Any]) -> Decision:
-        context = (
-            validate_context(context)
-            if self.context_contract is None
-            else validate_context_against_contract(context, self.context_contract)
-        )
+        context = self._validated_context(context)
+        matched, _ = self._evaluate_rules(context, explain=False)
+        outcome = _outcome(matched, self.policy.default_effect)
 
-        matched: list[tuple[int, str, Effect, str]] = []
-        for rule in self.policy.rules:
-            try:
-                applies = all(
-                    _evaluate_condition(context, condition) for condition in rule.conditions
-                )
-            except EvaluationError as exc:
-                raise EvaluationError(f"rule {rule.id!r} failed: {exc}") from exc
-            if applies:
-                matched.append((rule.priority, rule.id, rule.effect, rule.message))
-
-        matched.sort(key=lambda item: (item[0], item[1]))
         matched_ids = tuple(item[1] for item in matched)
-        effects = {item[2] for item in matched}
-        if Effect.DENY in effects:
-            outcome = Outcome.DENY
-        elif Effect.REVIEW in effects:
-            outcome = Outcome.REVIEW
-        elif Effect.ALLOW in effects:
-            outcome = Outcome.ALLOW
-        else:
-            outcome = self.policy.default_effect
-
         deciding_effect = Effect(outcome.value)
         reasons = tuple(
             message or f"Rule {rule_id!r} matched with effect {effect.value!r}."
@@ -224,6 +218,97 @@ class PolicyEngine:
             reasons=reasons,
             evaluated_rules=len(self.policy.rules),
         )
+
+    def explain(self, context: Mapping[str, Any]) -> PolicyExplanation:
+        """Explain one evaluation without retaining input, literals, or messages."""
+
+        context = self._validated_context(context)
+        matched, rule_traces = self._evaluate_rules(context, explain=True)
+        outcome = _outcome(matched, self.policy.default_effect)
+        deciding_effect = Effect(outcome.value)
+        matched_ids = tuple(item[1] for item in matched)
+        decisive_ids = tuple(item[1] for item in matched if item[2] == deciding_effect)
+        matched_id_set = set(matched_ids)
+        decisive_id_set = set(decisive_ids)
+        rules = tuple(
+            RuleExplanation(
+                rule_id=rule.id,
+                effect=rule.effect,
+                priority=rule.priority,
+                matched=rule.id in matched_id_set,
+                decisive=rule.id in decisive_id_set,
+                conditions=conditions,
+            )
+            for rule, conditions in zip(self.policy.rules, rule_traces, strict=True)
+        )
+        return PolicyExplanation(
+            policy_id=self.policy.id,
+            policy_version=self.policy.version,
+            policy_fingerprint=self.policy_fingerprint,
+            context_contract_fingerprint=self.context_contract_fingerprint,
+            outcome=outcome,
+            default_applied=not decisive_ids,
+            matched_rule_ids=matched_ids,
+            decisive_rule_ids=decisive_ids,
+            rules=rules,
+        )
+
+    def _validated_context(self, context: Mapping[str, Any]) -> Mapping[str, Any]:
+        return (
+            validate_context(context)
+            if self.context_contract is None
+            else validate_context_against_contract(context, self.context_contract)
+        )
+
+    def _evaluate_rules(
+        self,
+        context: Mapping[str, Any],
+        *,
+        explain: bool,
+    ) -> tuple[list[_MatchedRule], tuple[tuple[ConditionExplanation, ...], ...]]:
+        matched: list[_MatchedRule] = []
+        traces: list[tuple[ConditionExplanation, ...]] = []
+        for rule in self.policy.rules:
+            applies = True
+            condition_traces: list[ConditionExplanation] = []
+            for index, condition in enumerate(rule.conditions):
+                if not applies:
+                    if explain:
+                        condition_traces.append(
+                            ConditionExplanation(
+                                index=index,
+                                field=condition.field,
+                                operator=condition.operator,
+                                status=ConditionExplanationStatus.NOT_EVALUATED,
+                            )
+                        )
+                    continue
+                try:
+                    condition_matched = _evaluate_condition(context, condition)
+                except EvaluationError as exc:
+                    raise EvaluationError(f"rule {rule.id!r} failed: {exc}") from exc
+                if explain:
+                    condition_traces.append(
+                        ConditionExplanation(
+                            index=index,
+                            field=condition.field,
+                            operator=condition.operator,
+                            status=(
+                                ConditionExplanationStatus.MATCHED
+                                if condition_matched
+                                else ConditionExplanationStatus.NOT_MATCHED
+                            ),
+                        )
+                    )
+                if not condition_matched:
+                    applies = False
+            if explain:
+                traces.append(tuple(condition_traces))
+            if applies:
+                matched.append((rule.priority, rule.id, rule.effect, rule.message))
+
+        matched.sort(key=lambda item: (item[0], item[1]))
+        return matched, tuple(traces)
 
     def evaluate_many(self, contexts: Iterable[Mapping[str, Any]]) -> tuple[Decision, ...]:
         """Evaluate a bounded batch in input order."""

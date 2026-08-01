@@ -25,6 +25,7 @@ from .deployment import create_deployment_lock, verify_deployment_lock
 from .diagnostics import PolicyLintReport, PolicyLintSeverity, lint_policy
 from .engine import PolicyEngine
 from .errors import PolicyCompositionError, SamsarixEthicsError
+from .explanation import PolicyExplanation
 from .io import (
     append_audit_record,
     load_context,
@@ -43,6 +44,7 @@ from .schema import (
     get_policy_comparison_schema,
     get_policy_composition_schema,
     get_policy_coverage_schema,
+    get_policy_explanation_schema,
     get_policy_lint_schema,
     get_policy_schema,
     get_policy_shadow_schema,
@@ -91,6 +93,21 @@ def _parser() -> argparse.ArgumentParser:
     )
     check.add_argument("--audit-log", help="append metadata-only JSONL to this path")
     check.add_argument("--format", choices=("json", "text"), default="json")
+
+    explain = subparsers.add_parser(
+        "explain", help="show value-minimized rule and condition evaluation status"
+    )
+    explain.add_argument("--policy", required=True, help="path to a JSON policy")
+    explain.add_argument(
+        "--context-contract", help="validate policy and input against this application contract"
+    )
+    explain.add_argument(
+        "--deployment-lock", help="require the policy and contract to match this exact lock"
+    )
+    explain.add_argument(
+        "--input", default="-", help="path to a JSON input object; default: standard input"
+    )
+    explain.add_argument("--format", choices=("json", "text"), default="json")
 
     validate = subparsers.add_parser(
         "validate", help="validate a JSON policy without evaluating it"
@@ -206,6 +223,7 @@ def _parser() -> argparse.ArgumentParser:
             "policy-comparison",
             "policy-composition",
             "policy-coverage",
+            "policy-explanation",
             "policy-lint",
             "policy-shadow",
             "context-contract",
@@ -250,6 +268,31 @@ def _decision_exit(outcome: Outcome) -> int:
         Outcome.DENY: EXIT_DENIED,
         Outcome.REVIEW: EXIT_REVIEW,
     }[outcome]
+
+
+def _render_explanation(explanation: PolicyExplanation, output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(explanation.to_dict(), indent=2, sort_keys=True)
+    lines = [
+        f"Outcome: {explanation.outcome.value.upper()}",
+        f"Policy: {explanation.policy_id}@{explanation.policy_version}",
+        f"Policy fingerprint: {explanation.policy_fingerprint}",
+        f"Default applied: {'yes' if explanation.default_applied else 'no'}",
+        "Rules:",
+    ]
+    for rule in explanation.rules:
+        rule_status = "MATCH" if rule.matched else "MISS"
+        decisive = ", decisive" if rule.decisive else ""
+        lines.append(
+            f"  [{rule_status}] {rule.rule_id} ({rule.effect.value}, priority={rule.priority}"
+            f"{decisive})"
+        )
+        for condition in rule.conditions:
+            lines.append(
+                f"    [{condition.status.value.upper()}] #{condition.index} "
+                f"{condition.field} {condition.operator}"
+            )
+    return "\n".join(lines)
 
 
 def _render_test_report(report: PolicyTestReport, output_format: str) -> str:
@@ -446,6 +489,7 @@ def main(
                 "policy-comparison": get_policy_comparison_schema,
                 "policy-composition": get_policy_composition_schema,
                 "policy-coverage": get_policy_coverage_schema,
+                "policy-explanation": get_policy_explanation_schema,
                 "policy-lint": get_policy_lint_schema,
                 "policy-shadow": get_policy_shadow_schema,
                 "context-contract": get_context_contract_schema,
@@ -617,6 +661,26 @@ def main(
                     file=output,
                 )
             return EXIT_ALLOWED
+
+        if arguments.command == "explain":
+            context = load_context(arguments.input, stdin=binary_input)
+            context_contract = (
+                load_context_contract(arguments.context_contract)
+                if arguments.context_contract
+                else None
+            )
+            deployment_lock = (
+                load_deployment_lock(arguments.deployment_lock)
+                if arguments.deployment_lock
+                else None
+            )
+            explanation = PolicyEngine(
+                policy,
+                context_contract=context_contract,
+                deployment_lock=deployment_lock,
+            ).explain(context)
+            print(_render_explanation(explanation, arguments.format), file=output)
+            return _decision_exit(explanation.outcome)
 
         if arguments.command == "test":
             suite = load_policy_test_suite(arguments.suite)

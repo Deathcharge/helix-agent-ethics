@@ -56,8 +56,9 @@ gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
 send_email = gate.bind("send_email", capabilities=["external:write"])
 ```
 
-The returned frozen `BoundToolGate` exposes `fingerprint`, `evaluate`, `enforce`, `execute`, and
-`execute_async` without per-call tool-name or capability parameters. Its canonical capability tuple
+The returned frozen `BoundToolGate` exposes `fingerprint`, `evaluate`, `enforce`, `explain`,
+`execute`, and `execute_async` without per-call tool-name or capability parameters. Explanation is
+value-minimized operator diagnostics, not authorization. Its canonical capability tuple
 is detached from the input iterable. This makes the secure integration shape easier: untrusted
 model or protocol call data supplies the arguments and framework call ID, while the application
 selects the pre-registered binding by tool name.
