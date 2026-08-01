@@ -12,12 +12,12 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any, BinaryIO
 
+from ._policy_payload import MAX_POLICY_BYTES, serialize_policy_document
 from .audit import AuditRecord, JsonlAuditSink
 from .errors import InputValidationError, PolicyValidationError
 from .models import Decision, Policy
 from .validation import validate_json_shape
 
-MAX_POLICY_BYTES = 1_048_576
 MAX_INPUT_BYTES = 262_144
 
 SAMPLE_POLICY: dict[str, Any] = {
@@ -214,7 +214,7 @@ def _write_policy_payload(
         raise PolicyValidationError(f"refusing to overwrite existing file: {target}")
     if not target.parent.exists():
         raise PolicyValidationError(f"parent directory does not exist: {target.parent}")
-    payload = _serialize_policy(value, label=label)
+    payload = serialize_policy_document(value, label=label)
     temporary_name: str | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -246,27 +246,6 @@ def _write_policy_payload(
                 Path(temporary_name).unlink(missing_ok=True)
         raise PolicyValidationError(f"cannot write {label} {target}: {exc}") from exc
     return target.resolve()
-
-
-def _serialize_policy(value: dict[str, Any], *, label: str) -> bytes:
-    try:
-        validate_json_shape(value, label=label)
-    except InputValidationError as exc:
-        raise PolicyValidationError(str(exc)) from exc
-    encoder = json.JSONEncoder(allow_nan=False, ensure_ascii=True, indent=2, sort_keys=False)
-    payload = bytearray()
-    try:
-        for part in encoder.iterencode(value):
-            chunk = part.encode("ascii")
-            if len(payload) + len(chunk) + 1 > MAX_POLICY_BYTES:
-                raise PolicyValidationError(
-                    f"{label} exceeds the byte limit of {MAX_POLICY_BYTES} when serialized"
-                )
-            payload.extend(chunk)
-    except (TypeError, ValueError, UnicodeError) as exc:
-        raise PolicyValidationError(f"{label} cannot be serialized: {type(exc).__name__}") from exc
-    payload.extend(b"\n")
-    return bytes(payload)
 
 
 def append_audit_record(path: str | Path, decision: Decision) -> None:

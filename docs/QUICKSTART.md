@@ -62,10 +62,17 @@ This build-time step combines eight organization-owned guardrails with four supp
 It emits one ordinary policy plus a value-minimized source-provenance report. Existing output is
 never replaced without `--force`. See [layered policy composition](POLICY_COMPOSITION.md).
 
+Lint and regression-test the exact generated deployment artifact:
+
+```bash
+samsarix-ethics lint composed-policy.json --fail-on suggestion
+samsarix-ethics test --policy composed-policy.json examples/tests/tool-call-baseline.tests.json
+```
+
 ## 6. Measure policy rule coverage
 
 ```bash
-samsarix-ethics coverage --policy examples/policies/tool-call-baseline.json examples/tests/tool-call-baseline.tests.json --threshold 100
+samsarix-ethics coverage --policy composed-policy.json examples/tests/tool-call-baseline.tests.json --threshold 100
 ```
 
 The tool-call suite matches all twelve rules and observes allow, deny, and review. Missing the
@@ -119,7 +126,7 @@ denied, external writes as reviewable, and unknown capabilities as reviewable:
 ```python
 from samsarix_ethics import ToolGate, load_policy
 
-gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
+gate = ToolGate(load_policy("composed-policy.json"))
 read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
 result = read_ticket.execute(
     {"ticket_id": "T-100"},
@@ -132,7 +139,7 @@ assert result.decision.allowed
 Run the fourteen-case compatibility fixture:
 
 ```bash
-samsarix-ethics test --policy examples/policies/tool-call-baseline.json examples/tests/tool-call-baseline.tests.json
+samsarix-ethics test --policy composed-policy.json examples/tests/tool-call-baseline.tests.json
 ```
 
 See [tool-call integrations](TOOL_CALLS.md) before connecting an agent runtime.

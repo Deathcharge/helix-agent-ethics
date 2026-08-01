@@ -16,6 +16,7 @@ from .validation import freeze_json_value, thaw_json_value, validate_json_shape
 
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _FIELD_PATH = re.compile(r"^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$")
+MAX_POLICY_RULES = 1_000
 
 
 class Effect(StrEnum):
@@ -249,8 +250,8 @@ class Policy:
         rules_value = data["rules"]
         if not isinstance(rules_value, list):
             raise PolicyValidationError("policy.rules must be a JSON array")
-        if len(rules_value) > 1_000:
-            raise PolicyValidationError("policy.rules exceeds the limit of 1000")
+        if len(rules_value) > MAX_POLICY_RULES:
+            raise PolicyValidationError(f"policy.rules exceeds the limit of {MAX_POLICY_RULES}")
         rules = tuple(
             PolicyRule.from_dict(item, index=index) for index, item in enumerate(rules_value)
         )

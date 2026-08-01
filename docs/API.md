@@ -79,8 +79,9 @@ within the normal 1,000-rule, 1 MiB serialized, and structural policy limits. Vi
 `PolicyEngine`, `ToolGate`, lint, regression, coverage, and comparison workflows.
 `PolicyComposition.sources` is an ordered tuple of frozen `PolicyCompositionSource` records.
 `policy_fingerprint` exposes the target's canonical fingerprint. `to_dict()` returns a versioned
-report with target/source IDs, versions, fingerprints and rule counts, but no paths, descriptions,
-rules, conditions, messages, or values.
+report with approved metadata including the target default effect, target/source IDs, versions,
+fingerprints, and rule counts. It omits paths, descriptions, rules, conditions, messages, and
+condition values.
 
 The CLI equivalent is `samsarix-ethics compose --id ... --version ... --policy SOURCE ...
 --output TARGET`. Output replacement requires `--force`. See

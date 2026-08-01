@@ -63,7 +63,7 @@ from .gate import (
     fingerprint_tool_call,
 )
 from .io import append_audit_record, load_context, load_policy, write_policy
-from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
+from .models import MAX_POLICY_RULES, Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
 from .provenance import POLICY_FINGERPRINT_VERSION, fingerprint_policy
 from .schema import (
     get_audit_record_schema,
@@ -94,6 +94,7 @@ __all__ = [
     "AUDIT_RECORD_VERSION",
     "MAX_BATCH_ITEMS",
     "MAX_COMPOSED_POLICIES",
+    "MAX_POLICY_RULES",
     "MAX_POLICY_TEST_BYTES",
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
     "MAX_TOOL_CAPABILITIES",

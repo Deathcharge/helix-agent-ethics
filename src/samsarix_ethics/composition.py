@@ -9,9 +9,9 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from ._policy_payload import serialize_policy_document
 from .errors import PolicyCompositionError, PolicyValidationError
-from .io import _serialize_policy
-from .models import Policy
+from .models import MAX_POLICY_RULES, Policy
 from .provenance import fingerprint_policy
 
 POLICY_COMPOSITION_VERSION = 1
@@ -130,8 +130,10 @@ def compose_policies(
         raise PolicyCompositionError(f"policy composition has duplicate rule ids: {details}")
 
     total_rules = sum(len(source.rules) for source in sources)
-    if total_rules > 1_000:
-        raise PolicyCompositionError("composed policy.rules exceeds the limit of 1000")
+    if total_rules > MAX_POLICY_RULES:
+        raise PolicyCompositionError(
+            f"composed policy.rules exceeds the limit of {MAX_POLICY_RULES}"
+        )
 
     try:
         policy = Policy.from_dict(
@@ -148,7 +150,7 @@ def compose_policies(
         raise PolicyCompositionError(f"invalid composed policy metadata: {exc}") from exc
 
     try:
-        _serialize_policy(policy.to_dict(), label="composed policy")
+        serialize_policy_document(policy.to_dict(), label="composed policy")
     except PolicyValidationError as exc:
         raise PolicyCompositionError(str(exc)) from exc
 

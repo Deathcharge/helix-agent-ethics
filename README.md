@@ -131,9 +131,10 @@ samsarix-ethics compose \
 ```
 
 Sources must share a default effect and have globally unique rule IDs. The command writes the
-deployable policy atomically and reports exact source/output fingerprints without copying paths,
-descriptions, rules, conditions, messages, or values. The result works with every existing command;
-the bundled fourteen-case support-agent suite reaches 100% of its twelve composed rules. See the
+deployable policy atomically and reports approved metadata including the default effect, IDs,
+versions, rule counts, and exact source/output fingerprints. It omits paths, descriptions, rules,
+conditions, messages, and condition values. The result works with every existing command; the
+bundled fourteen-case support-agent suite reaches 100% of its twelve composed rules. See the
 [layered policy composition guide](docs/POLICY_COMPOSITION.md).
 
 Lint a valid policy for a deliberately small set of deterministic authoring risks:

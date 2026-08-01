@@ -10,6 +10,7 @@ import pytest
 
 from samsarix_ethics import (
     MAX_COMPOSED_POLICIES,
+    MAX_POLICY_RULES,
     POLICY_COMPOSITION_VERSION,
     Outcome,
     Policy,
@@ -17,6 +18,7 @@ from samsarix_ethics import (
     PolicyEngine,
     compose_policies,
     fingerprint_policy,
+    get_policy_composition_schema,
 )
 
 
@@ -131,6 +133,17 @@ def test_compose_policies_enforces_source_and_aggregate_rule_limits() -> None:
         compose_policies(too_many_sources, policy_id="combined", policy_version="1")
     with pytest.raises(PolicyCompositionError, match="exceeds the limit of 1000"):
         compose_policies([first, second], policy_id="combined", policy_version="1")
+
+
+def test_composition_schema_limits_match_authoritative_constants() -> None:
+    schema = get_policy_composition_schema()
+    properties = schema["properties"]
+    source = schema["$defs"]["source"]["properties"]
+
+    assert properties["source_count"]["maximum"] == MAX_COMPOSED_POLICIES
+    assert properties["sources"]["maxItems"] == MAX_COMPOSED_POLICIES
+    assert properties["total_rules"]["maximum"] == MAX_POLICY_RULES
+    assert source["rule_count"]["maximum"] == MAX_POLICY_RULES
 
 
 def test_compose_policies_rejects_an_output_the_standard_loader_cannot_read() -> None:

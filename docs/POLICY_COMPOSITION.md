@@ -28,7 +28,7 @@ samsarix-ethics compose \
 ```
 
 The command atomically writes `composed-policy.json` and prints a versioned, value-minimized
-provenance report. The generated policy has the same twelve rules and exact semantic fingerprint
+provenance report. The generated policy has the same twelve rules and exact policy fingerprint
 as `examples/policies/tool-call-baseline.json`. Exercise the full deployment artifact:
 
 ```bash
