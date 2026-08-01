@@ -102,6 +102,11 @@ Bounded review used current primary sources:
   [policy updates](https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/policies-edit.html)
   expose update timestamps. Agent Ethics remains local, but needs equivalent evidence that two
   decisions actually used identical policy content.
+- [OPA policy testing](https://www.openpolicyagent.org/docs/policy-testing) treats executable tests
+  as the change-safety mechanism for evolving rules, while the
+  [Verified Permissions test bench](https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/authorization-testing.html)
+  supports evaluating requests while policies change. The existing bounded suite can therefore
+  serve as a privacy-minimized candidate-impact corpus without a second fixture format.
 - Official `actions/upload-artifact` v6+ and `actions/download-artifact` v7+ releases use the
   Node 24 action runtime required by current GitHub-hosted runners.
 - Official [`actions/attest-build-provenance` v4 release guidance](https://github.com/actions/attest-build-provenance/releases/tag/v4.1.1)
@@ -186,6 +191,8 @@ certification or ethics truth.
   exact-commit-pinned `actions/attest` v4 usage.
 - [x] Add exact canonical policy fingerprints to decisions, test reports, gates, validation output,
   and audit records so an unchanged display version cannot hide changed evaluated policy content.
+- [x] Compare baseline and candidate behavior over bounded regression suites, separating
+  authorization changes, metadata-only changes, and fail-closed errors without reporting inputs.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [ ] Add policy-set composition/version migration after real adopter feedback.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
@@ -224,7 +231,7 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 206 real tests; latest local run: 206 passed, 95.61% total coverage with branch measurement.
+- Added 215 real tests; latest local run: 215 passed, 95.89% total coverage with branch measurement.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
@@ -253,6 +260,8 @@ certification or ethics truth.
   evaluation, sync execution, and async execution without per-call capability parameters.
 - Added a canonical streamed exact-policy fingerprint with a pinned test vector and propagated it
   through decisions, regression reports, gates, CLI validation, and metadata-only audit record v1.
+- Added a versioned baseline-versus-candidate impact report/API/CLI/schema and runnable candidate
+  that detects a sensitive-read change from allow to review while omitting every case input.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -275,6 +284,8 @@ External validation gates:
 - Policy correctness is only as good as operator rules and caller-supplied facts.
 - A policy fingerprint proves exact canonical content equality, not authorship, review, freshness,
   secure distribution, or rollback protection.
+- An identical comparison report proves only the supplied cases and observable fields; it is not
+  exhaustive semantic equivalence or evidence for inputs the suite did not cover.
 - The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own

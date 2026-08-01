@@ -58,6 +58,17 @@ jobs:
           samsarix-ethics test \
             --policy examples/policies/tool-call-baseline.json \
             examples/tests/tool-call-baseline.tests.json
+          samsarix-ethics schema policy-comparison >/dev/null
+          set +e
+          samsarix-ethics compare \
+            --baseline examples/policies/safe-agent-actions.json \
+            --candidate examples/policies/safe-agent-actions-candidate.json \
+            examples/tests/safe-agent-actions.tests.json \
+            --format json >/tmp/policy-impact.json
+          comparison_status="$?"
+          set -e
+          test "$comparison_status" -eq 1
+          python -c 'import json; value=json.load(open("/tmp/policy-impact.json")); assert value["authorization_changes"] == 1'
           python examples/tool_gate_demo.py
       - name: Build distributions
         if: matrix.python-version == '3.11'
@@ -76,6 +87,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics validate /tmp/wheel-policy.json
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-comparison >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
@@ -84,7 +96,9 @@ jobs:
               AUDIT_RECORD_VERSION,
               AuditRecord,
               Policy,
+              PolicyTestSuite,
               ToolGate,
+              compare_policies,
               fingerprint_policy,
           )
 
@@ -104,6 +118,24 @@ jobs:
               }],
           })
           records: list[AuditRecord] = []
+          candidate = Policy.from_dict({
+              "schema_version": 1,
+              "id": "wheel-smoke",
+              "version": "2",
+              "default_effect": "deny",
+              "rules": [],
+          })
+          suite = PolicyTestSuite.from_dict({
+              "schema_version": 1,
+              "cases": [{
+                  "name": "read impact",
+                  "input": {"action": {"capabilities": ["resource:read"]}},
+                  "expected_outcome": "allow",
+              }],
+          })
+          comparison = compare_policies(policy, candidate, suite)
+          assert comparison.authorization_changes == 1
+          assert comparison.identical is False
           gate = ToolGate(policy, audit_sink=records.append)
           read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
           result = read_ticket.execute(

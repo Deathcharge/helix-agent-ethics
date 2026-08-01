@@ -113,3 +113,16 @@ validated policy when `PolicyEngine` is constructed. The engine reuses it in eve
 value. A pinned vector protects the serialization contract. The digest is mutation/equality
 evidence only: the embedding application still owns policy signing, review, distribution,
 freshness, and rollback prevention.
+
+## Implemented gap: pre-deployment policy impact
+
+Exact fingerprints identify that a policy changed but do not explain what the change does. The
+bounded regression suite now doubles as a candidate-impact corpus through `compare_policies` and
+the `compare` CLI. Each case runs against the approved baseline and candidate; the report separates
+authorization changes from matched-rule/warning metadata changes and treats either-side failures as
+errors. Inputs, decision UUIDs, timestamps, reasons, and warning text remain absent.
+
+This gives consumer maintainers a deterministic artifact to review before updating an exact source
+pin. It does not modify the private Agent Framework integration or claim exhaustive equivalence:
+the consumer must still update its own pin and rerun its compatibility matrix in a separately
+scoped repository change.

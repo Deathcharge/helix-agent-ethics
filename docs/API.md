@@ -144,12 +144,12 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()`, `get_policy_test_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
+### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
-suites, the normalized tool-call context, bound approval records, and metadata-only audit records.
-These calls perform no network access and callers may mutate the returned value without changing
-future calls.
+suites, comparison reports, the normalized tool-call context, bound approval records, and
+metadata-only audit records. These calls perform no network access and callers may mutate the
+returned value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`
 
@@ -165,6 +165,38 @@ every raw case input. `successful` is true only when all cases pass.
 
 `PolicyTestCase`, `PolicyTestSuite`, `PolicyTestResult`, and `PolicyTestReport` are frozen public
 models with JSON-serializable `to_dict()` methods.
+
+## Policy impact comparison
+
+### `compare_policies(baseline, candidate, suite) -> PolicyComparisonReport`
+
+Evaluates every bounded `PolicyTestSuite` case independently against two policies and returns a
+deterministic, input-free report. The suite's expected fields are not used for comparison; the
+function directly compares each policy's actual outcome, ordered matched-rule IDs, warning count,
+reason messages, and warning messages. Message contents are compared internally but not retained in
+the report. Either-side evaluation failures become per-case `error` results rather than being
+mistaken for unchanged behavior.
+
+The report uses `comparison_version = POLICY_COMPARISON_VERSION` (currently `1`) and includes both
+policies' ID, version, and exact fingerprint. Aggregate properties are:
+
+| Property | Meaning |
+| --- | --- |
+| `unchanged` | cases with equal outcome, matched rules, warning count, reasons, and warnings |
+| `changed` | cases where one or more observable fields differ |
+| `authorization_changes` | changed cases whose outcome differs |
+| `metadata_only_changes` | equal-outcome cases with different rule, warning, or message metadata |
+| `errors` | cases where either policy failed closed |
+| `identical` | true only when `changed == 0` and `errors == 0` |
+
+Each `PolicyComparisonResult` has a `PolicyComparisonStatus`, an ordered tuple of
+`PolicyComparisonChange` values, and input-free baseline/candidate `PolicyComparisonSnapshot`
+objects. `to_dict()` returns detached JSON values. It excludes fixture inputs, decision UUIDs,
+timestamps, reason text, and warning text.
+
+The CLI equivalent is `samsarix-ethics compare --baseline ... --candidate ... SUITE`. It exits `0`
+only for identical observed behavior, `1` for changes or errors, and `2` for invalid invocation or
+input. See [POLICY_COMPARISON.md](POLICY_COMPARISON.md) for rollout guidance and coverage limits.
 
 ## Audit records and sinks
 

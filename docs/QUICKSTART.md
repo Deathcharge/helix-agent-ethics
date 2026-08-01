@@ -30,7 +30,7 @@ samsarix-ethics validate examples/policies/safe-agent-actions.json
 Expected result:
 
 ```text
-Valid policy safe-agent-actions@1.0.0: 6 rules, default=review
+Valid policy safe-agent-actions@1.0.0: 6 rules, default=review, fingerprint=v1:sha256:...
 ```
 
 ## 3. Run the policy regression suite
@@ -42,7 +42,17 @@ samsarix-ethics test --policy examples/policies/safe-agent-actions.json examples
 The five cases cover allow, deny, review, missing approval, and warning behavior. All pass and the
 command exits `0`; an unmet expectation or evaluation error exits `1`.
 
-## 4. Evaluate an allowed action
+## 4. Compare a candidate before rollout
+
+```bash
+samsarix-ethics compare --baseline examples/policies/safe-agent-actions.json --candidate examples/policies/safe-agent-actions-candidate.json examples/tests/safe-agent-actions.tests.json
+```
+
+The candidate keeps four cases unchanged and moves one sensitive read from `allow` to `review`.
+The report excludes inputs and exits `1` because observable behavior changed. Review that impact
+before adopting the candidate. See [policy impact comparison](POLICY_COMPARISON.md).
+
+## 5. Evaluate an allowed action
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json
@@ -51,7 +61,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 The JSON result has `outcome: allow`, `allowed: true`, a new `decision_id`, the policy version, and
 the matching rule explanation. The command exits `0`.
 
-## 5. Observe safe denial
+## 6. Observe safe denial
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/delete-resource.json
@@ -60,7 +70,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 The example lacks human approval, so the deny rule wins and the command exits `3`. This nonzero
 exit is intentional and suitable for shell or CI gates.
 
-## 6. Add a privacy-minimized audit record
+## 7. Add a privacy-minimized audit record
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json --audit-log decisions.jsonl
@@ -71,7 +81,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 reuses a policy version label. Decide access, rotation, retention, and deletion policy before
 enabling this in a real application.
 
-## 7. Enforce a real tool callback
+## 8. Enforce a real tool callback
 
 The bundled tool policy treats read-only work as allowed, destructive work without approval as
 denied, external writes as reviewable, and unknown capabilities as reviewable:
@@ -97,7 +107,7 @@ samsarix-ethics test --policy examples/policies/tool-call-baseline.json examples
 
 See [tool-call integrations](TOOL_CALLS.md) before connecting an agent runtime.
 
-## 8. Start a policy of your own
+## 9. Start a policy of your own
 
 ```bash
 samsarix-ethics init my-policy.json
@@ -112,6 +122,7 @@ To configure an editor or external validator, export the versioned schemas:
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
+samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json

@@ -21,8 +21,10 @@ from samsarix_ethics import (
     PolicyTestValidationError,
     ToolCallApproval,
     build_tool_context,
+    compare_policies,
     fingerprint_tool_call,
     get_audit_record_schema,
+    get_policy_comparison_schema,
     get_policy_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
@@ -42,12 +44,18 @@ def _suite(*cases: dict[str, Any]) -> PolicyTestSuite:
 def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     audit_record_schema = get_audit_record_schema()
     policy_schema = get_policy_schema()
+    comparison_schema = get_policy_comparison_schema()
     test_schema = get_policy_test_schema()
     tool_approval_schema = get_tool_approval_schema()
     tool_context_schema = get_tool_context_schema()
     root = Path(__file__).parents[1]
     example_policies = [
         SAMPLE_POLICY,
+        json.loads(
+            (root / "examples/policies/safe-agent-actions-candidate.json").read_text(
+                encoding="utf-8"
+            )
+        ),
         json.loads(
             (root / "examples/policies/tool-call-baseline.json").read_text(encoding="utf-8")
         ),
@@ -72,9 +80,15 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
         True,
         fingerprint_tool_call("call-1", "read_file", {"path": "README.md"}),
     ).to_dict()
+    comparison_report = compare_policies(
+        Policy.from_dict(SAMPLE_POLICY),
+        Policy.from_dict(SAMPLE_POLICY),
+        PolicyTestSuite.from_dict(example_suites[0]),
+    ).to_dict()
 
     Draft202012Validator.check_schema(audit_record_schema)
     Draft202012Validator.check_schema(policy_schema)
+    Draft202012Validator.check_schema(comparison_schema)
     Draft202012Validator.check_schema(test_schema)
     Draft202012Validator.check_schema(tool_approval_schema)
     Draft202012Validator.check_schema(tool_context_schema)
@@ -85,8 +99,10 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     Draft202012Validator(tool_context_schema).validate(tool_context_example)
     Draft202012Validator(tool_approval_schema).validate(tool_approval)
     Draft202012Validator(audit_record_schema).validate(audit_record)
+    Draft202012Validator(comparison_schema).validate(comparison_report)
     assert audit_record_schema["$id"].endswith("/audit-record/v1.json")
     assert policy_schema["$id"].endswith("/policy/v1.json")
+    assert comparison_schema["$id"].endswith("/policy-comparison/v1.json")
     assert test_schema["$id"].endswith("/policy-test/v1.json")
     assert tool_approval_schema["$id"].endswith("/tool-approval/v1.json")
     assert tool_context_schema["$id"].endswith("/tool-context/v1.json")
@@ -157,12 +173,15 @@ def test_schema_access_returns_fresh_values() -> None:
     changed_audit["title"] = "changed"
     changed = get_policy_schema()
     changed["title"] = "changed"
+    changed_comparison = get_policy_comparison_schema()
+    changed_comparison["title"] = "changed"
     changed_tool_context = get_tool_context_schema()
     changed_tool_context["title"] = "changed"
     changed_tool_approval = get_tool_approval_schema()
     changed_tool_approval["title"] = "changed"
 
     assert get_policy_schema()["title"] != "changed"
+    assert get_policy_comparison_schema()["title"] != "changed"
     assert get_audit_record_schema()["title"] != "changed"
     assert get_tool_approval_schema()["title"] != "changed"
     assert get_tool_context_schema()["title"] != "changed"

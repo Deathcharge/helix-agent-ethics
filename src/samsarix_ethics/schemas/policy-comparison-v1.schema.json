@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/policy-comparison/v1.json",
+  "title": "Samsarix Agent Ethics policy comparison report v1",
+  "description": "Input-free behavioral comparison of baseline and candidate policies.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "comparison_version",
+    "suite_name",
+    "baseline_policy_id",
+    "baseline_policy_version",
+    "baseline_policy_fingerprint",
+    "candidate_policy_id",
+    "candidate_policy_version",
+    "candidate_policy_fingerprint",
+    "total",
+    "unchanged",
+    "changed",
+    "authorization_changes",
+    "metadata_only_changes",
+    "errors",
+    "identical",
+    "results"
+  ],
+  "properties": {
+    "comparison_version": {"const": 1},
+    "suite_name": {"type": "string", "minLength": 1, "maxLength": 200},
+    "baseline_policy_id": {"$ref": "#/$defs/identifier"},
+    "baseline_policy_version": {"$ref": "#/$defs/identifier"},
+    "baseline_policy_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "candidate_policy_id": {"$ref": "#/$defs/identifier"},
+    "candidate_policy_version": {"$ref": "#/$defs/identifier"},
+    "candidate_policy_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "total": {"type": "integer", "minimum": 1, "maximum": 1000},
+    "unchanged": {"$ref": "#/$defs/count"},
+    "changed": {"$ref": "#/$defs/count"},
+    "authorization_changes": {"$ref": "#/$defs/count"},
+    "metadata_only_changes": {"$ref": "#/$defs/count"},
+    "errors": {"$ref": "#/$defs/count"},
+    "identical": {"type": "boolean"},
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1000,
+      "items": {"$ref": "#/$defs/result"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "matched_rules", "warning_count", "error"],
+      "properties": {
+        "outcome": {"type": ["string", "null"], "enum": ["allow", "deny", "review", null]},
+        "matched_rules": {
+          "type": "array",
+          "maxItems": 1000,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "warning_count": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "error": {"type": ["string", "null"]}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "changes",
+        "authorization_changed",
+        "baseline",
+        "candidate"
+      ],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 200},
+        "status": {"enum": ["unchanged", "changed", "error"]},
+        "changes": {
+          "type": "array",
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "outcome",
+              "matched_rules",
+              "warning_count",
+              "reason_messages",
+              "warning_messages"
+            ]
+          }
+        },
+        "authorization_changed": {"type": "boolean"},
+        "baseline": {"$ref": "#/$defs/snapshot"},
+        "candidate": {"$ref": "#/$defs/snapshot"}
+      }
+    }
+  }
+}

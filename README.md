@@ -68,8 +68,10 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|tool-context|tool-approval|audit-record]
+samsarix-ethics schema [policy|policy-test|policy-comparison|tool-context|tool-approval|audit-record]
 samsarix-ethics test --policy POLICY.json TESTS.json [--format text|json]
+samsarix-ethics compare --baseline BASELINE.json --candidate CANDIDATE.json \
+                        TESTS.json [--format text|json]
 samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
 samsarix-ethics --help
@@ -81,7 +83,7 @@ Exit codes are stable for non-interactive use:
 | Code | Meaning |
 | ---: | --- |
 | `0` | action allowed, or non-decision command succeeded |
-| `1` | one or more policy regression cases failed or errored |
+| `1` | policy tests failed/errored, or comparison found changes/errors |
 | `2` | invalid invocation, policy, input, evaluation, or requested audit write |
 | `3` | action denied |
 | `4` | human review required |
@@ -101,6 +103,7 @@ Print the versioned Draft 2020-12 schemas for editors, CI, or code generation:
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
+samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
@@ -114,10 +117,23 @@ samsarix-ethics test --policy examples/policies/safe-agent-actions.json \
   examples/tests/safe-agent-actions.tests.json
 ```
 
+Compare an approved baseline with a candidate over that same suite before rollout:
+
+```bash
+samsarix-ethics compare \
+  --baseline examples/policies/safe-agent-actions.json \
+  --candidate examples/policies/safe-agent-actions-candidate.json \
+  examples/tests/safe-agent-actions.tests.json
+```
+
+The included candidate changes one sensitive-read case from `allow` to `review`, so comparison
+reports one authorization change and exits `1`. The versioned report never includes case inputs.
+See the [policy impact comparison guide](docs/POLICY_COMPARISON.md).
+
 ## Python API
 
 ```python
-from samsarix_ethics import PolicyEngine, load_policy
+from samsarix_ethics import PolicyEngine, compare_policies, load_policy, load_policy_test_suite
 
 policy = load_policy("examples/policies/safe-agent-actions.json")
 engine = PolicyEngine(policy)
@@ -136,6 +152,11 @@ if decision.allowed:
 batch = PolicyEngine(policy).evaluate_many(
     [{"action": {"operation": "read"}}, {"action": {"operation": "delete"}}]
 )
+
+candidate = load_policy("examples/policies/safe-agent-actions-candidate.json")
+suite = load_policy_test_suite("examples/tests/safe-agent-actions.tests.json")
+impact = compare_policies(policy, candidate, suite)
+print(impact.authorization_changes, impact.metadata_only_changes)
 ```
 
 For an in-process tool boundary, `ToolGate` turns non-allow outcomes into typed exceptions and
@@ -242,6 +263,8 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
   bounded.
 - Duplicate JSON keys and non-finite numbers are rejected.
 - Direct Python calls enforce the same bounded JSON contract as file and standard-input parsing.
+- Baseline/candidate impact reports classify authorization, metadata-only, and error cases without
+  copying regression inputs; equality is limited to the supplied cases.
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
@@ -294,7 +317,8 @@ before any registry upload.
 
 The product is a library plus CLI; it has no server or cloud component. The package separates
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
-versioned schemas, bounded I/O, regression testing, and presentation/exit codes.
+versioned schemas, bounded I/O, regression testing, policy impact comparison, and
+presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
 Deliberate limitations:

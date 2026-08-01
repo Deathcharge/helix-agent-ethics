@@ -37,6 +37,9 @@ are bounded and type-checked. The embedding application remains responsible for:
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
 code, loads no plugins, and stores no raw evaluation input in its built-in audit record.
+Policy-test and comparison reports also exclude case inputs. They still expose case names, policy
+and rule identifiers, fingerprints, and bounded evaluation errors; do not place secrets in those
+operator-authored labels, and protect reports as operational metadata.
 Caller-supplied audit sinks are trusted application code invoked synchronously before authorization;
 their failures prevent tool execution, but their transport and downstream storage are outside this
 package's boundary.
