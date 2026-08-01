@@ -25,7 +25,8 @@ boundary. `PolicyEngine.evaluate` calls it automatically.
 
 Evaluates every rule deterministically. Raises `InputValidationError` when the context is not a
 bounded JSON object and `EvaluationError` if an operator cannot safely evaluate the supplied types
-or a `$ref` is missing.
+or a `$ref` is missing. Construction computes `policy_fingerprint` once for reuse by every
+decision.
 
 ### `PolicyEngine(policy).evaluate_many(contexts) -> tuple[Decision, ...]`
 
@@ -39,7 +40,8 @@ closed. An empty batch returns an empty tuple.
 | --- | --- |
 | `decision_id` | UUID generated for this evaluation |
 | `evaluated_at` | UTC ISO 8601 timestamp |
-| `policy_id`, `policy_version` | exact policy identity used |
+| `policy_id`, `policy_version` | operator-authored policy identity labels |
+| `policy_fingerprint` | exact canonical policy content used, as `v1:sha256:<hex>` |
 | `outcome` | `Outcome.ALLOW`, `DENY`, or `REVIEW` |
 | `allowed` | true only for `ALLOW` |
 | `matched_rules` | matching rule IDs in priority/ID order |
@@ -48,6 +50,15 @@ closed. An empty batch returns an empty tuple.
 | `evaluated_rules` | total rule count |
 
 `Decision.to_dict()` returns a JSON-serializable dictionary and still excludes the raw input.
+
+### `fingerprint_policy(policy) -> str`
+
+Returns the authoritative `v1:sha256:<hex>` fingerprint of a validated `Policy`. The canonical
+payload includes every serialized policy field and a fingerprint-version domain separator. JSON
+object keys are sorted; array order is retained, so rule and condition order remain part of exact
+provenance. Serialization streams through the hash without building a second encoded byte buffer.
+`PolicyEngine`, `ToolGate`, and `BoundToolGate` expose the same precomputed value as
+`policy_fingerprint`; callers should use this helper instead of implementing their own serializer.
 
 ## Tool-call enforcement
 
@@ -109,9 +120,10 @@ decision from authorizing a callback. The package invokes the sink exactly once 
 
 The frozen object returned by `ToolGate.bind(...)`. Its `tool_name` and canonical immutable
 `capabilities` tuple cannot be supplied or changed per invocation. It exposes `gate` and `policy`
-properties plus `fingerprint(tool_call_id, arguments, *, actor=None)`, `evaluate`, `enforce`,
-`execute`, and `execute_async`. The latter four accept the same actor, context, call-ID, and approval
-keywords as `ToolGate`, but take only arguments (and an executor where applicable).
+properties, the gate's `policy_fingerprint`, plus
+`fingerprint(tool_call_id, arguments, *, actor=None)`, `evaluate`, `enforce`, `execute`, and
+`execute_async`. The latter four accept the same actor, context, call-ID, and approval keywords as
+`ToolGate`, but take only arguments (and an executor where applicable).
 
 Use a trusted application registry to select a binding. This prevents model or protocol payloads
 from downgrading capability labels, but it does not establish that remote tool metadata is honest.
@@ -147,9 +159,9 @@ contain 1-1,000 uniquely named cases. Raises `PolicyTestValidationError` for mal
 ### `run_policy_tests(policy, suite) -> PolicyTestReport`
 
 Evaluates every case and records `PolicyTestStatus.PASS`, `FAIL`, or `ERROR`. A report includes
-policy identity, counts, expected and actual outcomes, matched rule IDs, assertion messages, and
-evaluation errors. It deliberately excludes every raw case input. `successful` is true only when
-all cases pass.
+operator-authored policy identity, its exact policy fingerprint, counts, expected and actual
+outcomes, matched rule IDs, assertion messages, and evaluation errors. It deliberately excludes
+every raw case input. `successful` is true only when all cases pass.
 
 `PolicyTestCase`, `PolicyTestSuite`, `PolicyTestResult`, and `PolicyTestReport` are frozen public
 models with JSON-serializable `to_dict()` methods.
@@ -159,8 +171,9 @@ models with JSON-serializable `to_dict()` methods.
 ### `AuditRecord.from_decision(decision) -> AuditRecord`
 
 Creates a frozen `audit_record_version = AUDIT_RECORD_VERSION` record (currently version `1`) with
-decision/policy identity, evaluation time, outcome, matched rule IDs, and warning count. Raw input,
-reasons, and warning text are absent. `to_dict()` returns a detached JSON-compatible dictionary.
+decision/policy identity, the exact policy fingerprint, evaluation time, outcome, matched rule IDs,
+and warning count. Raw input, reasons, and warning text are absent. `to_dict()` returns a detached
+JSON-compatible dictionary.
 
 ### `AuditSink`
 

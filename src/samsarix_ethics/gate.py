@@ -188,6 +188,12 @@ class ToolGate:
 
         return self._engine.policy
 
+    @property
+    def policy_fingerprint(self) -> str:
+        """Return the exact policy fingerprint used by this gate."""
+
+        return self._engine.policy_fingerprint
+
     def bind(
         self,
         tool_name: str,
@@ -385,6 +391,12 @@ class BoundToolGate:
         """Return the immutable policy used by the parent gate."""
 
         return self._gate.policy
+
+    @property
+    def policy_fingerprint(self) -> str:
+        """Return the exact policy fingerprint used by the parent gate."""
+
+        return self._gate.policy_fingerprint
 
     @property
     def tool_name(self) -> str:

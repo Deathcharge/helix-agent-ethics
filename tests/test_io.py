@@ -164,6 +164,7 @@ def test_audit_record_excludes_raw_input(tmp_path: Path, policy_document: dict[s
     assert record["outcome"] == "allow"
     assert record["audit_record_version"] == AUDIT_RECORD_VERSION
     assert record["decision_id"] == decision.decision_id
+    assert record["policy_fingerprint"] == decision.policy_fingerprint
     assert "secret" not in record
     assert "do-not-log" not in audit_path.read_text(encoding="utf-8")
 
@@ -180,6 +181,7 @@ def test_audit_record_is_frozen_versioned_and_detached(
     assert record.outcome == "allow"
     assert record.matched_rules == decision.matched_rules
     assert record.warning_count == len(decision.warnings)
+    assert record.policy_fingerprint == decision.policy_fingerprint
     with pytest.raises(FrozenInstanceError):
         record.outcome = "deny"  # type: ignore[misc]
 
@@ -194,7 +196,7 @@ def test_audit_record_and_jsonl_sink_reject_invalid_objects(tmp_path: Path) -> N
     with pytest.raises(TypeError, match="Decision"):
         AuditRecord.from_decision(object())  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="audit_record_version"):
-        AuditRecord("id", "time", "policy", "1", "allow", (), 0, 2)
+        AuditRecord("id", "time", "policy", "1", "bad", "allow", (), 0, 2)
     with pytest.raises(TypeError, match="AuditRecord"):
         JsonlAuditSink(tmp_path / "audit.jsonl")(object())  # type: ignore[arg-type]
 
@@ -210,6 +212,7 @@ def test_audit_record_and_jsonl_sink_reject_invalid_objects(tmp_path: Path) -> N
         ("evaluated_at", "2026-08-01T12:00:00+99:99", "valid RFC 3339"),
         ("policy_id", "bad policy", "policy_id"),
         ("policy_version", "", "policy_version"),
+        ("policy_fingerprint", "sha256:bad", "policy_fingerprint"),
         ("outcome", "warn", "outcome"),
         ("matched_rules", ["allow-read"], "tuple"),
         ("matched_rules", ("allow-read", "allow-read"), "duplicates"),

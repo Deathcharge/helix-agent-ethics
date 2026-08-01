@@ -116,6 +116,24 @@ These bounds are independent; a file-size limit may be reached before a list-cou
 
 Duplicate JSON keys, non-UTF-8 input, `NaN`, and infinities are invalid.
 
+## Exact policy provenance
+
+The `id` and `version` fields are useful operator-authored labels, but the runtime does not assume
+that an operator increments them after every edit. `fingerprint_policy(policy)` returns the exact
+`v1:sha256:<hex>` identifier carried by decisions, policy-test reports, gates, and audit records.
+The canonical form includes every serialized policy field. Object-key order is normalized while
+array order is retained, so rearranging rules or conditions changes the exact-content fingerprint.
+
+The CLI reports this value during validation:
+
+```bash
+samsarix-ethics validate policy.json --format json
+```
+
+Use the package helper as the authoritative serializer. The fingerprint detects content mismatch;
+it is not a signature, author identity, approval record, or proof that a policy was distributed
+securely.
+
 ## JSON Schema
 
 The wheel contains Draft 2020-12 schemas for policies, policy-test suites, normalized tool-call

@@ -229,6 +229,7 @@ class PolicyTestReport:
     suite_name: str
     policy_id: str
     policy_version: str
+    policy_fingerprint: str
     results: tuple[PolicyTestResult, ...]
 
     @property
@@ -252,6 +253,7 @@ class PolicyTestReport:
             "suite_name": self.suite_name,
             "policy_id": self.policy_id,
             "policy_version": self.policy_version,
+            "policy_fingerprint": self.policy_fingerprint,
             "total": len(self.results),
             "passed": self.passed,
             "failed": self.failed,
@@ -333,5 +335,6 @@ def run_policy_tests(policy: Policy, suite: PolicyTestSuite) -> PolicyTestReport
         suite_name=suite.name,
         policy_id=policy.id,
         policy_version=policy.version,
+        policy_fingerprint=engine.policy_fingerprint,
         results=tuple(results),
     )

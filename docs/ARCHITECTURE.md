@@ -22,6 +22,7 @@ the legacy `helix-unified` repository.
 - `models.py`: strict schema validation and immutable policy/decision values.
 - `audit.py`: versioned metadata-only records, the caller sink contract, and local JSONL sink.
 - `approval.py`: immutable approval records and bounded exact-call fingerprints.
+- `provenance.py`: canonical, streamed exact-policy fingerprints.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `engine.py`: dotted-field resolution, typed condition operators, rule matching, and precedence.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and the legacy audit helper.
@@ -66,9 +67,12 @@ analysis risk. Cross-field comparison uses the explicit `{"$ref": "path.to.field
 ### Privacy-minimized audit
 
 Raw action context can contain credentials or personal data, so the versioned `AuditRecord` stores
-only decision metadata. The built-in JSONL sink is local best effort (`append` plus `fsync`), not
-an immutable or cross-process ordered ledger. A caller-owned sink receives the same frozen record,
-runs once before authorization, and owns transport, retries, idempotency, and durable retention.
+only decision metadata. Each decision and record identifies the complete validated policy content
+with a domain-separated, versioned SHA-256 fingerprint; operator-authored policy ID and version
+remain human-readable labels. JSON object keys are canonicalized and array order is preserved. The
+built-in JSONL sink is local best effort (`append` plus `fsync`), not an immutable or cross-process
+ordered ledger. A caller-owned sink receives the same frozen record, runs once before authorization,
+and owns transport, retries, idempotency, and durable retention.
 
 ### Enforcement remains local and immediate
 
@@ -86,6 +90,8 @@ authorization and risk facts can be re-read.
 ## Trust boundaries
 
 - **Policy authors/operators** are trusted to define correct rules and secure policy files.
+- **Policy fingerprint** proves exact content equality under the documented v1 serializer; it does
+  not prove who authored, approved, distributed, or securely stored that policy.
 - **Evaluation input** may be attacker-controlled and is bounded and type-checked.
 - **Embedding application** owns authentication, authorization, fact integrity, enforcement,
   approval expiry and atomic one-time consumption, concurrency, and the protected side effect.

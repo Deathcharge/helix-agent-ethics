@@ -120,7 +120,9 @@ samsarix-ethics test --policy examples/policies/safe-agent-actions.json \
 from samsarix_ethics import PolicyEngine, load_policy
 
 policy = load_policy("examples/policies/safe-agent-actions.json")
-decision = PolicyEngine(policy).evaluate(
+engine = PolicyEngine(policy)
+print(engine.policy_fingerprint)  # v1:sha256:...
+decision = engine.evaluate(
     {
         "actor": {"id": "research-agent"},
         "action": {"operation": "read", "risk": "low"},
@@ -204,7 +206,9 @@ gate = ToolGate(policy, audit_sink=records.append)
 The sink runs once after each decision is computed and before the decision can authorize a callback.
 It must return `None`; an exception or other return becomes `AuditLogError` and fails closed. Use
 either `audit_sink=` or the existing local `audit_log=` path, not both. Agent Ethics never retries
-delivery or includes evaluation input in `AuditRecord`.
+delivery or includes evaluation input in `AuditRecord`. Every decision and audit record includes
+the exact canonical policy fingerprint, so reused human-readable policy versions cannot make two
+different policy bodies look identical in operational evidence.
 
 ## Downstream adoption
 
@@ -241,6 +245,8 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
+- Decisions, policy-test reports, and audit records carry a versioned SHA-256 fingerprint of the
+  complete validated policy body; policy ID/version remain operator-authored labels.
 - Caller-owned audit sinks receive the same versioned metadata-only record and no raw input.
 - `ToolGate` audits before execution when configured; an audit failure prevents the callback.
 - Audit retention, access controls, rotation, and tamper resistance belong to the embedding

@@ -36,6 +36,8 @@ All notable product changes are recorded here.
   capability labels out of untrusted per-call payloads across sync, async, and approval flows.
 - Node 24-native artifact upload/download actions, an installed-wheel bound-profile smoke test, and
   monthly GitHub Actions dependency update proposals.
+- Canonical streamed `fingerprint_policy` provenance, propagated through engines, gates, decisions,
+  policy-test reports, CLI validation, and privacy-minimized audit record v1.
 
 ### Changed
 

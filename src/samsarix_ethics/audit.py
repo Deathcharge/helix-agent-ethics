@@ -16,6 +16,7 @@ from typing import Any, Protocol, cast
 
 from .errors import AuditLogError
 from .models import Decision
+from .provenance import _is_policy_fingerprint
 
 AUDIT_RECORD_VERSION = 1
 _AUDIT_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
@@ -33,6 +34,7 @@ class AuditRecord:
     evaluated_at: str
     policy_id: str
     policy_version: str
+    policy_fingerprint: str
     outcome: str
     matched_rules: tuple[str, ...]
     warning_count: int
@@ -62,6 +64,8 @@ class AuditRecord:
         ):
             if not isinstance(value, str) or not _AUDIT_IDENTIFIER.fullmatch(value):
                 raise ValueError(f"{field} must be a 1-128 character identifier")
+        if not _is_policy_fingerprint(self.policy_fingerprint):
+            raise ValueError("policy_fingerprint must use the current v1:sha256 lowercase format")
         if not isinstance(self.outcome, str) or self.outcome not in {"allow", "deny", "review"}:
             raise ValueError("outcome must be allow, deny, or review")
         if not isinstance(self.matched_rules, tuple):
@@ -93,6 +97,7 @@ class AuditRecord:
             evaluated_at=decision.evaluated_at,
             policy_id=decision.policy_id,
             policy_version=decision.policy_version,
+            policy_fingerprint=decision.policy_fingerprint,
             outcome=decision.outcome.value,
             matched_rules=decision.matched_rules,
             warning_count=len(decision.warnings),
@@ -107,6 +112,7 @@ class AuditRecord:
             "evaluated_at": self.evaluated_at,
             "policy_id": self.policy_id,
             "policy_version": self.policy_version,
+            "policy_fingerprint": self.policy_fingerprint,
             "outcome": self.outcome,
             "matched_rules": list(self.matched_rules),
             "warning_count": self.warning_count,

@@ -17,6 +17,7 @@ from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .io import append_audit_record, load_context, load_policy, write_sample_policy
 from .models import Decision, Outcome
+from .provenance import fingerprint_policy
 from .schema import (
     get_audit_record_schema,
     get_policy_schema,
@@ -85,6 +86,7 @@ def _render_decision(decision: Decision, output_format: str) -> str:
         f"Allowed: {'yes' if decision.allowed else 'no'}",
         f"Decision ID: {decision.decision_id}",
         f"Policy: {decision.policy_id}@{decision.policy_version}",
+        f"Policy fingerprint: {decision.policy_fingerprint}",
         "Reasons:",
     ]
     lines.extend(f"  - {reason}" for reason in decision.reasons)
@@ -151,10 +153,12 @@ def main(
 
         policy = load_policy(arguments.policy)
         if arguments.command == "validate":
+            policy_fingerprint = fingerprint_policy(policy)
             result = {
                 "valid": True,
                 "policy_id": policy.id,
                 "policy_version": policy.version,
+                "policy_fingerprint": policy_fingerprint,
                 "default_effect": policy.default_effect.value,
                 "rule_count": len(policy.rules),
             }
@@ -163,7 +167,8 @@ def main(
             else:
                 print(
                     f"Valid policy {policy.id}@{policy.version}: "
-                    f"{len(policy.rules)} rules, default={policy.default_effect.value}",
+                    f"{len(policy.rules)} rules, default={policy.default_effect.value}, "
+                    f"fingerprint={policy_fingerprint}",
                     file=output,
                 )
             return EXIT_ALLOWED

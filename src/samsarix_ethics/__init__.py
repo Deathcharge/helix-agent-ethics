@@ -33,6 +33,7 @@ from .gate import (
 )
 from .io import append_audit_record, load_context, load_policy
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
+from .provenance import POLICY_FINGERPRINT_VERSION, fingerprint_policy
 from .schema import (
     get_audit_record_schema,
     get_policy_schema,
@@ -60,6 +61,7 @@ __all__ = [
     "MAX_POLICY_TEST_BYTES",
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
     "MAX_TOOL_CAPABILITIES",
+    "POLICY_FINGERPRINT_VERSION",
     "TOOL_CALL_APPROVAL_VERSION",
     "TOOL_CALL_FINGERPRINT_VERSION",
     "TOOL_CONTEXT_VERSION",
@@ -93,6 +95,7 @@ __all__ = [
     "ToolGate",
     "append_audit_record",
     "build_tool_context",
+    "fingerprint_policy",
     "fingerprint_tool_call",
     "get_audit_record_schema",
     "get_policy_schema",

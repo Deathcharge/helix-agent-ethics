@@ -91,6 +91,17 @@ Bounded review used current primary sources:
   execution interception to registered tool objects rather than trusting model-supplied metadata.
 - The [MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema) explicitly says
   tool annotations are hints and must not drive decisions when their server is untrusted.
+- [OPA decision logs](https://www.openpolicyagent.org/docs/management-decision-logs) carry the
+  evaluated bundle revision alongside each decision, while
+  [OPA bundles](https://www.openpolicyagent.org/docs/management-bundles) define revision as bundle
+  metadata. This supports recording evaluated policy-artifact provenance rather than relying only
+  on a policy name; a local content digest can make that association independent of revision-label
+  discipline.
+- [Amazon Verified Permissions policy stores](https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/policy-stores.html)
+  centralize policy/schema validation, and
+  [policy updates](https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/policies-edit.html)
+  expose update timestamps. Agent Ethics remains local, but needs equivalent evidence that two
+  decisions actually used identical policy content.
 - Official `actions/upload-artifact` v6+ and `actions/download-artifact` v7+ releases use the
   Node 24 action runtime required by current GitHub-hosted runners.
 
@@ -168,6 +179,8 @@ certification or ethics truth.
   tool identity or capability labels.
 - [x] Migrate artifact retention/provenance jobs off the deprecated Node 20 action runtime and add
   automated GitHub Actions update proposals.
+- [x] Add exact canonical policy fingerprints to decisions, test reports, gates, validation output,
+  and audit records so an unchanged display version cannot hide changed evaluated policy content.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [ ] Add policy-set composition/version migration after real adopter feedback.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
@@ -206,7 +219,7 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 191 real tests; latest local run: 191 passed, 95.46% total coverage with branch measurement.
+- Added 206 real tests; latest local run: 206 passed, 95.61% total coverage with branch measurement.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
@@ -233,6 +246,8 @@ certification or ethics truth.
   the call ID, tool, arguments, capabilities, or actor now fails before policy, audit, or execution.
 - Added frozen bound-tool gates that reuse trusted registration metadata for fingerprinting,
   evaluation, sync execution, and async execution without per-call capability parameters.
+- Added a canonical streamed exact-policy fingerprint with a pinned test vector and propagated it
+  through decisions, regression reports, gates, CLI validation, and metadata-only audit record v1.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -253,6 +268,8 @@ External validation gates:
 ## Known risks
 
 - Policy correctness is only as good as operator rules and caller-supplied facts.
+- A policy fingerprint proves exact canonical content equality, not authorship, review, freshness,
+  secure distribution, or rollback protection.
 - The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own
