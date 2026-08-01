@@ -9,6 +9,7 @@ responsible for enforcement immediately before the protected operation.
 ```text
 trusted policy JSON ──> bounded parser ──> immutable Policy ──────────────┐
 trusted context contract ─> path/operator check + runtime fact types ────┤
+reviewed deployment lock ─> exact artifact verification ─────────────────┤
                                                                          ├─> PolicyEngine ─> Decision
 untrusted action JSON ─> bounded parser ─> context object ────────────────┘                  │
                                                                                ├─> optional metadata-only audit sink
@@ -28,7 +29,8 @@ the legacy `helix-unified` repository.
 - `models.py`: strict schema validation and immutable policy/decision values.
 - `audit.py`: versioned metadata-only records, the caller sink contract, and local JSONL sink.
 - `approval.py`: immutable approval records and bounded exact-call fingerprints.
-- `provenance.py`: canonical, streamed exact-policy fingerprints.
+- `provenance.py`: canonical, domain-separated policy and context-contract fingerprints.
+- `deployment.py`: strict immutable deployment locks and exact artifact verification.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `contracts.py`: immutable application fact declarations, policy compatibility, and runtime type
   enforcement.
@@ -66,7 +68,16 @@ accept unrelated request fields by design so opaque arguments need not be modele
 structure, not truth: the application remains responsible for authentic and current facts.
 Regression, coverage, comparison, and shadow workflows can pass the same contract into their
 internal engines so pre-deployment evidence does not use a weaker fact boundary than production.
-Current decision and report schemas do not embed contract provenance.
+Current decision and report schemas do not embed contract provenance. An optional deployment lock
+binds exact policy and contract content at engine or gate construction without copying either
+artifact into decisions.
+
+Deployment locks use canonical domain-separated fingerprints plus the operator-authored IDs and
+versions. Contract presence is exact, so a locked contract cannot be omitted or introduced
+silently. Lock verification is an activation precondition for `PolicyEngine`, `ToolGate`, and the
+locked CLI decision paths; mismatch raises a typed validation error before authorization. The lock
+is deliberately a detached artifact so repository review or an external signing system can protect
+the policy, contract, and lock as one deployment set.
 
 ### Schemas plus executable examples
 
@@ -153,6 +164,9 @@ authorization and risk facts can be re-read.
 - **Evaluation input** may be attacker-controlled and is bounded and type-checked.
 - **Context contract** is trusted application configuration. It restricts policy-visible path and
   type expectations but neither authenticates facts nor closes the entire input object.
+- **Deployment lock** proves the supplied artifacts equal its canonical fingerprints. It does not
+  authenticate who created or approved them, make distribution secure, establish freshness, or
+  prevent rollback; the deployment system must protect and authenticate the complete artifact set.
 - **Embedding application** owns authentication, authorization, fact integrity, enforcement,
   approval expiry and atomic one-time consumption, concurrency, and the protected side effect.
 - **Shadow-rollout operator** owns exact baseline/candidate selection, sampling, telemetry

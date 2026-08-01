@@ -108,8 +108,8 @@ declared application boundary. Removing or changing fact types requires a separa
 migration; this API does not compare two different application schemas.
 
 Version 1 decision, test, coverage, comparison, shadow, and audit records do not embed a contract
-fingerprint. Preserve the reviewed contract artifact and its version alongside deployment or CI
-configuration when exact lifecycle provenance matters. Policy fingerprints continue to identify
+fingerprint in lifecycle reports. Use a deployment lock to bind the reviewed contract artifact and
+policy together at validation and evaluation boundaries. Policy fingerprints continue to identify
 only policy content.
 
 ## Security boundary and limitations

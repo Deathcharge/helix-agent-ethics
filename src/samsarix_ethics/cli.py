@@ -21,6 +21,7 @@ from .comparison import (
 )
 from .composition import MAX_COMPOSED_POLICIES, PolicyComposition, compose_policies
 from .coverage import PolicyCoverageReport, measure_policy_coverage
+from .deployment import create_deployment_lock, verify_deployment_lock
 from .diagnostics import PolicyLintReport, PolicyLintSeverity, lint_policy
 from .engine import PolicyEngine
 from .errors import PolicyCompositionError, SamsarixEthicsError
@@ -28,6 +29,7 @@ from .io import (
     append_audit_record,
     load_context,
     load_context_contract,
+    load_deployment_lock,
     load_policy,
     write_policy,
     write_sample_policy,
@@ -37,6 +39,7 @@ from .provenance import fingerprint_policy
 from .schema import (
     get_audit_record_schema,
     get_context_contract_schema,
+    get_deployment_lock_schema,
     get_policy_comparison_schema,
     get_policy_composition_schema,
     get_policy_coverage_schema,
@@ -81,6 +84,9 @@ def _parser() -> argparse.ArgumentParser:
         "--context-contract", help="validate policy and input against this application contract"
     )
     check.add_argument(
+        "--deployment-lock", help="require the policy and contract to match this exact lock"
+    )
+    check.add_argument(
         "--input", default="-", help="path to a JSON input object; default: standard input"
     )
     check.add_argument("--audit-log", help="append metadata-only JSONL to this path")
@@ -92,6 +98,9 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("policy", help="path to a JSON policy")
     validate.add_argument(
         "--context-contract", help="validate policy references against this application contract"
+    )
+    validate.add_argument(
+        "--deployment-lock", help="require the policy and contract to match this exact lock"
     )
     validate.add_argument("--format", choices=("json", "text"), default="text")
 
@@ -175,6 +184,18 @@ def _parser() -> argparse.ArgumentParser:
     )
     compose.add_argument("--format", choices=("json", "text"), default="text")
 
+    lock = subparsers.add_parser("lock", help="create or verify an exact policy deployment lock")
+    lock_subparsers = lock.add_subparsers(dest="lock_command", required=True)
+    lock_create = lock_subparsers.add_parser("create", help="print a new deployment lock")
+    lock_create.add_argument("--policy", required=True, help="path to a JSON policy")
+    lock_create.add_argument("--context-contract", help="optional application contract path")
+    lock_create.add_argument("--format", choices=("json", "text"), default="json")
+    lock_verify = lock_subparsers.add_parser("verify", help="verify an existing deployment lock")
+    lock_verify.add_argument("lock", help="path to a JSON deployment lock")
+    lock_verify.add_argument("--policy", required=True, help="path to a JSON policy")
+    lock_verify.add_argument("--context-contract", help="optional application contract path")
+    lock_verify.add_argument("--format", choices=("json", "text"), default="text")
+
     schema = subparsers.add_parser("schema", help="print a bundled JSON Schema")
     schema.add_argument(
         "kind",
@@ -188,6 +209,7 @@ def _parser() -> argparse.ArgumentParser:
             "policy-lint",
             "policy-shadow",
             "context-contract",
+            "deployment-lock",
             "tool-context",
             "tool-approval",
             "audit-record",
@@ -427,6 +449,7 @@ def main(
                 "policy-lint": get_policy_lint_schema,
                 "policy-shadow": get_policy_shadow_schema,
                 "context-contract": get_context_contract_schema,
+                "deployment-lock": get_deployment_lock_schema,
                 "tool-context": get_tool_context_schema,
                 "tool-approval": get_tool_approval_schema,
                 "audit-record": get_audit_record_schema,
@@ -449,6 +472,42 @@ def main(
             )
             target = write_policy(arguments.output, composition.policy, force=arguments.force)
             print(_render_composition_report(composition, target, arguments.format), file=output)
+            return EXIT_ALLOWED
+
+        if arguments.command == "lock":
+            policy = load_policy(arguments.policy)
+            context_contract = (
+                load_context_contract(arguments.context_contract)
+                if arguments.context_contract
+                else None
+            )
+            if arguments.lock_command == "create":
+                lock_value = create_deployment_lock(policy, context_contract)
+            else:
+                lock_value = load_deployment_lock(arguments.lock)
+                verify_deployment_lock(lock_value, policy, context_contract)
+            if arguments.format == "json":
+                print(
+                    json.dumps(lock_value.to_dict(), indent=2, sort_keys=True),
+                    file=output,
+                )
+            else:
+                contract_label = (
+                    "none"
+                    if lock_value.context_contract is None
+                    else (
+                        f"{lock_value.context_contract.id}@"
+                        f"{lock_value.context_contract.version} "
+                        f"({lock_value.context_contract.fingerprint})"
+                    )
+                )
+                print(
+                    f"{'Created' if arguments.lock_command == 'create' else 'Verified'} "
+                    f"deployment lock: policy={lock_value.policy.id}@"
+                    f"{lock_value.policy.version} ({lock_value.policy.fingerprint}), "
+                    f"contract={contract_label}",
+                    file=output,
+                )
             return EXIT_ALLOWED
 
         if arguments.command == "compare":
@@ -515,7 +574,16 @@ def main(
                 if arguments.context_contract
                 else None
             )
-            PolicyEngine(policy, context_contract=context_contract)
+            deployment_lock = (
+                load_deployment_lock(arguments.deployment_lock)
+                if arguments.deployment_lock
+                else None
+            )
+            PolicyEngine(
+                policy,
+                context_contract=context_contract,
+                deployment_lock=deployment_lock,
+            )
             policy_fingerprint = fingerprint_policy(policy)
             result = {
                 "valid": True,
@@ -531,6 +599,8 @@ def main(
                     "id": context_contract.id,
                     "version": context_contract.version,
                 }
+            if deployment_lock is not None:
+                result["deployment_lock_verified"] = True
             if arguments.format == "json":
                 print(json.dumps(result, indent=2, sort_keys=True), file=output)
             else:
@@ -539,10 +609,11 @@ def main(
                     if context_contract is not None
                     else ""
                 )
+                lock_suffix = ", deployment-lock=verified" if deployment_lock is not None else ""
                 print(
                     f"Valid policy {policy.id}@{policy.version}: "
                     f"{len(policy.rules)} rules, default={policy.default_effect.value}, "
-                    f"fingerprint={policy_fingerprint}{contract_suffix}",
+                    f"fingerprint={policy_fingerprint}{contract_suffix}{lock_suffix}",
                     file=output,
                 )
             return EXIT_ALLOWED
@@ -568,7 +639,14 @@ def main(
             if arguments.context_contract
             else None
         )
-        decision = PolicyEngine(policy, context_contract=context_contract).evaluate(context)
+        deployment_lock = (
+            load_deployment_lock(arguments.deployment_lock) if arguments.deployment_lock else None
+        )
+        decision = PolicyEngine(
+            policy,
+            context_contract=context_contract,
+            deployment_lock=deployment_lock,
+        ).evaluate(context)
         if arguments.audit_log:
             append_audit_record(Path(arguments.audit_log), decision)
         print(_render_decision(decision, arguments.format), file=output)

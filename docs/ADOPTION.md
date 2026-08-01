@@ -175,8 +175,26 @@ optional facts before policies reference them.
 This does not implement Cedar principals/resources/actions, close undeclared request fields, prove
 fact authenticity, or replace a consumer's full application schema. Contract adoption and source
 pin updates in downstream repositories remain separately reviewed changes. Version 1 decision and
-report formats do not yet carry contract fingerprints, so deployment configuration must preserve
-the reviewed contract artifact separately.
+report formats do not carry contract fingerprints. A versioned deployment lock now binds exact
+policy and contract content during validation and engine/gate construction; the deployment system
+must preserve and authenticate that reviewed artifact set.
+
+## Implemented gap: exact deployment selection
+
+Operator-authored policy and contract versions are useful release labels, but they do not prevent
+version reuse or unnoticed content replacement. OPA bundle activation similarly distinguishes a
+declared revision from integrity verification, and strict schema-backed authorization services
+reject invalid policy updates rather than activating them.
+
+Agent Ethics now provides canonical domain-separated context-contract fingerprints and a strict
+`DeploymentLock` artifact. The CLI creates and verifies locks, exposes their Draft 2020-12 schema,
+and can require the lock for `validate` and `check`. `PolicyEngine` and `ToolGate` verify the same
+lock before evaluation. The checked-in tool-call example binds a real twelve-rule policy and its
+application fact contract, and a test makes either artifact's drift fail CI.
+
+This is exact-content selection, not a control plane. Locks do not sign, distribute, activate,
+refresh, or roll back artifacts and do not identify an approver. Repository review, build
+provenance, deployment credentials, and any required signing system remain caller-owned.
 
 ## Implemented gap: layered policy ownership
 

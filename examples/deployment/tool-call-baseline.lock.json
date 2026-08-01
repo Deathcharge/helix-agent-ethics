@@ -1,0 +1,13 @@
+{
+  "context_contract": {
+    "fingerprint": "v1:sha256:6fa3da2cba9fde85e844a7fb96c3df3110b36152481af5831815c599388de7fc",
+    "id": "tool-call-context",
+    "version": "1.0.0"
+  },
+  "deployment_lock_version": 1,
+  "policy": {
+    "fingerprint": "v1:sha256:20c8e54cce2b07face13cc515e2e69e7ef711adef29a28906670d90cce2fdba2",
+    "id": "tool-call-baseline",
+    "version": "1.0.0"
+  }
+}

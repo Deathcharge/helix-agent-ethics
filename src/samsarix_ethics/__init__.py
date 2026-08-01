@@ -41,6 +41,13 @@ from .coverage import (
     PolicyCoverageReport,
     measure_policy_coverage,
 )
+from .deployment import (
+    DEPLOYMENT_LOCK_VERSION,
+    DeploymentLock,
+    DeploymentLockArtifact,
+    create_deployment_lock,
+    verify_deployment_lock,
+)
 from .diagnostics import (
     POLICY_LINT_VERSION,
     PolicyLintCode,
@@ -53,6 +60,7 @@ from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
     AuditLogError,
     ContextContractValidationError,
+    DeploymentLockValidationError,
     EvaluationError,
     InputValidationError,
     PolicyCompositionError,
@@ -74,17 +82,25 @@ from .gate import (
 )
 from .io import (
     MAX_CONTEXT_CONTRACT_BYTES,
+    MAX_DEPLOYMENT_LOCK_BYTES,
     append_audit_record,
     load_context,
     load_context_contract,
+    load_deployment_lock,
     load_policy,
     write_policy,
 )
 from .models import MAX_POLICY_RULES, Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
-from .provenance import POLICY_FINGERPRINT_VERSION, fingerprint_policy
+from .provenance import (
+    CONTEXT_CONTRACT_FINGERPRINT_VERSION,
+    POLICY_FINGERPRINT_VERSION,
+    fingerprint_context_contract,
+    fingerprint_policy,
+)
 from .schema import (
     get_audit_record_schema,
     get_context_contract_schema,
+    get_deployment_lock_schema,
     get_policy_comparison_schema,
     get_policy_composition_schema,
     get_policy_coverage_schema,
@@ -119,11 +135,14 @@ __version__ = "0.1.0"
 
 __all__ = [
     "AUDIT_RECORD_VERSION",
+    "CONTEXT_CONTRACT_FINGERPRINT_VERSION",
     "CONTEXT_CONTRACT_VERSION",
+    "DEPLOYMENT_LOCK_VERSION",
     "MAX_BATCH_ITEMS",
     "MAX_COMPOSED_POLICIES",
     "MAX_CONTEXT_CONTRACT_BYTES",
     "MAX_CONTEXT_CONTRACT_FIELDS",
+    "MAX_DEPLOYMENT_LOCK_BYTES",
     "MAX_POLICY_RULES",
     "MAX_POLICY_TEST_BYTES",
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
@@ -146,6 +165,9 @@ __all__ = [
     "ContextField",
     "ContextFieldType",
     "Decision",
+    "DeploymentLock",
+    "DeploymentLockArtifact",
+    "DeploymentLockValidationError",
     "Effect",
     "EvaluationError",
     "InputValidationError",
@@ -192,10 +214,13 @@ __all__ = [
     "build_tool_context",
     "compare_policies",
     "compose_policies",
+    "create_deployment_lock",
+    "fingerprint_context_contract",
     "fingerprint_policy",
     "fingerprint_tool_call",
     "get_audit_record_schema",
     "get_context_contract_schema",
+    "get_deployment_lock_schema",
     "get_policy_comparison_schema",
     "get_policy_composition_schema",
     "get_policy_coverage_schema",
@@ -208,6 +233,7 @@ __all__ = [
     "lint_policy",
     "load_context",
     "load_context_contract",
+    "load_deployment_lock",
     "load_policy",
     "load_policy_test_suite",
     "measure_policy_coverage",
@@ -215,5 +241,6 @@ __all__ = [
     "validate_context",
     "validate_context_against_contract",
     "validate_policy_context_contract",
+    "verify_deployment_lock",
     "write_policy",
 ]
