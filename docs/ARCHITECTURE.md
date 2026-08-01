@@ -29,6 +29,7 @@ the legacy `helix-unified` repository.
 - `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
 - `comparison.py`: deterministic, input-free baseline/candidate impact reports.
+- `coverage.py`: deterministic, input-free rule and outcome coverage with CI thresholds.
 - `gate.py`: normalized tool-call contexts, immutable registration bindings, and fail-closed
   sync/async callback enforcement.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
@@ -61,6 +62,12 @@ Reason/warning contents are compared but discarded; the report exposes only chan
 excludes inputs, decision UUIDs, and timestamps so repeated runs are deterministic. Equality is
 scoped to supplied cases and observable decision metadata; it is not whole-language semantic
 equivalence.
+
+Coverage evaluates the same bounded cases against one policy, unions successful decisions'
+matched-rule IDs, and preserves policy declaration order in covered/uncovered lists. Overridden and
+warning rules still count when matched; errored cases get no partial credit and fail the threshold.
+Outcome counts make default-only behavior visible, but rule coverage is not path, condition, or
+input-space coverage.
 
 ### Deny and review override allow
 

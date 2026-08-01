@@ -59,6 +59,13 @@ jobs:
             --policy examples/policies/tool-call-baseline.json \
             examples/tests/tool-call-baseline.tests.json
           samsarix-ethics schema policy-comparison >/dev/null
+          samsarix-ethics schema policy-coverage >/dev/null
+          samsarix-ethics coverage \
+            --policy examples/policies/tool-call-baseline.json \
+            examples/tests/tool-call-baseline.tests.json \
+            --threshold 100 \
+            --format json >/tmp/policy-coverage.json
+          python -c 'import json; value=json.load(open("/tmp/policy-coverage.json")); assert value["complete"] is True'
           set +e
           samsarix-ethics compare \
             --baseline examples/policies/safe-agent-actions.json \
@@ -88,6 +95,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-comparison >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-coverage >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
@@ -100,6 +108,7 @@ jobs:
               ToolGate,
               compare_policies,
               fingerprint_policy,
+              measure_policy_coverage,
           )
 
           policy = Policy.from_dict({
@@ -133,6 +142,9 @@ jobs:
                   "expected_outcome": "allow",
               }],
           })
+          coverage = measure_policy_coverage(policy, suite, threshold=100)
+          assert coverage.complete is True
+          assert coverage.threshold_met is True
           comparison = compare_policies(policy, candidate, suite)
           assert comparison.authorization_changes == 1
           assert comparison.identical is False

@@ -42,6 +42,12 @@ def get_policy_comparison_schema() -> dict[str, Any]:
     return _load_schema("policy-comparison-v1.schema.json")
 
 
+def get_policy_coverage_schema() -> dict[str, Any]:
+    """Return a fresh copy of the policy-coverage version 1 JSON Schema."""
+
+    return _load_schema("policy-coverage-v1.schema.json")
+
+
 def get_tool_context_schema() -> dict[str, Any]:
     """Return a fresh copy of the tool-call context version 1 JSON Schema."""
 

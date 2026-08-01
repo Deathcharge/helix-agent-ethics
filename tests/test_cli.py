@@ -32,6 +32,7 @@ def test_help_and_version() -> None:
     assert help_result.returncode == 0
     assert "check" in help_result.stdout
     assert "compare" in help_result.stdout
+    assert "coverage" in help_result.stdout
     assert "schema" in help_result.stdout
     assert "test" in help_result.stdout
     assert version_result.returncode == 0
@@ -123,6 +124,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy = _run_cli("schema")
     policy_tests = _run_cli("schema", "policy-test")
     policy_comparison = _run_cli("schema", "policy-comparison")
+    policy_coverage = _run_cli("schema", "policy-coverage")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     audit_record = _run_cli("schema", "audit-record")
@@ -133,12 +135,140 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_tests.stdout)["$id"].endswith("/policy-test/v1.json")
     assert policy_comparison.returncode == 0
     assert json.loads(policy_comparison.stdout)["$id"].endswith("/policy-comparison/v1.json")
+    assert policy_coverage.returncode == 0
+    assert json.loads(policy_coverage.stdout)["$id"].endswith("/policy-coverage/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
     assert json.loads(tool_approval.stdout)["$id"].endswith("/tool-approval/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
+
+
+def test_coverage_command_reports_uncovered_rules_and_enforces_threshold(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_path = write_json("coverage-policy.json", policy_document)
+    suite_path = write_json(
+        "coverage.tests.json",
+        {
+            "schema_version": 1,
+            "name": "coverage",
+            "cases": [
+                {
+                    "name": "read only",
+                    "input": {
+                        "action": {"operation": "read"},
+                        "secret": "never-print-coverage-input",
+                    },
+                    "expected_outcome": "allow",
+                }
+            ],
+        },
+    )
+
+    passing = _run_cli(
+        "coverage",
+        "--policy",
+        str(policy_path),
+        str(suite_path),
+        "--threshold",
+        "50",
+        "--format",
+        "json",
+    )
+    default_threshold = _run_cli(
+        "coverage",
+        "--policy",
+        str(policy_path),
+        str(suite_path),
+        "--format",
+        "json",
+    )
+    failing = _run_cli(
+        "coverage",
+        "--policy",
+        str(policy_path),
+        str(suite_path),
+        "--threshold",
+        "100",
+    )
+    invalid = _run_cli(
+        "coverage",
+        "--policy",
+        str(policy_path),
+        str(suite_path),
+        "--threshold",
+        "101",
+    )
+    non_integer = _run_cli(
+        "coverage",
+        "--policy",
+        str(policy_path),
+        str(suite_path),
+        "--threshold",
+        "not-a-number",
+    )
+
+    assert passing.returncode == 0
+    payload = json.loads(passing.stdout)
+    assert payload["coverage_percent"] == 50.0
+    assert payload["threshold_met"] is True
+    assert payload["covered_rule_ids"] == ["allow-read"]
+    assert payload["uncovered_rule_ids"] == ["deny-delete"]
+    assert "never-print-coverage-input" not in passing.stdout
+    assert default_threshold.returncode == 0
+    assert json.loads(default_threshold.stdout)["required_coverage_percent"] == 0
+    assert failing.returncode == 1
+    assert "Rules: 1/2 covered (50.00%; required 100%)" in failing.stdout
+    assert "  - deny-delete" in failing.stdout
+    assert "threshold NOT MET" in failing.stdout
+    assert invalid.returncode == 2
+    assert "must be an integer from 0 to 100" in invalid.stderr
+    assert non_integer.returncode == 2
+    assert "must be an integer from 0 to 100" in non_integer.stderr
+
+
+def test_coverage_command_errors_fail_closed_without_inputs(
+    write_json: Any,
+) -> None:
+    policy_path = write_json(
+        "coverage-error-policy.json",
+        {
+            "schema_version": 1,
+            "id": "coverage-errors",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "array-only",
+                    "effect": "allow",
+                    "conditions": [{"field": "roles", "operator": "contains", "value": "admin"}],
+                }
+            ],
+        },
+    )
+    suite_path = write_json(
+        "coverage-errors.tests.json",
+        {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "name": "wrong shape",
+                    "input": {"roles": "never-print-this-value"},
+                    "expected_outcome": "deny",
+                }
+            ],
+        },
+    )
+
+    result = _run_cli("coverage", "--policy", str(policy_path), str(suite_path))
+
+    assert result.returncode == 1
+    assert "Errors:" in result.stdout
+    assert "wrong shape: rule 'array-only' failed" in result.stdout
+    assert "threshold NOT MET" in result.stdout
+    assert "never-print-this-value" not in result.stdout
 
 
 def test_compare_command_reports_impact_and_uses_ci_exit_code(

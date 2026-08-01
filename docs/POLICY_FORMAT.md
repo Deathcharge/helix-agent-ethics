@@ -136,14 +136,15 @@ securely.
 
 ## JSON Schema
 
-The wheel contains Draft 2020-12 schemas for policies, policy-test suites, policy-comparison
-reports, normalized tool-call contexts, bound approval records, and audit records. Print fresh
+The wheel contains Draft 2020-12 schemas for policies, policy-test suites, policy-comparison and
+policy-coverage reports, normalized tool-call contexts, bound approval records, and audit records. Print fresh
 copies without a network request:
 
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
+samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
@@ -185,3 +186,13 @@ samsarix-ethics compare --baseline approved.json --candidate proposed.json polic
 Exit `0` means all supplied cases had identical observable behavior; changes or evaluation errors
 exit `1`. This is sampled impact evidence, not proof of equivalence for inputs absent from the
 suite. See [POLICY_COMPARISON.md](POLICY_COMPARISON.md).
+
+Measure which rules that suite exercises and optionally fail below an explicit integer threshold:
+
+```bash
+samsarix-ethics coverage --policy policy.json policy.tests.json --threshold 100
+```
+
+Matching warning and overridden authorization rules count as covered; default outcomes cover no
+rule. Reports omit inputs and do not claim complete condition or input-space coverage. See
+[POLICY_COVERAGE.md](POLICY_COVERAGE.md).

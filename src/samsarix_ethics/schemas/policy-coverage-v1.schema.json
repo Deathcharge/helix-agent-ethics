@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/policy-coverage/v1.json",
+  "title": "Samsarix Agent Ethics policy coverage report v1",
+  "description": "Input-free rule and outcome coverage over a bounded policy-test suite.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "coverage_version",
+    "suite_name",
+    "policy_id",
+    "policy_version",
+    "policy_fingerprint",
+    "total_rules",
+    "covered_rules",
+    "uncovered_rules",
+    "coverage_percent",
+    "required_coverage_percent",
+    "threshold_met",
+    "complete",
+    "covered_rule_ids",
+    "uncovered_rule_ids",
+    "total_cases",
+    "evaluated_cases",
+    "allow_cases",
+    "deny_cases",
+    "review_cases",
+    "errors",
+    "error_cases"
+  ],
+  "properties": {
+    "coverage_version": {"const": 1},
+    "suite_name": {"type": "string", "minLength": 1, "maxLength": 200},
+    "policy_id": {"$ref": "#/$defs/identifier"},
+    "policy_version": {"$ref": "#/$defs/identifier"},
+    "policy_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "total_rules": {"$ref": "#/$defs/count"},
+    "covered_rules": {"$ref": "#/$defs/count"},
+    "uncovered_rules": {"$ref": "#/$defs/count"},
+    "coverage_percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "required_coverage_percent": {"type": "integer", "minimum": 0, "maximum": 100},
+    "threshold_met": {"type": "boolean"},
+    "complete": {"type": "boolean"},
+    "covered_rule_ids": {"$ref": "#/$defs/ruleIds"},
+    "uncovered_rule_ids": {"$ref": "#/$defs/ruleIds"},
+    "total_cases": {"type": "integer", "minimum": 1, "maximum": 1000},
+    "evaluated_cases": {"$ref": "#/$defs/count"},
+    "allow_cases": {"$ref": "#/$defs/count"},
+    "deny_cases": {"$ref": "#/$defs/count"},
+    "review_cases": {"$ref": "#/$defs/count"},
+    "errors": {"$ref": "#/$defs/count"},
+    "error_cases": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {"$ref": "#/$defs/errorCase"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "ruleIds": {
+      "type": "array",
+      "maxItems": 1000,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/identifier"}
+    },
+    "errorCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "error"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 200},
+        "error": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    }
+  }
+}
