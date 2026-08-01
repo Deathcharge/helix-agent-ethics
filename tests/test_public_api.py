@@ -11,6 +11,11 @@ def test_public_api_is_importable() -> None:
     assert "PolicyValidationError" in samsarix_ethics.__all__
     assert "SamsarixEthicsError" in samsarix_ethics.__all__
     assert "validate_context" in samsarix_ethics.__all__
+    assert "ContextContract" in samsarix_ethics.__all__
+    assert "ContextContractValidationError" in samsarix_ethics.__all__
+    assert "get_context_contract_schema" in samsarix_ethics.__all__
+    assert "load_context_contract" in samsarix_ethics.__all__
+    assert "validate_policy_context_contract" in samsarix_ethics.__all__
     assert "ToolGate" in samsarix_ethics.__all__
     assert "BoundToolGate" in samsarix_ethics.__all__
     assert "ToolCallBlockedError" in samsarix_ethics.__all__
@@ -50,3 +55,5 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.TOOL_CALL_FINGERPRINT_VERSION == 1
     assert samsarix_ethics.TOOL_CONTEXT_VERSION == 1
     assert samsarix_ethics.AUDIT_RECORD_VERSION == 1
+    assert samsarix_ethics.CONTEXT_CONTRACT_VERSION == 1
+    assert samsarix_ethics.MAX_CONTEXT_CONTRACT_FIELDS == 1_000

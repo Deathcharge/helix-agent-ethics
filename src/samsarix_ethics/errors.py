@@ -19,6 +19,10 @@ class PolicyValidationError(SamsarixEthicsError):
     """Raised when a policy document is malformed or internally inconsistent."""
 
 
+class ContextContractValidationError(SamsarixEthicsError):
+    """Raised when a context contract is malformed or incompatible with a policy."""
+
+
 class PolicyCompositionError(SamsarixEthicsError):
     """Raised when validated policy sources cannot be composed safely."""
 

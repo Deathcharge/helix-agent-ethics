@@ -72,6 +72,13 @@ cannot downgrade those labels per call. The application still owns the registry 
 binding. Treat MCP and other remote tool annotations as untrusted hints unless their source and
 meaning are independently trusted.
 
+An optional `ContextContract` can reject policy path typos and missing or mistyped declared facts
+before rule evaluation. A contract is trusted configuration, not authentication: it does not prove
+that identity, capability, approval, tenant, or risk facts came from a trusted source, and it
+deliberately permits unrelated input fields. Applications must derive and protect trusted facts
+outside model-controlled payloads and use a full application validator when the entire request
+must be closed.
+
 The policy fingerprint is deterministic mutation/equality evidence, not a digital signature. It
 does not authenticate a policy author, prove review, prevent rollback, or secure policy
 distribution. Because a digest can also act as an equality oracle for a guessable private policy,

@@ -67,8 +67,8 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 
 ```text
 samsarix-ethics init POLICY.json [--force]
-samsarix-ethics validate POLICY.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-lint|policy-shadow|tool-context|tool-approval|audit-record]
+samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--format text|json]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-lint|policy-shadow|context-contract|tool-context|tool-approval|audit-record]
 samsarix-ethics compose --id ID --version VERSION --policy SOURCE.json [--policy SOURCE.json ...] \
                         --output POLICY.json [--description TEXT] [--force] [--format text|json]
 samsarix-ethics lint POLICY.json [--fail-on none|security-warning|warning|suggestion]
@@ -80,7 +80,8 @@ samsarix-ethics compare --baseline BASELINE.json --candidate CANDIDATE.json \
                         TESTS.json [--format text|json]
 samsarix-ethics shadow --baseline BASELINE.json --candidate CANDIDATE.json \
                        [--input INPUT.json|-] [--format json|text]
-samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
+samsarix-ethics check --policy POLICY.json [--context-contract CONTRACT.json]
+                      [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
 samsarix-ethics --help
 samsarix-ethics --version
@@ -116,10 +117,23 @@ samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
 samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
+samsarix-ethics schema context-contract > context-contract-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```
+
+Catch misspelled policy facts and incompatible operator types before deployment, then enforce
+required application facts and their types at evaluation time:
+
+```bash
+samsarix-ethics validate examples/policies/tool-call-baseline.json \
+  --context-contract examples/contracts/tool-call-context.json
+```
+
+Context contracts are opt-in, versioned, and dependency-free. They validate declared dotted paths
+while permitting unrelated request fields such as opaque tool arguments. See the
+[application context contract guide](docs/CONTEXT_CONTRACTS.md).
 
 Compose organization-owned guardrails with application-owned permissions into one ordinary policy:
 
@@ -208,6 +222,7 @@ from samsarix_ethics import (
     compare_policies,
     compose_policies,
     load_policy,
+    load_context_contract,
     load_policy_test_suite,
     lint_policy,
     measure_policy_coverage,
@@ -249,6 +264,10 @@ shadow = PolicyShadowEvaluator(policy, candidate).evaluate(
 print(shadow.status, shadow.authorization_changed)
 # Enforce only this baseline decision during the shadow rollout.
 authoritative_decision = shadow.authoritative_decision
+
+tool_policy = load_policy("examples/policies/tool-call-baseline.json")
+tool_contract = load_context_contract("examples/contracts/tool-call-context.json")
+contracted_engine = PolicyEngine(tool_policy, context_contract=tool_contract)
 
 composition = compose_policies(
     [
@@ -430,7 +449,8 @@ before any registry upload.
 The product is a library plus CLI; it has no server or cloud component. The package separates
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
 versioned schemas, bounded I/O, authoring diagnostics, regression testing, rule coverage, policy
-impact comparison, layered composition, baseline-authoritative shadow rollout, and
+impact comparison, layered composition, application context contracts,
+baseline-authoritative shadow rollout, and
 presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
@@ -442,6 +462,8 @@ Deliberate limitations:
   rollback automation.
 - JSONL audit append is local and metadata-only, with no cross-process ordering guarantee.
 - The engine evaluates explicit caller-supplied facts; it does not infer intent or truth.
+- Context contracts validate declared paths and types, not fact authenticity or every undeclared
+  request field.
 - Policies must be reviewed and tested for the embedding application's real threat model.
 
 ## Contributing and license

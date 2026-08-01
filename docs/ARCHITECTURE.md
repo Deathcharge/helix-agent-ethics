@@ -7,9 +7,10 @@ configuration and an action-context object, receives an explainable decision, an
 responsible for enforcement immediately before the protected operation.
 
 ```text
-trusted policy JSON ──> bounded parser ──> immutable Policy ─┐
-                                                            ├─> PolicyEngine ─> Decision
-untrusted action JSON ─> bounded parser ──> context object ──┘                  │
+trusted policy JSON ──> bounded parser ──> immutable Policy ──────────────┐
+trusted context contract ─> path/operator check + runtime fact types ────┤
+                                                                         ├─> PolicyEngine ─> Decision
+untrusted action JSON ─> bounded parser ─> context object ────────────────┘                  │
                                                                                ├─> optional metadata-only audit sink
                                                                                └─> ToolGate ─> callback or typed block
 
@@ -29,6 +30,8 @@ the legacy `helix-unified` repository.
 - `approval.py`: immutable approval records and bounded exact-call fingerprints.
 - `provenance.py`: canonical, streamed exact-policy fingerprints.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
+- `contracts.py`: immutable application fact declarations, policy compatibility, and runtime type
+  enforcement.
 - `engine.py`: dotted-field resolution, typed condition operators, rule matching, and precedence.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and the legacy audit helper.
 - `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
@@ -55,6 +58,12 @@ reproducible, offline, testable, and cost-free. It also means the caller must su
 Unknown fields/operators, duplicate IDs, invalid references, malformed JSON, non-finite numbers,
 non-JSON in-memory values, and bounded-resource violations are rejected before a decision. Operator
 type errors stop the evaluation. An embedding application must treat errors as non-authorization.
+
+An optional application context contract adds a second, explicit layer. Engine construction
+rejects undeclared policy paths and incompatible operator/type combinations; evaluation rejects
+missing required facts, declared type mismatches, and declared array-item mismatches. Contracts
+accept unrelated request fields by design so opaque arguments need not be modeled. They establish
+structure, not truth: the application remains responsible for authentic and current facts.
 
 ### Schemas plus executable examples
 
@@ -139,6 +148,8 @@ authorization and risk facts can be re-read.
 - **Policy fingerprint** proves exact content equality under the documented v1 serializer; it does
   not prove who authored, approved, distributed, or securely stored that policy.
 - **Evaluation input** may be attacker-controlled and is bounded and type-checked.
+- **Context contract** is trusted application configuration. It restricts policy-visible path and
+  type expectations but neither authenticates facts nor closes the entire input object.
 - **Embedding application** owns authentication, authorization, fact integrity, enforcement,
   approval expiry and atomic one-time consumption, concurrency, and the protected side effect.
 - **Shadow-rollout operator** owns exact baseline/candidate selection, sampling, telemetry
