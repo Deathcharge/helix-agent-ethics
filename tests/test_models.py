@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import pytest
@@ -127,6 +128,38 @@ def test_exists_condition_serializes_without_value() -> None:
     )
 
     assert condition.to_dict() == {"field": "actor.id", "operator": "exists"}
+
+
+def test_exists_condition_rejects_unused_value() -> None:
+    with pytest.raises(PolicyValidationError, match="value is not allowed"):
+        PolicyCondition.from_dict(
+            {"field": "actor.id", "operator": "exists", "value": True},
+            location="condition",
+        )
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        (("not", "json"), "non-JSON value"),
+        (math.inf, "non-finite number"),
+    ],
+)
+def test_in_memory_policy_uses_json_contract(
+    value: Any, message: str, policy_document: dict[str, Any]
+) -> None:
+    policy_document["rules"][0]["conditions"][0]["value"] = value
+
+    with pytest.raises(PolicyValidationError, match=message):
+        Policy.from_dict(policy_document)
+
+
+def test_reference_path_length_is_bounded() -> None:
+    with pytest.raises(PolicyValidationError, match="not a valid field path"):
+        PolicyCondition.from_dict(
+            {"field": "actor.id", "operator": "eq", "value": {"$ref": "x" * 257}},
+            location="condition",
+        )
 
 
 def test_membership_condition_accepts_array_reference() -> None:

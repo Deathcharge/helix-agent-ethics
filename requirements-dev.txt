@@ -1,6 +1,7 @@
 # Direct development tool requirements. Compile these into requirements-dev.lock.
 # The package itself has no runtime dependencies and is installed separately.
 build==1.5.0
+jsonschema==4.26.0
 mypy==1.19.1
 pytest==9.0.3
 pytest-cov==6.3.0

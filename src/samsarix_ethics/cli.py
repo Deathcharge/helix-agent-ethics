@@ -17,8 +17,11 @@ from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .io import append_audit_record, load_context, load_policy, write_sample_policy
 from .models import Decision, Outcome
+from .schema import get_policy_schema, get_policy_test_schema
+from .testing import PolicyTestReport, load_policy_test_suite, run_policy_tests
 
 EXIT_ALLOWED = 0
+EXIT_TEST_FAILED = 1
 EXIT_ERROR = 2
 EXIT_DENIED = 3
 EXIT_REVIEW = 4
@@ -45,6 +48,20 @@ def _parser() -> argparse.ArgumentParser:
     )
     validate.add_argument("policy", help="path to a JSON policy")
     validate.add_argument("--format", choices=("json", "text"), default="text")
+
+    test_suite = subparsers.add_parser("test", help="run a JSON policy regression suite")
+    test_suite.add_argument("--policy", required=True, help="path to a JSON policy")
+    test_suite.add_argument("suite", help="path to a JSON policy-test suite")
+    test_suite.add_argument("--format", choices=("json", "text"), default="text")
+
+    schema = subparsers.add_parser("schema", help="print a bundled JSON Schema")
+    schema.add_argument(
+        "kind",
+        nargs="?",
+        choices=("policy", "policy-test"),
+        default="policy",
+        help="schema to print; default: policy",
+    )
 
     initialize = subparsers.add_parser("init", help="write a documented sample policy")
     initialize.add_argument("path", help="output path for the sample JSON policy")
@@ -79,6 +96,21 @@ def _decision_exit(outcome: Outcome) -> int:
     }[outcome]
 
 
+def _render_test_report(report: PolicyTestReport, output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(report.to_dict(), indent=2, sort_keys=True)
+    lines: list[str] = []
+    for result in report.results:
+        detail = "; ".join(result.failures) if result.failures else result.error
+        suffix = f": {detail}" if detail else ""
+        lines.append(f"{result.status.value.upper()} {result.name}{suffix}")
+    lines.append(
+        f"Summary: {report.passed} passed, {report.failed} failed, "
+        f"{report.errors} errors, {len(report.results)} total"
+    )
+    return "\n".join(lines)
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -99,6 +131,11 @@ def main(
             print(f"Wrote sample policy: {target}", file=output)
             return EXIT_ALLOWED
 
+        if arguments.command == "schema":
+            schema = get_policy_schema() if arguments.kind == "policy" else get_policy_test_schema()
+            print(json.dumps(schema, indent=2, sort_keys=True), file=output)
+            return EXIT_ALLOWED
+
         policy = load_policy(arguments.policy)
         if arguments.command == "validate":
             result = {
@@ -117,6 +154,12 @@ def main(
                     file=output,
                 )
             return EXIT_ALLOWED
+
+        if arguments.command == "test":
+            suite = load_policy_test_suite(arguments.suite)
+            report = run_policy_tests(policy, suite)
+            print(_render_test_report(report, arguments.format), file=output)
+            return EXIT_ALLOWED if report.successful else EXIT_TEST_FAILED
 
         context = load_context(arguments.input, stdin=binary_input)
         decision = PolicyEngine(policy).evaluate(context)

@@ -19,12 +19,15 @@ All notable product changes are recorded here.
 - Reproducible hashed development lock, commit-pinned CI actions, and installed-wheel CI smoke test.
 - Fail-closed sample policy coverage for missing destructive-action approval.
 - Bounded batch evaluation and shared validation for parsed and in-memory JSON contexts.
+- Bundled Draft 2020-12 policy and policy-test schemas, an executable regression-suite API/CLI,
+  privacy-minimized test reports, and a five-case real policy example.
 
 ### Changed
 
 - Membership policy literals are validated before evaluation, mixed integer/float comparisons are
   supported, decision sequences serialize as JSON arrays, and file reads remain bounded if a file
   grows during loading.
+- Existence conditions reject unused values so runtime validation and the published schema agree.
 
 ### Removed
 

@@ -14,8 +14,9 @@ adoption remain separate evidence-based decisions.
 - Keep the default branch buildable from a clean checkout and preserve exact-head CI evidence.
 - Keep Samsarix LLC branding, package identity, license metadata, and compatibility aliases internally consistent.
 - Preserve the pre-productization default under a rollback ref before merging; do not delete legacy history.
-- Review priority: publish policy schema and one fail-closed integration.
-- Review priority: add policy test fixtures and batch evaluation for CI and pre-deployment use.
+- Versioned policy/test schemas, policy regression suites, and bounded batch evaluation are in the
+  release candidate; preserve their compatibility fixtures as the language evolves.
+- Review priority: add one fail-closed downstream integration with a consumer-owned contract test.
 - Review priority: publish focused policy packs for high-value agent tool boundaries.
 
 ## Release candidate
@@ -26,7 +27,7 @@ adoption remain separate evidence-based decisions.
 
 Current hardening backlog:
 
-- No published package/release, policy JSON Schema, or downstream integration evidence.
+- No published package/release or downstream integration evidence.
 - Installed-wheel smoke coverage exists locally and in CI, but publication provenance and signing
   are not yet configured.
 - The “ethics” name may still overpromise relative to a deterministic authorization/policy gate.

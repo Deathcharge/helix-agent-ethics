@@ -60,6 +60,28 @@ closed. An empty batch returns an empty tuple.
 Models are frozen dataclasses. Construct policies through `from_dict` or `load_policy` so validation
 always runs.
 
+## Schemas and policy regression tests
+
+### `get_policy_schema()` and `get_policy_test_schema()`
+
+Return fresh dictionaries containing the bundled Draft 2020-12 schemas. These calls perform no
+network access and callers may mutate the returned value without changing future calls.
+
+### `load_policy_test_suite(path) -> PolicyTestSuite`
+
+Loads a UTF-8 JSON suite with a 4 MiB byte limit and the shared JSON structural limits. Suites
+contain 1-1,000 uniquely named cases. Raises `PolicyTestValidationError` for malformed suites.
+
+### `run_policy_tests(policy, suite) -> PolicyTestReport`
+
+Evaluates every case and records `PolicyTestStatus.PASS`, `FAIL`, or `ERROR`. A report includes
+policy identity, counts, expected and actual outcomes, matched rule IDs, assertion messages, and
+evaluation errors. It deliberately excludes every raw case input. `successful` is true only when
+all cases pass.
+
+`PolicyTestCase`, `PolicyTestSuite`, `PolicyTestResult`, and `PolicyTestReport` are frozen public
+models with JSON-serializable `to_dict()` methods.
+
 ## Audit helper
 
 ### `append_audit_record(path, decision) -> None`
@@ -70,9 +92,9 @@ does not include evaluation input, rule messages, or secrets. Raises `AuditLogEr
 
 ## Error hierarchy
 
-`PolicyValidationError`, `InputValidationError`, `EvaluationError`, and `AuditLogError` derive from
-`SamsarixEthicsError`. The base class and specialized errors are exported from
-`samsarix_ethics` and defined in `samsarix_ethics.errors`.
+`PolicyValidationError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
+and `AuditLogError` derive from `SamsarixEthicsError`. The base class and specialized errors are
+exported from `samsarix_ethics` and defined in `samsarix_ethics.errors`.
 
 ## Compatibility
 

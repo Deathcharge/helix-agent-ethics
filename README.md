@@ -39,6 +39,8 @@ Install and evaluate the included read-only action:
 ```bash
 python -m pip install -e .
 samsarix-ethics validate examples/policies/safe-agent-actions.json
+samsarix-ethics test --policy examples/policies/safe-agent-actions.json \
+  examples/tests/safe-agent-actions.tests.json
 samsarix-ethics check \
   --policy examples/policies/safe-agent-actions.json \
   --input examples/actions/read-resource.json
@@ -66,6 +68,8 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--format text|json]
+samsarix-ethics schema [policy|policy-test]
+samsarix-ethics test --policy POLICY.json TESTS.json [--format text|json]
 samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
 samsarix-ethics --help
@@ -77,6 +81,7 @@ Exit codes are stable for non-interactive use:
 | Code | Meaning |
 | ---: | --- |
 | `0` | action allowed, or non-decision command succeeded |
+| `1` | one or more policy regression cases failed or errored |
 | `2` | invalid invocation, policy, input, evaluation, or requested audit write |
 | `3` | action denied |
 | `4` | human review required |
@@ -90,6 +95,21 @@ samsarix-ethics init policy.json
 ```
 
 `--force` is required to replace an existing file.
+
+Print the versioned Draft 2020-12 schemas for editors, CI, or code generation:
+
+```bash
+samsarix-ethics schema policy > policy-v1.schema.json
+samsarix-ethics schema policy-test > policy-test-v1.schema.json
+```
+
+The bundled regression suite proves allow, deny, review, missing-approval, and warning behavior
+without exposing case inputs in its report:
+
+```bash
+samsarix-ethics test --policy examples/policies/safe-agent-actions.json \
+  examples/tests/safe-agent-actions.tests.json
+```
 
 ## Python API
 
@@ -107,6 +127,10 @@ decision = PolicyEngine(policy).evaluate(
 
 if decision.allowed:
     print(decision.decision_id, decision.reasons)
+
+batch = PolicyEngine(policy).evaluate_many(
+    [{"action": {"operation": "read"}}, {"action": {"operation": "delete"}}]
+)
 ```
 
 The application remains responsible for enforcing the decision immediately before the protected
@@ -130,6 +154,7 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
 - JSON byte size, nesting depth, string length, container count, rule count, and condition count are
   bounded.
 - Duplicate JSON keys and non-finite numbers are rejected.
+- Direct Python calls enforce the same bounded JSON contract as file and standard-input parsing.
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
@@ -175,7 +200,8 @@ environment as described in [docs/PRODUCTIZATION.md](docs/PRODUCTIZATION.md) bef
 ## Architecture and limitations
 
 The product is a library plus CLI; it has no server or cloud component. The package separates
-validated immutable models, deterministic evaluation, bounded I/O, and presentation/exit codes.
+validated immutable models, deterministic evaluation, versioned schemas, bounded I/O, regression
+testing, and presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
 Deliberate limitations:

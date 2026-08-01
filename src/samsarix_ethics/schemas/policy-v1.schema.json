@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/policy/v1.json",
+  "title": "Samsarix Agent Ethics policy v1",
+  "description": "A deterministic, local policy gate for autonomous agent actions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "default_effect", "rules"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"$ref": "#/$defs/identifier"},
+    "version": {"$ref": "#/$defs/identifier"},
+    "description": {"type": "string", "maxLength": 1000},
+    "default_effect": {"enum": ["allow", "deny", "review"]},
+    "rules": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {"$ref": "#/$defs/rule"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "field_path": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)*$"
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$ref"],
+      "properties": {"$ref": {"$ref": "#/$defs/field_path"}}
+    },
+    "expected_value": {
+      "oneOf": [
+        {"$ref": "#/$defs/reference"},
+        {"type": ["array", "boolean", "null", "number", "string"]}
+      ]
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "operator"],
+      "properties": {
+        "field": {"$ref": "#/$defs/field_path"},
+        "operator": {
+          "enum": [
+            "contains",
+            "ends_with",
+            "eq",
+            "exists",
+            "gt",
+            "gte",
+            "in",
+            "lt",
+            "lte",
+            "neq",
+            "not_contains",
+            "not_exists",
+            "not_in",
+            "starts_with"
+          ]
+        },
+        "value": {"$ref": "#/$defs/expected_value"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"operator": {"enum": ["exists", "not_exists"]}},
+            "required": ["operator"]
+          },
+          "then": {"not": {"required": ["value"]}},
+          "else": {"required": ["value"]}
+        },
+        {
+          "if": {
+            "properties": {"operator": {"enum": ["in", "not_in"]}},
+            "required": ["operator"]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "oneOf": [
+                  {"type": "array"},
+                  {"$ref": "#/$defs/reference"}
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "effect", "conditions"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "effect": {"enum": ["allow", "audit", "deny", "review", "warn"]},
+        "conditions": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {"$ref": "#/$defs/condition"}
+        },
+        "message": {"type": "string", "maxLength": 500},
+        "priority": {"type": "integer", "minimum": -10000, "maximum": 10000}
+      }
+    }
+  }
+}

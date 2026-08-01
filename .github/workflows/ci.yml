@@ -63,3 +63,8 @@ jobs:
           /tmp/samsarix-wheel/bin/python -m pip install --no-deps "$wheel"
           /tmp/samsarix-wheel/bin/samsarix-ethics --version
           /tmp/samsarix-wheel/bin/samsarix-ethics validate examples/policies/safe-agent-actions.json
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema policy >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics test \
+            --policy examples/policies/safe-agent-actions.json \
+            examples/tests/safe-agent-actions.tests.json

@@ -20,5 +20,9 @@ class EvaluationError(SamsarixEthicsError):
     """Raised when a valid policy cannot be evaluated against the supplied input."""
 
 
+class PolicyTestValidationError(SamsarixEthicsError):
+    """Raised when a policy-test suite is malformed or outside safety limits."""
+
+
 class AuditLogError(SamsarixEthicsError):
     """Raised when a requested audit record cannot be durably appended."""

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "name": "safe agent action regressions",
+  "cases": [
+    {
+      "name": "read-only action is allowed",
+      "input": {
+        "action": {"operation": "read", "risk": "low"}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-read-only-action"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "missing destructive approval is denied",
+      "input": {
+        "action": {"operation": "delete", "risk": "medium"}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-destructive-action-without-approval"]
+    },
+    {
+      "name": "false destructive approval is denied",
+      "input": {
+        "action": {"operation": "send", "risk": "medium"},
+        "context": {"human_approved": false}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-unapproved-destructive-action"]
+    },
+    {
+      "name": "high-risk action requires review",
+      "input": {
+        "action": {"operation": "write", "risk": "high"}
+      },
+      "expected_outcome": "review",
+      "expected_matched_rules": ["review-high-risk-action"]
+    },
+    {
+      "name": "sensitive read records a warning",
+      "input": {
+        "action": {"operation": "read", "risk": "low"},
+        "data": {"sensitivity": "restricted"}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-read-only-action", "warn-sensitive-data"],
+      "expected_warning_count": 1
+    }
+  ]
+}

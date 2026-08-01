@@ -22,6 +22,8 @@ the legacy `helix-unified` repository.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `engine.py`: dotted-field resolution, typed condition operators, rule matching, and precedence.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and audit append.
+- `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
+- `testing.py`: bounded regression suites and input-free aggregate reports.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
 - `__init__.py`: deliberate public Python API.
 
@@ -37,6 +39,13 @@ reproducible, offline, testable, and cost-free. It also means the caller must su
 Unknown fields/operators, duplicate IDs, invalid references, malformed JSON, non-finite numbers,
 non-JSON in-memory values, and bounded-resource violations are rejected before a decision. Operator
 type errors stop the evaluation. An embedding application must treat errors as non-authorization.
+
+### Schemas plus executable examples
+
+The JSON Schemas support editors and generic CI validators; the Python validators remain
+authoritative for semantic and aggregate constraints. Policy-test suites evaluate real engine
+behavior and separate unmet expectations from evaluation errors. Reports omit raw inputs just as
+the audit helper does.
 
 ### Deny and review override allow
 

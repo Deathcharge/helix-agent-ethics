@@ -10,7 +10,8 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 from typing import Any, ClassVar
 
-from .errors import PolicyValidationError
+from .errors import InputValidationError, PolicyValidationError
+from .validation import validate_json_shape
 
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _FIELD_PATH = re.compile(r"^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$")
@@ -104,6 +105,10 @@ class PolicyCondition:
         if not isinstance(operator, str) or operator not in cls.SUPPORTED_OPERATORS:
             supported = ", ".join(sorted(cls.SUPPORTED_OPERATORS))
             raise PolicyValidationError(f"{location}.operator must be one of: {supported}")
+        if operator in {"exists", "not_exists"} and "value" in data:
+            raise PolicyValidationError(
+                f"{location}.value is not allowed for operator {operator!r}"
+            )
         if operator not in {"exists", "not_exists"} and "value" not in data:
             raise PolicyValidationError(f"{location}.value is required for operator {operator!r}")
         expected = data.get("value")
@@ -112,7 +117,7 @@ class PolicyCondition:
                 raise PolicyValidationError(
                     f"{location}.value objects must contain only a string '$ref' field"
                 )
-            if not _FIELD_PATH.fullmatch(expected["$ref"]):
+            if len(expected["$ref"]) > 256 or not _FIELD_PATH.fullmatch(expected["$ref"]):
                 raise PolicyValidationError(f"{location}.value.$ref is not a valid field path")
         if operator in {"in", "not_in"} and not isinstance(expected, (list, dict)):
             raise PolicyValidationError(
@@ -208,6 +213,10 @@ class Policy:
 
     @classmethod
     def from_dict(cls, value: Any) -> Policy:
+        try:
+            validate_json_shape(value, label="policy")
+        except InputValidationError as exc:
+            raise PolicyValidationError(str(exc)) from exc
         data = _expect_mapping(value, "policy")
         _check_keys(
             data,
