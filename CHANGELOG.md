@@ -46,6 +46,9 @@ All notable product changes are recorded here.
   and a 100%-covered twelve-rule tool-policy example.
 - Versioned, value-minimized policy authoring diagnostics with five stable finding codes, explicit
   severity gates, a bundled report schema, and strict checks over every example policy.
+- Deterministic layered policy composition API/CLI, a versioned value-minimized provenance schema,
+  atomic output writes, and a support-agent example that centrally combines organization
+  guardrails with application permissions while retaining the ordinary policy toolchain.
 
 ### Changed
 

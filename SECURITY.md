@@ -44,6 +44,10 @@ proves only that a supplied case matched a rule, not that every condition path o
 Lint reports omit condition values, descriptions, and rule messages, but expose rule identifiers
 and zero-based condition locations. A clean lint report covers only documented deterministic
 findings and is not evidence that an allow rule reflects application intent or least privilege.
+Composition reports omit source paths, descriptions, rules, conditions, messages, and condition
+values, but expose source and target IDs, versions, rule counts, and exact fingerprints. Treat
+those fingerprints as operational metadata and equality oracles, not author signatures or
+freshness evidence. Composition does not fetch, authenticate, sign, distribute, or activate policy.
 Caller-supplied audit sinks are trusted application code invoked synchronously before authorization;
 their failures prevent tool execution, but their transport and downstream storage are outside this
 package's boundary.

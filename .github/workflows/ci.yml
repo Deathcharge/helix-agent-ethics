@@ -52,20 +52,42 @@ jobs:
       - name: Smoke-test source examples
         if: matrix.python-version == '3.11'
         run: |
+          samsarix-ethics compose \
+            --id tool-call-baseline \
+            --version 1.0.0 \
+            --description "Fail-closed baseline for read, destructive, external, and sensitive tool capabilities." \
+            --policy examples/policies/organization-tool-guardrails.json \
+            --policy examples/policies/support-agent-tool-permissions.json \
+            --output /tmp/composed-tool-policy.json \
+            --format json >/tmp/policy-composition.json
+          python - <<'PY'
+          import json
+          from samsarix_ethics import fingerprint_policy, load_policy
+
+          report = json.load(open("/tmp/policy-composition.json"))
+          composed = load_policy("/tmp/composed-tool-policy.json")
+          expected = load_policy("examples/policies/tool-call-baseline.json")
+          assert composed == expected
+          assert report["source_count"] == 2
+          assert report["total_rules"] == 12
+          assert report["policy_fingerprint"] == fingerprint_policy(expected)
+          assert "conditions" not in json.dumps(report)
+          PY
           samsarix-ethics test \
             --policy examples/policies/safe-agent-actions.json \
             examples/tests/safe-agent-actions.tests.json
           samsarix-ethics test \
-            --policy examples/policies/tool-call-baseline.json \
+            --policy /tmp/composed-tool-policy.json \
             examples/tests/tool-call-baseline.tests.json
           samsarix-ethics schema policy-comparison >/dev/null
+          samsarix-ethics schema policy-composition >/dev/null
           samsarix-ethics schema policy-coverage >/dev/null
           samsarix-ethics schema policy-lint >/dev/null
           for policy in examples/policies/*.json; do
             samsarix-ethics lint "$policy" --fail-on suggestion
           done
           samsarix-ethics coverage \
-            --policy examples/policies/tool-call-baseline.json \
+            --policy /tmp/composed-tool-policy.json \
             examples/tests/tool-call-baseline.tests.json \
             --threshold 100 \
             --format json >/tmp/policy-coverage.json
@@ -99,6 +121,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-comparison >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-composition >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-coverage >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-lint >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
@@ -113,6 +136,7 @@ jobs:
               PolicyTestSuite,
               ToolGate,
               compare_policies,
+              compose_policies,
               fingerprint_policy,
               lint_policy,
               measure_policy_coverage,
@@ -137,7 +161,7 @@ jobs:
           records: list[AuditRecord] = []
           candidate = Policy.from_dict({
               "schema_version": 1,
-              "id": "wheel-smoke",
+              "id": "wheel-smoke-candidate",
               "version": "2",
               "default_effect": "deny",
               "rules": [],
@@ -159,6 +183,13 @@ jobs:
           comparison = compare_policies(policy, candidate, suite)
           assert comparison.authorization_changes == 1
           assert comparison.identical is False
+          composition = compose_policies(
+              [policy, candidate],
+              policy_id="wheel-layered",
+              policy_version="1",
+          )
+          assert composition.policy.rules == policy.rules
+          assert composition.to_dict()["source_count"] == 2
           gate = ToolGate(policy, audit_sink=records.append)
           read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
           result = read_ticket.execute(

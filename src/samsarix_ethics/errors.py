@@ -19,6 +19,10 @@ class PolicyValidationError(SamsarixEthicsError):
     """Raised when a policy document is malformed or internally inconsistent."""
 
 
+class PolicyCompositionError(SamsarixEthicsError):
+    """Raised when validated policy sources cannot be composed safely."""
+
+
 class InputValidationError(SamsarixEthicsError):
     """Raised when an evaluation input cannot be safely parsed or validated."""
 

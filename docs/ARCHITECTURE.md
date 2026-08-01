@@ -12,6 +12,8 @@ trusted policy JSON ──> bounded parser ──> immutable Policy ─┐
 untrusted action JSON ─> bounded parser ──> context object ──┘                  │
                                                                                ├─> optional metadata-only audit sink
                                                                                └─> ToolGate ─> callback or typed block
+
+ordered trusted policy sources ─> composition validation ─> ordinary immutable Policy
 ```
 
 There is no network service, identity provider, database, model provider, or dependency on
@@ -29,6 +31,7 @@ the legacy `helix-unified` repository.
 - `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
 - `comparison.py`: deterministic, input-free baseline/candidate impact reports.
+- `composition.py`: bounded central policy aggregation and value-minimized source provenance.
 - `coverage.py`: deterministic, input-free rule and outcome coverage with CI thresholds.
 - `diagnostics.py`: stable, value-minimized policy authoring findings and severity gates.
 - `gate.py`: normalized tool-call contexts, immutable registration bindings, and fail-closed
@@ -74,6 +77,13 @@ Diagnostics operate only on the validated immutable policy. They recognize fixed
 contradictory, duplicate, and missing-explanation shapes; no condition value is copied into a
 finding. Same-field literal equality/membership reasoning matches engine JSON equality, including
 the distinction between booleans and numbers, while dynamic references are not guessed.
+
+Composition operates on 1-32 validated policies and produces one ordinary policy so the existing
+engine, gate, test, coverage, comparison, lint, and audit contracts remain canonical. It preserves
+source/rule order, requires unique source and rule IDs, and requires one shared default effect.
+The report binds each source and the output to exact fingerprints but excludes paths,
+descriptions, rules, messages, conditions, and values. Composition is a trusted build step, not a
+runtime loader, remote policy store, signature verifier, or activation protocol.
 
 ### Deny and review override allow
 

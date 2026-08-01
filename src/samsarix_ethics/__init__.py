@@ -19,6 +19,13 @@ from .comparison import (
     PolicyComparisonStatus,
     compare_policies,
 )
+from .composition import (
+    MAX_COMPOSED_POLICIES,
+    POLICY_COMPOSITION_VERSION,
+    PolicyComposition,
+    PolicyCompositionSource,
+    compose_policies,
+)
 from .coverage import (
     POLICY_COVERAGE_VERSION,
     PolicyCoverageError,
@@ -38,6 +45,7 @@ from .errors import (
     AuditLogError,
     EvaluationError,
     InputValidationError,
+    PolicyCompositionError,
     PolicyTestValidationError,
     PolicyValidationError,
     SamsarixEthicsError,
@@ -54,12 +62,13 @@ from .gate import (
     build_tool_context,
     fingerprint_tool_call,
 )
-from .io import append_audit_record, load_context, load_policy
-from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
+from .io import append_audit_record, load_context, load_policy, write_policy
+from .models import MAX_POLICY_RULES, Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
 from .provenance import POLICY_FINGERPRINT_VERSION, fingerprint_policy
 from .schema import (
     get_audit_record_schema,
     get_policy_comparison_schema,
+    get_policy_composition_schema,
     get_policy_coverage_schema,
     get_policy_lint_schema,
     get_policy_schema,
@@ -84,10 +93,13 @@ __version__ = "0.1.0"
 __all__ = [
     "AUDIT_RECORD_VERSION",
     "MAX_BATCH_ITEMS",
+    "MAX_COMPOSED_POLICIES",
+    "MAX_POLICY_RULES",
     "MAX_POLICY_TEST_BYTES",
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
     "MAX_TOOL_CAPABILITIES",
     "POLICY_COMPARISON_VERSION",
+    "POLICY_COMPOSITION_VERSION",
     "POLICY_COVERAGE_VERSION",
     "POLICY_FINGERPRINT_VERSION",
     "POLICY_LINT_VERSION",
@@ -110,6 +122,9 @@ __all__ = [
     "PolicyComparisonResult",
     "PolicyComparisonSnapshot",
     "PolicyComparisonStatus",
+    "PolicyComposition",
+    "PolicyCompositionError",
+    "PolicyCompositionSource",
     "PolicyCondition",
     "PolicyCoverageError",
     "PolicyCoverageReport",
@@ -136,10 +151,12 @@ __all__ = [
     "append_audit_record",
     "build_tool_context",
     "compare_policies",
+    "compose_policies",
     "fingerprint_policy",
     "fingerprint_tool_call",
     "get_audit_record_schema",
     "get_policy_comparison_schema",
+    "get_policy_composition_schema",
     "get_policy_coverage_schema",
     "get_policy_lint_schema",
     "get_policy_schema",
@@ -153,4 +170,5 @@ __all__ = [
     "measure_policy_coverage",
     "run_policy_tests",
     "validate_context",
+    "write_policy",
 ]

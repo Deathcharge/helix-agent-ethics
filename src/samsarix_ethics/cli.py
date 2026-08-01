@@ -19,16 +19,18 @@ from .comparison import (
     PolicyComparisonStatus,
     compare_policies,
 )
+from .composition import MAX_COMPOSED_POLICIES, PolicyComposition, compose_policies
 from .coverage import PolicyCoverageReport, measure_policy_coverage
 from .diagnostics import PolicyLintReport, PolicyLintSeverity, lint_policy
 from .engine import PolicyEngine
-from .errors import SamsarixEthicsError
-from .io import append_audit_record, load_context, load_policy, write_sample_policy
+from .errors import PolicyCompositionError, SamsarixEthicsError
+from .io import append_audit_record, load_context, load_policy, write_policy, write_sample_policy
 from .models import Decision, Outcome
 from .provenance import fingerprint_policy
 from .schema import (
     get_audit_record_schema,
     get_policy_comparison_schema,
+    get_policy_composition_schema,
     get_policy_coverage_schema,
     get_policy_lint_schema,
     get_policy_schema,
@@ -114,6 +116,27 @@ def _parser() -> argparse.ArgumentParser:
     compare.add_argument("suite", help="path to a JSON policy-test suite")
     compare.add_argument("--format", choices=("json", "text"), default="text")
 
+    compose = subparsers.add_parser(
+        "compose", help="combine ordered policy sources into one deployable policy"
+    )
+    compose.add_argument("--id", dest="policy_id", required=True, help="composed policy id")
+    compose.add_argument(
+        "--version", dest="policy_version", required=True, help="composed policy version"
+    )
+    compose.add_argument("--description", default="", help="optional composed policy description")
+    compose.add_argument(
+        "--policy",
+        dest="source_policies",
+        action="append",
+        required=True,
+        help="ordered source policy path; repeat for each source",
+    )
+    compose.add_argument("--output", required=True, help="output path for the composed policy")
+    compose.add_argument(
+        "--force", action="store_true", help="explicitly replace an existing output file"
+    )
+    compose.add_argument("--format", choices=("json", "text"), default="text")
+
     schema = subparsers.add_parser("schema", help="print a bundled JSON Schema")
     schema.add_argument(
         "kind",
@@ -122,6 +145,7 @@ def _parser() -> argparse.ArgumentParser:
             "policy",
             "policy-test",
             "policy-comparison",
+            "policy-composition",
             "policy-coverage",
             "policy-lint",
             "tool-context",
@@ -278,6 +302,29 @@ def _render_lint_report(report: PolicyLintReport, output_format: str) -> str:
     return "\n".join(lines)
 
 
+def _render_composition_report(
+    composition: PolicyComposition,
+    output_path: Path,
+    output_format: str,
+) -> str:
+    if output_format == "json":
+        return json.dumps(composition.to_dict(), indent=2, sort_keys=True)
+    policy = composition.policy
+    lines = [
+        f"Composed policy: {policy.id}@{policy.version} ({composition.policy_fingerprint})",
+        f"Output: {output_path}",
+        f"Default: {policy.default_effect.value}",
+        f"Rules: {len(policy.rules)} from {len(composition.sources)} sources",
+        "Sources:",
+    ]
+    lines.extend(
+        f"  - {source.policy_id}@{source.policy_version}: {source.rule_count} rules "
+        f"({source.policy_fingerprint})"
+        for source in composition.sources
+    )
+    return "\n".join(lines)
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -303,6 +350,7 @@ def main(
                 "policy": get_policy_schema,
                 "policy-test": get_policy_test_schema,
                 "policy-comparison": get_policy_comparison_schema,
+                "policy-composition": get_policy_composition_schema,
                 "policy-coverage": get_policy_coverage_schema,
                 "policy-lint": get_policy_lint_schema,
                 "tool-context": get_tool_context_schema,
@@ -311,6 +359,22 @@ def main(
             }
             schema = schema_loaders[arguments.kind]()
             print(json.dumps(schema, indent=2, sort_keys=True), file=output)
+            return EXIT_ALLOWED
+
+        if arguments.command == "compose":
+            if len(arguments.source_policies) > MAX_COMPOSED_POLICIES:
+                raise PolicyCompositionError(
+                    f"policy composition exceeds the limit of {MAX_COMPOSED_POLICIES} sources"
+                )
+            source_policies = [load_policy(path) for path in arguments.source_policies]
+            composition = compose_policies(
+                source_policies,
+                policy_id=arguments.policy_id,
+                policy_version=arguments.policy_version,
+                description=arguments.description,
+            )
+            target = write_policy(arguments.output, composition.policy, force=arguments.force)
+            print(_render_composition_report(composition, target, arguments.format), file=output)
             return EXIT_ALLOWED
 
         if arguments.command == "compare":

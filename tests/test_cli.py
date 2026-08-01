@@ -32,6 +32,7 @@ def test_help_and_version() -> None:
     assert help_result.returncode == 0
     assert "check" in help_result.stdout
     assert "compare" in help_result.stdout
+    assert "compose" in help_result.stdout
     assert "coverage" in help_result.stdout
     assert "lint" in help_result.stdout
     assert "schema" in help_result.stdout
@@ -125,6 +126,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy = _run_cli("schema")
     policy_tests = _run_cli("schema", "policy-test")
     policy_comparison = _run_cli("schema", "policy-comparison")
+    policy_composition = _run_cli("schema", "policy-composition")
     policy_coverage = _run_cli("schema", "policy-coverage")
     policy_lint = _run_cli("schema", "policy-lint")
     tool_context = _run_cli("schema", "tool-context")
@@ -137,6 +139,8 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_tests.stdout)["$id"].endswith("/policy-test/v1.json")
     assert policy_comparison.returncode == 0
     assert json.loads(policy_comparison.stdout)["$id"].endswith("/policy-comparison/v1.json")
+    assert policy_composition.returncode == 0
+    assert json.loads(policy_composition.stdout)["$id"].endswith("/policy-composition/v1.json")
     assert policy_coverage.returncode == 0
     assert json.loads(policy_coverage.stdout)["$id"].endswith("/policy-coverage/v1.json")
     assert policy_lint.returncode == 0
@@ -147,6 +151,73 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(tool_approval.stdout)["$id"].endswith("/tool-approval/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
+
+
+def test_compose_command_writes_reusable_policy_and_requires_explicit_overwrite(
+    tmp_path: Path, write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    guardrails = deepcopy(policy_document)
+    guardrails["id"] = "guardrails"
+    guardrails["default_effect"] = "deny"
+    guardrails["rules"] = [guardrails["rules"][0]]
+    permissions = deepcopy(policy_document)
+    permissions["id"] = "permissions"
+    permissions["default_effect"] = "deny"
+    permissions["rules"] = [permissions["rules"][1]]
+    guardrails_path = write_json("guardrails.json", guardrails)
+    permissions_path = write_json("permissions.json", permissions)
+    output_path = tmp_path / "composed.json"
+    arguments = (
+        "compose",
+        "--id",
+        "composed",
+        "--version",
+        "1",
+        "--description",
+        "Layered policy.",
+        "--policy",
+        str(guardrails_path),
+        "--policy",
+        str(permissions_path),
+        "--output",
+        str(output_path),
+    )
+
+    composed = _run_cli(*arguments, "--format", "json")
+    overwrite = _run_cli(*arguments)
+    forced = _run_cli(*arguments, "--force")
+    checked = _run_cli(
+        "check", "--policy", str(output_path), stdin='{"action":{"operation":"read"}}'
+    )
+
+    assert composed.returncode == 0
+    report = json.loads(composed.stdout)
+    assert report["composition_version"] == 1
+    assert report["source_count"] == 2
+    assert report["total_rules"] == 2
+    assert "Layered policy" not in composed.stdout
+    assert [rule["id"] for rule in json.loads(output_path.read_text())["rules"]] == [
+        "deny-delete",
+        "allow-read",
+    ]
+    assert overwrite.returncode == 2
+    assert "refusing to overwrite" in overwrite.stderr
+    assert forced.returncode == 0
+    assert "Rules: 2 from 2 sources" in forced.stdout
+    assert checked.returncode == 0
+
+
+def test_compose_command_bounds_sources_before_reading_files(tmp_path: Path) -> None:
+    arguments = ["compose", "--id", "bounded", "--version", "1"]
+    for index in range(33):
+        arguments.extend(["--policy", str(tmp_path / f"missing-{index}.json")])
+    arguments.extend(["--output", str(tmp_path / "composed.json")])
+
+    result = _run_cli(*arguments)
+
+    assert result.returncode == 2
+    assert "exceeds the limit of 32 sources" in result.stderr
+    assert "cannot read policy" not in result.stderr
 
 
 def test_lint_command_reports_findings_and_enforces_explicit_severity(

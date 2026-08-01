@@ -12,12 +12,12 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any, BinaryIO
 
+from ._policy_payload import MAX_POLICY_BYTES, serialize_policy_document
 from .audit import AuditRecord, JsonlAuditSink
 from .errors import InputValidationError, PolicyValidationError
 from .models import Decision, Policy
 from .validation import validate_json_shape
 
-MAX_POLICY_BYTES = 1_048_576
 MAX_INPUT_BYTES = 262_144
 
 SAMPLE_POLICY: dict[str, Any] = {
@@ -191,12 +191,30 @@ def load_context(path: str | Path | None, *, stdin: BinaryIO | None = None) -> d
 def write_sample_policy(path: str | Path, *, force: bool = False) -> Path:
     """Write the bundled sample atomically, refusing overwrite unless requested."""
 
+    return _write_policy_payload(path, SAMPLE_POLICY, force=force, label="sample policy")
+
+
+def write_policy(path: str | Path, policy: Policy, *, force: bool = False) -> Path:
+    """Write a validated policy atomically, refusing overwrite unless requested."""
+
+    if not isinstance(policy, Policy):
+        raise TypeError("policy must be a Policy")
+    return _write_policy_payload(path, policy.to_dict(), force=force, label="policy")
+
+
+def _write_policy_payload(
+    path: str | Path,
+    value: dict[str, Any],
+    *,
+    force: bool,
+    label: str,
+) -> Path:
     target = Path(path)
     if target.exists() and not force:
         raise PolicyValidationError(f"refusing to overwrite existing file: {target}")
     if not target.parent.exists():
         raise PolicyValidationError(f"parent directory does not exist: {target.parent}")
-    payload = (json.dumps(SAMPLE_POLICY, indent=2, sort_keys=False) + "\n").encode("utf-8")
+    payload = serialize_policy_document(value, label=label)
     temporary_name: str | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -206,12 +224,27 @@ def write_sample_policy(path: str | Path, *, force: bool = False) -> Path:
             temporary.write(payload)
             temporary.flush()
             os.fsync(temporary.fileno())
-        os.replace(temporary_name, target)
+        if force:
+            os.replace(temporary_name, target)
+        else:
+            try:
+                os.link(temporary_name, target)
+            except FileExistsError as exc:
+                raise PolicyValidationError(
+                    f"refusing to overwrite existing file: {target}"
+                ) from exc
+            Path(temporary_name).unlink()
+        temporary_name = None
+    except PolicyValidationError:
+        if temporary_name:
+            with suppress(OSError):
+                Path(temporary_name).unlink(missing_ok=True)
+        raise
     except OSError as exc:
         if temporary_name:
             with suppress(OSError):
                 Path(temporary_name).unlink(missing_ok=True)
-        raise PolicyValidationError(f"cannot write sample policy {target}: {exc}") from exc
+        raise PolicyValidationError(f"cannot write {label} {target}: {exc}") from exc
     return target.resolve()
 
 

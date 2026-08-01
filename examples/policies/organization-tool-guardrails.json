@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "id": "organization-tool-guardrails",
+  "version": "1.0.0",
+  "description": "Organization-wide context, destructive-action, and external-write guardrails.",
+  "default_effect": "review",
+  "rules": [
+    {
+      "id": "deny-missing-tool-context-version",
+      "effect": "deny",
+      "priority": 0,
+      "message": "The tool-call context version is required.",
+      "conditions": [
+        {"field": "tool_context_version", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-unsupported-tool-context-version",
+      "effect": "deny",
+      "priority": 0,
+      "message": "The tool-call context version is unsupported.",
+      "conditions": [
+        {"field": "tool_context_version", "operator": "neq", "value": 1}
+      ]
+    },
+    {
+      "id": "deny-missing-tool-kind",
+      "effect": "deny",
+      "priority": 0,
+      "message": "The tool-call kind is required.",
+      "conditions": [
+        {"field": "action.kind", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-unsupported-tool-kind",
+      "effect": "deny",
+      "priority": 0,
+      "message": "Only normalized tool-call actions are supported.",
+      "conditions": [
+        {"field": "action.kind", "operator": "neq", "value": "tool_call"}
+      ]
+    },
+    {
+      "id": "deny-destructive-without-approval",
+      "effect": "deny",
+      "priority": 10,
+      "message": "Destructive tool calls require explicit human approval.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "destructive"},
+        {"field": "context.approval.approved", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-destructive-after-rejection",
+      "effect": "deny",
+      "priority": 10,
+      "message": "The destructive tool call was not approved.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "destructive"},
+        {"field": "context.approval.approved", "operator": "eq", "value": false}
+      ]
+    },
+    {
+      "id": "review-external-without-approval",
+      "effect": "review",
+      "priority": 20,
+      "message": "External side effects require human review.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "external:write"},
+        {"field": "context.approval.approved", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-external-after-rejection",
+      "effect": "deny",
+      "priority": 20,
+      "message": "The external side effect was rejected.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "external:write"},
+        {"field": "context.approval.approved", "operator": "eq", "value": false}
+      ]
+    }
+  ]
+}

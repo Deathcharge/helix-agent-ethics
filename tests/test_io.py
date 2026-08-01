@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 import samsarix_ethics.audit as audit_module
+import samsarix_ethics.io as io_module
 from samsarix_ethics import (
     AUDIT_RECORD_VERSION,
     AuditLogError,
@@ -27,6 +28,7 @@ from samsarix_ethics.io import (
     append_audit_record,
     load_context,
     load_policy,
+    write_policy,
     write_sample_policy,
 )
 from samsarix_ethics.validation import MAX_JSON_DEPTH, MAX_STRING_LENGTH
@@ -131,6 +133,42 @@ def test_sample_policy_is_valid_and_overwrite_is_explicit(tmp_path: Path) -> Non
     with pytest.raises(PolicyValidationError, match="refusing to overwrite"):
         write_sample_policy(path)
     assert write_sample_policy(path, force=True) == path.resolve()
+
+
+def test_validated_policy_write_is_atomic_and_requires_explicit_overwrite(
+    tmp_path: Path, policy_document: dict[str, Any]
+) -> None:
+    policy = Policy.from_dict(policy_document)
+    path = tmp_path / "written-policy.json"
+
+    assert write_policy(path, policy) == path.resolve()
+    assert load_policy(path) == policy
+    with pytest.raises(PolicyValidationError, match="refusing to overwrite"):
+        write_policy(path, policy)
+    assert write_policy(path, policy, force=True) == path.resolve()
+    with pytest.raises(TypeError, match="policy must be a Policy"):
+        write_policy(tmp_path / "bad.json", object())  # type: ignore[arg-type]
+
+
+def test_policy_write_does_not_replace_a_concurrently_created_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    policy_document: dict[str, Any],
+) -> None:
+    path = tmp_path / "concurrent-policy.json"
+
+    def collide(source: str, destination: str | Path) -> None:
+        del source
+        Path(destination).write_text("concurrent owner", encoding="utf-8")
+        raise FileExistsError
+
+    monkeypatch.setattr(io_module.os, "link", collide)
+
+    with pytest.raises(PolicyValidationError, match="refusing to overwrite"):
+        write_policy(path, Policy.from_dict(policy_document))
+
+    assert path.read_text(encoding="utf-8") == "concurrent owner"
+    assert list(tmp_path.glob(".concurrent-policy.json.*")) == []
 
 
 def test_sample_policy_denies_destructive_actions_without_explicit_approval(tmp_path: Path) -> None:
