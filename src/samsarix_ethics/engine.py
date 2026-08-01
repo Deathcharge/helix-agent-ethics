@@ -141,6 +141,8 @@ def _evaluate_condition(context: Mapping[str, Any], condition: PolicyCondition) 
 
 
 def _outcome(matched: Sequence[_MatchedRule], default: Outcome) -> Outcome:
+    """Resolve deny/review/allow precedence or return the policy default."""
+
     effects = {item[2] for item in matched}
     if Effect.DENY in effects:
         return Outcome.DENY
@@ -254,6 +256,8 @@ class PolicyEngine:
         )
 
     def _validated_context(self, context: Mapping[str, Any]) -> Mapping[str, Any]:
+        """Apply the engine's configured generic or contract-aware input boundary."""
+
         return (
             validate_context(context)
             if self.context_contract is None
@@ -266,6 +270,8 @@ class PolicyEngine:
         *,
         explain: bool,
     ) -> tuple[list[_MatchedRule], tuple[tuple[ConditionExplanation, ...], ...]]:
+        """Evaluate rules once and optionally retain only value-free condition status."""
+
         matched: list[_MatchedRule] = []
         traces: list[tuple[ConditionExplanation, ...]] = []
         for rule in self.policy.rules:

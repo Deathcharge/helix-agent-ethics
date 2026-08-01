@@ -259,8 +259,8 @@ decision from authorizing a callback. The package invokes the sink exactly once 
 The frozen object returned by `ToolGate.bind(...)`. Its `tool_name` and canonical immutable
 `capabilities` tuple cannot be supplied or changed per invocation. It exposes `gate` and `policy`
 properties, the gate's `policy_fingerprint`, plus
-`fingerprint(tool_call_id, arguments, *, actor=None)`, `evaluate`, `enforce`, `execute`, and
-`execute_async`. The latter four accept the same actor, context, call-ID, and approval keywords as
+`fingerprint(tool_call_id, arguments, *, actor=None)`, `evaluate`, `enforce`, `explain`, `execute`,
+and `execute_async`. The latter five accept the same actor, context, call-ID, and approval keywords as
 `ToolGate`, but take only arguments (and an executor where applicable).
 
 Use a trusted application registry to select a binding. This prevents model or protocol payloads
