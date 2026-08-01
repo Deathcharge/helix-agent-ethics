@@ -210,6 +210,8 @@ certification or ethics truth.
   and async `ToolGate`, a fourteen-case capability policy pack, and the `subset_of` operator.
 - Added immutable versioned audit records plus one synchronous caller-owned sink seam; sink delivery
   runs before authorization, fails closed, does not retry, and preserves the JSONL path API.
+- Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
+  and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
   `02fe13ae102359958b8a02d125a41abaa814d472`, pinned to Agent Ethics
   `eb69207b14ddd79bdfe774ec5b166c8ca8ce940e`; the private consumer's 106-test suite and installed

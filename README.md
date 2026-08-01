@@ -245,10 +245,12 @@ build checks. Compatibility tests cover Python 3.11 through 3.14.
 ## Packaging and release
 
 Build artifacts locally with `python -m build --no-isolation` after installing the locked
-toolchain. Publication is intentionally not automated and has
-not been performed. The `samsarix-agent-ethics` distribution name was unclaimed on PyPI when this
-release candidate was prepared, but availability is not a reservation. Test the wheel in a clean
-environment as described in [docs/PRODUCTIZATION.md](docs/PRODUCTIZATION.md) before publishing.
+toolchain. CI retains the verified wheel and source distribution for 14 days; artifacts built from
+`main` also receive GitHub build-provenance attestations. Publication is intentionally not automated
+and has not been performed. The `samsarix-agent-ethics` distribution name was unclaimed on PyPI when
+this release candidate was prepared, but availability is not a reservation. Follow the
+[release operator guide](RELEASING.md) to verify an exact artifact and configure Trusted Publishing
+before any registry upload.
 
 ## Architecture and limitations
 
