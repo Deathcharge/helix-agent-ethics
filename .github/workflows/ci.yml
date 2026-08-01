@@ -65,6 +65,24 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics validate examples/policies/safe-agent-actions.json
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics test \
             --policy examples/policies/safe-agent-actions.json \
             examples/tests/safe-agent-actions.tests.json
+          /tmp/samsarix-wheel/bin/samsarix-ethics test \
+            --policy examples/policies/tool-call-baseline.json \
+            examples/tests/tool-call-baseline.tests.json
+          /tmp/samsarix-wheel/bin/python - <<'PY'
+          from samsarix_ethics import ToolGate, load_policy
+
+          gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
+          result = gate.execute(
+              "read_ticket",
+              {"ticket_id": "T-100"},
+              lambda arguments: f"executed {arguments['ticket_id']}",
+              capabilities=["resource:read"],
+          )
+          assert result.value == "executed T-100"
+          assert result.decision.allowed
+          PY
+          /tmp/samsarix-wheel/bin/python examples/tool_gate_demo.py

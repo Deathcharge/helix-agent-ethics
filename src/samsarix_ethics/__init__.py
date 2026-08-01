@@ -11,10 +11,20 @@ from .errors import (
     PolicyTestValidationError,
     PolicyValidationError,
     SamsarixEthicsError,
+    ToolCallBlockedError,
+    ToolCallDeniedError,
+    ToolCallReviewRequiredError,
+)
+from .gate import (
+    MAX_TOOL_CAPABILITIES,
+    TOOL_CONTEXT_VERSION,
+    ToolExecutionResult,
+    ToolGate,
+    build_tool_context,
 )
 from .io import append_audit_record, load_context, load_policy
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
-from .schema import get_policy_schema, get_policy_test_schema
+from .schema import get_policy_schema, get_policy_test_schema, get_tool_context_schema
 from .testing import (
     MAX_POLICY_TEST_BYTES,
     PolicyTestCase,
@@ -32,6 +42,8 @@ __version__ = "0.1.0"
 __all__ = [
     "MAX_BATCH_ITEMS",
     "MAX_POLICY_TEST_BYTES",
+    "MAX_TOOL_CAPABILITIES",
+    "TOOL_CONTEXT_VERSION",
     "AuditLogError",
     "Decision",
     "Effect",
@@ -50,9 +62,16 @@ __all__ = [
     "PolicyTestValidationError",
     "PolicyValidationError",
     "SamsarixEthicsError",
+    "ToolCallBlockedError",
+    "ToolCallDeniedError",
+    "ToolCallReviewRequiredError",
+    "ToolExecutionResult",
+    "ToolGate",
     "append_audit_record",
+    "build_tool_context",
     "get_policy_schema",
     "get_policy_test_schema",
+    "get_tool_context_schema",
     "load_context",
     "load_policy",
     "load_policy_test_suite",

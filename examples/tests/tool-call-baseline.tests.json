@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "name": "tool-call baseline",
+  "cases": [
+    {
+      "name": "missing tool context version is denied",
+      "input": {
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "read_ticket",
+          "capabilities": ["resource:read"],
+          "arguments": {"ticket_id": "T-100"}
+        },
+        "context": {}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-missing-tool-context-version", "allow-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "unsupported tool context version is denied",
+      "input": {
+        "tool_context_version": 2,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "read_ticket",
+          "capabilities": ["resource:read"],
+          "arguments": {"ticket_id": "T-100"}
+        },
+        "context": {}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-unsupported-tool-context-version", "allow-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "missing tool kind is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "operation": "read_ticket",
+          "capabilities": ["resource:read"],
+          "arguments": {"ticket_id": "T-100"}
+        },
+        "context": {}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-missing-tool-kind", "allow-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "unsupported tool kind is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "workflow",
+          "operation": "read_ticket",
+          "capabilities": ["resource:read"],
+          "arguments": {"ticket_id": "T-100"}
+        },
+        "context": {}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-unsupported-tool-kind", "allow-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "read-only tool is allowed",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "read_ticket",
+          "capabilities": ["resource:read"],
+          "arguments": {"ticket_id": "T-100"}
+        },
+        "context": {}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "missing destructive approval is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "maintenance-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "delete_record",
+          "capabilities": ["destructive"],
+          "arguments": {"record_id": "R-100"}
+        },
+        "context": {}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-destructive-without-approval"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "rejected destructive call is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "maintenance-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "delete_record",
+          "capabilities": ["destructive"],
+          "arguments": {"record_id": "R-100"}
+        },
+        "context": {"human_approved": false}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-destructive-after-rejection"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "approved destructive call is allowed",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "maintenance-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "delete_record",
+          "capabilities": ["destructive"],
+          "arguments": {"record_id": "R-100"}
+        },
+        "context": {"human_approved": true}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-approved-destructive"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "external write requires review",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "send_email",
+          "capabilities": ["external:write"],
+          "arguments": {"to": "customer@example.com"}
+        },
+        "context": {}
+      },
+      "expected_outcome": "review",
+      "expected_matched_rules": ["review-external-without-approval"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "rejected external write is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "send_email",
+          "capabilities": ["external:write"],
+          "arguments": {"to": "customer@example.com"}
+        },
+        "context": {"human_approved": false}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-external-after-rejection"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "approved external write is allowed",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "send_email",
+          "capabilities": ["external:write"],
+          "arguments": {"to": "customer@example.com"}
+        },
+        "context": {"human_approved": true}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-approved-external"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "sensitive read is allowed with a warning",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "read_customer",
+          "capabilities": ["data:sensitive", "resource:read"],
+          "arguments": {"customer_id": "C-100"}
+        },
+        "context": {}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-read", "warn-sensitive-data"],
+      "expected_warning_count": 1
+    },
+    {
+      "name": "unknown capability defaults to review",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "support-agent"},
+        "action": {
+          "kind": "tool_call",
+          "operation": "unknown_tool",
+          "capabilities": ["custom:unknown"],
+          "arguments": {}
+        },
+        "context": {}
+      },
+      "expected_outcome": "review",
+      "expected_matched_rules": [],
+      "expected_warning_count": 0
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/tool-context/v1.json",
+  "title": "Samsarix tool-call context v1",
+  "description": "Normalized policy input for one proposed agent tool call.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool_context_version", "actor", "action", "context"],
+  "properties": {
+    "tool_context_version": {"const": 1},
+    "actor": {"type": "object"},
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "operation", "capabilities", "arguments"],
+      "properties": {
+        "kind": {"const": "tool_call"},
+        "operation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        },
+        "capabilities": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        },
+        "arguments": {"type": "object"}
+      }
+    },
+    "context": {"type": "object"}
+  }
+}

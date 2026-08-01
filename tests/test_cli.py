@@ -115,11 +115,14 @@ def test_text_output_and_audit_log(
 def test_schema_commands_emit_versioned_json() -> None:
     policy = _run_cli("schema")
     policy_tests = _run_cli("schema", "policy-test")
+    tool_context = _run_cli("schema", "tool-context")
 
     assert policy.returncode == 0
     assert json.loads(policy.stdout)["$id"].endswith("/policy/v1.json")
     assert policy_tests.returncode == 0
     assert json.loads(policy_tests.stdout)["$id"].endswith("/policy-test/v1.json")
+    assert tool_context.returncode == 0
+    assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
 
 
 def test_policy_test_command_reports_pass_and_fail(

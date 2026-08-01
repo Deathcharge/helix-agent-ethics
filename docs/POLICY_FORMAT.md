@@ -117,12 +117,13 @@ Duplicate JSON keys, non-UTF-8 input, `NaN`, and infinities are invalid.
 
 ## JSON Schema
 
-The wheel contains Draft 2020-12 schemas for both formats. Print fresh copies without a network
-request:
+The wheel contains Draft 2020-12 schemas for policies, policy-test suites, and normalized tool-call
+contexts. Print fresh copies without a network request:
 
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
+samsarix-ethics schema tool-context > tool-context-v1.schema.json
 ```
 
 The runtime model remains authoritative for constraints JSON Schema cannot express conveniently,
