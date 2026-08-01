@@ -60,6 +60,12 @@ def get_policy_composition_schema() -> dict[str, Any]:
     return _load_schema("policy-composition-v1.schema.json")
 
 
+def get_policy_shadow_schema() -> dict[str, Any]:
+    """Return a fresh copy of the policy shadow evaluation schema v1."""
+
+    return _load_schema("policy-shadow-v1.schema.json")
+
+
 def get_tool_context_schema() -> dict[str, Any]:
     """Return a fresh copy of the tool-call context version 1 JSON Schema."""
 

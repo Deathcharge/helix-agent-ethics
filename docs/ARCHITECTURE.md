@@ -14,6 +14,9 @@ untrusted action JSON ─> bounded parser ──> context object ──┘      
                                                                                └─> ToolGate ─> callback or typed block
 
 ordered trusted policy sources ─> composition validation ─> ordinary immutable Policy
+
+approved baseline ─> authoritative Decision ───────────────────────────────> caller enforcement
+                           └─ same detached input ─> candidate observation ─> minimized telemetry
 ```
 
 There is no network service, identity provider, database, model provider, or dependency on
@@ -32,6 +35,7 @@ the legacy `helix-unified` repository.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
 - `comparison.py`: deterministic, input-free baseline/candidate impact reports.
 - `composition.py`: bounded central policy aggregation and value-minimized source provenance.
+- `shadow.py`: baseline-authoritative live candidate observation and input-free rollout telemetry.
 - `coverage.py`: deterministic, input-free rule and outcome coverage with CI thresholds.
 - `diagnostics.py`: stable, value-minimized policy authoring findings and severity gates.
 - `gate.py`: normalized tool-call contexts, immutable registration bindings, and fail-closed
@@ -85,6 +89,15 @@ The report binds each source and the output to exact fingerprints but excludes p
 descriptions, rules, messages, conditions, and values. Composition is a trusted build step, not a
 runtime loader, remote policy store, signature verifier, or activation protocol.
 
+Shadow evaluation validates and detaches one context, evaluates the approved baseline first, and
+runs the candidate only after that baseline succeeds. Baseline errors propagate fail closed.
+Candidate domain errors become explicit observational telemetry; unexpected exceptions remain
+visible. Offline comparison and live shadowing share one definition of observable change so their
+outcome, matched-rule, warning-count, and message-change semantics cannot drift. Shadow reports add
+decision IDs and timestamps for live correlation while excluding input and message text. They bind
+both policies to exact fingerprints. The synchronous candidate work can add latency and resource
+use; sampling, queues, monitoring, activation, and rollback are caller-owned control-plane work.
+
 ### Deny and review override allow
 
 The outcome order is `deny > review > allow > default_effect`. This makes guardrail rules
@@ -127,6 +140,9 @@ authorization and risk facts can be re-read.
 - **Evaluation input** may be attacker-controlled and is bounded and type-checked.
 - **Embedding application** owns authentication, authorization, fact integrity, enforcement,
   approval expiry and atomic one-time consumption, concurrency, and the protected side effect.
+- **Shadow-rollout operator** owns exact baseline/candidate selection, sampling, telemetry
+  durability, latency/error budgets, promotion criteria, and rollback. Only the baseline decision
+  is authoritative until an independently reviewed deployment changes that role.
 - **Tool capability labels** are trusted application facts; model output must not assign its own
   permissions or approval state.
 - **Bound approval records** prove only that application-supplied approval evidence matches the

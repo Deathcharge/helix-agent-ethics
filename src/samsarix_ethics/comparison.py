@@ -7,11 +7,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
+from ._decision_observation import decision_change_names
 from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
-from .models import Outcome, Policy
+from .models import Decision, Outcome, Policy
 from .testing import PolicyTestCase, PolicyTestSuite
 from .validation import thaw_json_value
 
@@ -144,8 +145,7 @@ class PolicyComparisonReport:
 @dataclass(frozen=True, slots=True)
 class _CaseEvaluation:
     snapshot: PolicyComparisonSnapshot
-    reasons: tuple[str, ...]
-    warnings: tuple[str, ...]
+    decision: Decision | None
 
 
 def _evaluate_case(engine: PolicyEngine, case: PolicyTestCase) -> _CaseEvaluation:
@@ -159,8 +159,7 @@ def _evaluate_case(engine: PolicyEngine, case: PolicyTestCase) -> _CaseEvaluatio
                 warning_count=None,
                 error=str(exc),
             ),
-            reasons=(),
-            warnings=(),
+            decision=None,
         )
     return _CaseEvaluation(
         snapshot=PolicyComparisonSnapshot(
@@ -169,8 +168,7 @@ def _evaluate_case(engine: PolicyEngine, case: PolicyTestCase) -> _CaseEvaluatio
             warning_count=len(decision.warnings),
             error=None,
         ),
-        reasons=decision.reasons,
-        warnings=decision.warnings,
+        decision=decision,
     )
 
 
@@ -200,16 +198,12 @@ def compare_policies(
         if baseline_snapshot.error is not None or candidate_snapshot.error is not None:
             status = PolicyComparisonStatus.ERROR
         else:
-            if baseline_snapshot.outcome is not candidate_snapshot.outcome:
-                changes.append(PolicyComparisonChange.OUTCOME)
-            if baseline_snapshot.matched_rules != candidate_snapshot.matched_rules:
-                changes.append(PolicyComparisonChange.MATCHED_RULES)
-            if baseline_snapshot.warning_count != candidate_snapshot.warning_count:
-                changes.append(PolicyComparisonChange.WARNING_COUNT)
-            if baseline_evaluation.reasons != candidate_evaluation.reasons:
-                changes.append(PolicyComparisonChange.REASON_MESSAGES)
-            if baseline_evaluation.warnings != candidate_evaluation.warnings:
-                changes.append(PolicyComparisonChange.WARNING_MESSAGES)
+            baseline_decision = cast(Decision, baseline_evaluation.decision)
+            candidate_decision = cast(Decision, candidate_evaluation.decision)
+            changes.extend(
+                PolicyComparisonChange(change)
+                for change in decision_change_names(baseline_decision, candidate_decision)
+            )
             status = PolicyComparisonStatus.CHANGED if changes else PolicyComparisonStatus.UNCHANGED
         results.append(
             PolicyComparisonResult(

@@ -34,10 +34,12 @@ from .schema import (
     get_policy_coverage_schema,
     get_policy_lint_schema,
     get_policy_schema,
+    get_policy_shadow_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
     get_tool_context_schema,
 )
+from .shadow import PolicyShadowEvaluation, PolicyShadowEvaluator
 from .testing import PolicyTestReport, load_policy_test_suite, run_policy_tests
 
 EXIT_ALLOWED = 0
@@ -116,6 +118,16 @@ def _parser() -> argparse.ArgumentParser:
     compare.add_argument("suite", help="path to a JSON policy-test suite")
     compare.add_argument("--format", choices=("json", "text"), default="text")
 
+    shadow = subparsers.add_parser(
+        "shadow", help="evaluate a candidate without changing the baseline decision"
+    )
+    shadow.add_argument("--baseline", required=True, help="path to the authoritative JSON policy")
+    shadow.add_argument("--candidate", required=True, help="path to the observational JSON policy")
+    shadow.add_argument(
+        "--input", default="-", help="path to a JSON input object; default: standard input"
+    )
+    shadow.add_argument("--format", choices=("json", "text"), default="json")
+
     compose = subparsers.add_parser(
         "compose", help="combine ordered policy sources into one deployable policy"
     )
@@ -148,6 +160,7 @@ def _parser() -> argparse.ArgumentParser:
             "policy-composition",
             "policy-coverage",
             "policy-lint",
+            "policy-shadow",
             "tool-context",
             "tool-approval",
             "audit-record",
@@ -248,6 +261,34 @@ def _render_comparison_report(report: PolicyComparisonReport, output_format: str
         f"{report.metadata_only_changes} metadata-only), {report.errors} errors, "
         f"{len(report.results)} total"
     )
+    return "\n".join(lines)
+
+
+def _render_shadow_evaluation(
+    evaluation: PolicyShadowEvaluation,
+    output_format: str,
+) -> str:
+    if output_format == "json":
+        return json.dumps(evaluation.to_dict(), indent=2, sort_keys=True)
+    authoritative = evaluation.authoritative_decision
+    candidate = evaluation.candidate
+    lines = [
+        f"Authoritative: {authoritative.policy_id}@{authoritative.policy_version} "
+        f"({authoritative.policy_fingerprint}) -> {authoritative.outcome.value.upper()} "
+        f"(decision {authoritative.decision_id})",
+        f"Candidate: {candidate.policy_id}@{candidate.policy_version} "
+        f"({candidate.policy_fingerprint})",
+    ]
+    if candidate.error is not None:
+        lines.append(f"Candidate error: {candidate.error}")
+    elif candidate.outcome is not None:
+        lines.append(
+            f"Candidate observation: {candidate.outcome.value.upper()} "
+            f"(decision {candidate.decision_id})"
+        )
+    changes = ", ".join(change.value for change in evaluation.changes) or "none"
+    lines.append(f"Shadow status: {evaluation.status.value.upper()}; changes: {changes}")
+    lines.append("Enforce: authoritative baseline decision")
     return "\n".join(lines)
 
 
@@ -353,6 +394,7 @@ def main(
                 "policy-composition": get_policy_composition_schema,
                 "policy-coverage": get_policy_coverage_schema,
                 "policy-lint": get_policy_lint_schema,
+                "policy-shadow": get_policy_shadow_schema,
                 "tool-context": get_tool_context_schema,
                 "tool-approval": get_tool_approval_schema,
                 "audit-record": get_audit_record_schema,
@@ -384,6 +426,14 @@ def main(
             comparison_report = compare_policies(baseline, candidate, suite)
             print(_render_comparison_report(comparison_report, arguments.format), file=output)
             return EXIT_ALLOWED if comparison_report.identical else EXIT_TEST_FAILED
+
+        if arguments.command == "shadow":
+            baseline = load_policy(arguments.baseline)
+            candidate = load_policy(arguments.candidate)
+            context = load_context(arguments.input, stdin=binary_input)
+            shadow_evaluation = PolicyShadowEvaluator(baseline, candidate).evaluate(context)
+            print(_render_shadow_evaluation(shadow_evaluation, arguments.format), file=output)
+            return _decision_exit(shadow_evaluation.authoritative_decision.outcome)
 
         policy = load_policy(arguments.policy)
         if arguments.command == "lint":

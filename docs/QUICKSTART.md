@@ -89,7 +89,21 @@ The candidate keeps four cases unchanged and moves one sensitive read from `allo
 The report excludes inputs and exits `1` because observable behavior changed. Review that impact
 before adopting the candidate. See [policy impact comparison](POLICY_COMPARISON.md).
 
-## 8. Evaluate an allowed action
+## 8. Shadow the candidate on a live-shaped action
+
+```bash
+samsarix-ethics shadow \
+  --baseline examples/policies/safe-agent-actions.json \
+  --candidate examples/policies/safe-agent-actions-candidate.json \
+  --input examples/actions/read-restricted-resource.json
+```
+
+The approved baseline still returns `allow`, so the command exits `0`; the candidate observation
+returns `review`, and the report marks an authorization change. During rollout, enforce only the
+`authoritative` baseline outcome and monitor the independent shadow `status`. The report excludes
+the action input and all reason/warning text. See [shadow policy rollout](POLICY_SHADOWING.md).
+
+## 9. Evaluate an allowed action
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json
@@ -98,7 +112,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 The JSON result has `outcome: allow`, `allowed: true`, a new `decision_id`, the policy version, and
 the matching rule explanation. The command exits `0`.
 
-## 9. Observe safe denial
+## 10. Observe safe denial
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/delete-resource.json
@@ -107,7 +121,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 The example lacks human approval, so the deny rule wins and the command exits `3`. This nonzero
 exit is intentional and suitable for shell or CI gates.
 
-## 10. Add a privacy-minimized audit record
+## 11. Add a privacy-minimized audit record
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json --audit-log decisions.jsonl
@@ -118,7 +132,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 reuses a policy version label. Decide access, rotation, retention, and deletion policy before
 enabling this in a real application.
 
-## 11. Enforce a real tool callback
+## 12. Enforce a real tool callback
 
 The bundled tool policy treats read-only work as allowed, destructive work without approval as
 denied, external writes as reviewable, and unknown capabilities as reviewable:
@@ -144,7 +158,7 @@ samsarix-ethics test --policy composed-policy.json examples/tests/tool-call-base
 
 See [tool-call integrations](TOOL_CALLS.md) before connecting an agent runtime.
 
-## 12. Start a policy of your own
+## 13. Start a policy of your own
 
 ```bash
 samsarix-ethics init my-policy.json
@@ -163,6 +177,7 @@ samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
 samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
+samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json

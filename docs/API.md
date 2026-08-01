@@ -87,6 +87,32 @@ The CLI equivalent is `samsarix-ethics compose --id ... --version ... --policy S
 --output TARGET`. Output replacement requires `--force`. See
 [POLICY_COMPOSITION.md](POLICY_COMPOSITION.md) for the complete contract and support-agent example.
 
+## Shadow policy rollout
+
+### `PolicyShadowEvaluator(baseline, candidate).evaluate(context) -> PolicyShadowEvaluation`
+
+Validates and detaches one bounded JSON context, evaluates the baseline first, and evaluates the
+candidate only after the baseline succeeds. Baseline input/evaluation errors propagate fail closed.
+A candidate `SamsarixEthicsError` becomes `status = PolicyShadowStatus.ERROR` telemetry without
+replacing the baseline decision; unexpected exceptions propagate.
+
+`PolicyShadowEvaluation.authoritative_decision` is the complete baseline `Decision` that the
+application may enforce. `candidate_decision` is a complete observational `Decision` after success
+or `None` after a candidate-domain error. `status` is `UNCHANGED`, `CHANGED`, or `ERROR`; `changes`
+contains `PolicyShadowChange` labels for outcome, matched rules, warning count, reason messages,
+and warning messages. `authorization_changed` is true exactly when the outcome changed.
+
+`candidate` is the frozen input-free `PolicyShadowSnapshot`. It always retains candidate policy
+ID, version, and exact fingerprint. A successful snapshot also carries decision ID, evaluation
+time, outcome, matched-rule IDs, warning count, and evaluated-rule count. An error snapshot carries
+the bounded engine error while unavailable decision fields are null.
+
+`to_dict()` returns the `POLICY_SHADOW_VERSION` (currently `1`) report with successful baseline
+and candidate snapshots. It excludes the complete input and all reason/warning text; those message
+values are compared only in memory. The synchronous second evaluation may add latency and resource
+use. Sampling, telemetry delivery, promotion, and rollback remain caller responsibilities. See
+[POLICY_SHADOWING.md](POLICY_SHADOWING.md).
+
 ## Tool-call enforcement
 
 ### `fingerprint_tool_call(tool_call_id, tool_name, arguments, *, capabilities=(), actor=None)`
@@ -171,10 +197,10 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_policy_composition_schema()`, `get_policy_coverage_schema()`, `get_policy_lint_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
+### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_policy_composition_schema()`, `get_policy_coverage_schema()`, `get_policy_lint_schema()`, `get_policy_shadow_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
-suites, comparison, composition, coverage, and lint reports, the normalized tool-call context,
+suites, comparison, composition, coverage, lint, and shadow reports, the normalized tool-call context,
 bound approval records, and metadata-only audit records. These calls perform no network access and
 callers may mutate the returned value without changing future calls.
 

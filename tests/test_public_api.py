@@ -31,8 +31,11 @@ def test_public_api_is_importable() -> None:
     assert "PolicyCoverageReport" in samsarix_ethics.__all__
     assert "lint_policy" in samsarix_ethics.__all__
     assert "PolicyLintReport" in samsarix_ethics.__all__
+    assert "PolicyShadowEvaluator" in samsarix_ethics.__all__
+    assert "PolicyShadowEvaluation" in samsarix_ethics.__all__
     assert "get_policy_comparison_schema" in samsarix_ethics.__all__
     assert "get_policy_composition_schema" in samsarix_ethics.__all__
+    assert "get_policy_shadow_schema" in samsarix_ethics.__all__
     assert samsarix_ethics.MAX_BATCH_ITEMS == 1_000
     assert samsarix_ethics.MAX_POLICY_RULES == 1_000
     assert samsarix_ethics.MAX_TOOL_CAPABILITIES == 64
@@ -42,6 +45,7 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.POLICY_COMPOSITION_VERSION == 1
     assert samsarix_ethics.POLICY_COVERAGE_VERSION == 1
     assert samsarix_ethics.POLICY_LINT_VERSION == 1
+    assert samsarix_ethics.POLICY_SHADOW_VERSION == 1
     assert samsarix_ethics.TOOL_CALL_APPROVAL_VERSION == 1
     assert samsarix_ethics.TOOL_CALL_FINGERPRINT_VERSION == 1
     assert samsarix_ethics.TOOL_CONTEXT_VERSION == 1

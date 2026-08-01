@@ -15,6 +15,7 @@ from samsarix_ethics import (
     Outcome,
     Policy,
     PolicyEngine,
+    PolicyShadowEvaluator,
     PolicyTestCase,
     PolicyTestStatus,
     PolicyTestSuite,
@@ -30,6 +31,7 @@ from samsarix_ethics import (
     get_policy_coverage_schema,
     get_policy_lint_schema,
     get_policy_schema,
+    get_policy_shadow_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
     get_tool_context_schema,
@@ -54,6 +56,7 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     composition_schema = get_policy_composition_schema()
     coverage_schema = get_policy_coverage_schema()
     lint_schema = get_policy_lint_schema()
+    shadow_schema = get_policy_shadow_schema()
     test_schema = get_policy_test_schema()
     tool_approval_schema = get_tool_approval_schema()
     tool_context_schema = get_tool_context_schema()
@@ -103,6 +106,14 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     lint_policy_document = copy.deepcopy(SAMPLE_POLICY)
     lint_policy_document["default_effect"] = "allow"
     lint_report = lint_policy(Policy.from_dict(lint_policy_document)).to_dict()
+    shadow_report = (
+        PolicyShadowEvaluator(
+            Policy.from_dict(SAMPLE_POLICY),
+            Policy.from_dict(SAMPLE_POLICY),
+        )
+        .evaluate({"action": {"operation": "read"}})
+        .to_dict()
+    )
 
     Draft202012Validator.check_schema(audit_record_schema)
     Draft202012Validator.check_schema(policy_schema)
@@ -110,6 +121,7 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     Draft202012Validator.check_schema(composition_schema)
     Draft202012Validator.check_schema(coverage_schema)
     Draft202012Validator.check_schema(lint_schema)
+    Draft202012Validator.check_schema(shadow_schema)
     Draft202012Validator.check_schema(test_schema)
     Draft202012Validator.check_schema(tool_approval_schema)
     Draft202012Validator.check_schema(tool_context_schema)
@@ -124,12 +136,14 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     Draft202012Validator(composition_schema).validate(composition_report)
     Draft202012Validator(coverage_schema).validate(coverage_report)
     Draft202012Validator(lint_schema).validate(lint_report)
+    Draft202012Validator(shadow_schema).validate(shadow_report)
     assert audit_record_schema["$id"].endswith("/audit-record/v1.json")
     assert policy_schema["$id"].endswith("/policy/v1.json")
     assert comparison_schema["$id"].endswith("/policy-comparison/v1.json")
     assert composition_schema["$id"].endswith("/policy-composition/v1.json")
     assert coverage_schema["$id"].endswith("/policy-coverage/v1.json")
     assert lint_schema["$id"].endswith("/policy-lint/v1.json")
+    assert shadow_schema["$id"].endswith("/policy-shadow/v1.json")
     assert test_schema["$id"].endswith("/policy-test/v1.json")
     assert tool_approval_schema["$id"].endswith("/tool-approval/v1.json")
     assert tool_context_schema["$id"].endswith("/tool-context/v1.json")
@@ -218,6 +232,39 @@ def test_policy_composition_schema_rejects_unbounded_or_value_bearing_sources() 
         validator.validate(too_many_sources)
 
 
+def test_policy_shadow_schema_rejects_inconsistent_status_and_change_flags() -> None:
+    baseline = Policy.from_dict(SAMPLE_POLICY)
+    candidate_document = copy.deepcopy(SAMPLE_POLICY)
+    candidate_document["version"] = "2"
+    candidate_document["rules"].append(
+        {
+            "id": "review-read",
+            "effect": "review",
+            "conditions": [{"field": "action.operation", "operator": "eq", "value": "read"}],
+        }
+    )
+    valid = (
+        PolicyShadowEvaluator(baseline, Policy.from_dict(candidate_document))
+        .evaluate({"action": {"operation": "read"}})
+        .to_dict()
+    )
+    validator = Draft202012Validator(get_policy_shadow_schema())
+    false_authorization_flag = copy.deepcopy(valid)
+    false_authorization_flag["authorization_changed"] = False
+    false_unchanged_status = copy.deepcopy(valid)
+    false_unchanged_status["status"] = "unchanged"
+    value_bearing = copy.deepcopy(valid)
+    value_bearing["input"] = {"secret": "never-serialize"}
+
+    validator.validate(valid)
+    with pytest.raises(ValidationError):
+        validator.validate(false_authorization_flag)
+    with pytest.raises(ValidationError):
+        validator.validate(false_unchanged_status)
+    with pytest.raises(ValidationError):
+        validator.validate(value_bearing)
+
+
 def test_tool_context_schema_matches_builder_contract() -> None:
     schema = get_tool_context_schema()
     validator = Draft202012Validator(schema)
@@ -278,6 +325,8 @@ def test_schema_access_returns_fresh_values() -> None:
     changed_coverage["title"] = "changed"
     changed_lint = get_policy_lint_schema()
     changed_lint["title"] = "changed"
+    changed_shadow = get_policy_shadow_schema()
+    changed_shadow["title"] = "changed"
     changed_tool_context = get_tool_context_schema()
     changed_tool_context["title"] = "changed"
     changed_tool_approval = get_tool_approval_schema()
@@ -288,6 +337,7 @@ def test_schema_access_returns_fresh_values() -> None:
     assert get_policy_composition_schema()["title"] != "changed"
     assert get_policy_coverage_schema()["title"] != "changed"
     assert get_policy_lint_schema()["title"] != "changed"
+    assert get_policy_shadow_schema()["title"] != "changed"
     assert get_audit_record_schema()["title"] != "changed"
     assert get_tool_approval_schema()["title"] != "changed"
     assert get_tool_context_schema()["title"] != "changed"

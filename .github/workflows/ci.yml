@@ -83,6 +83,7 @@ jobs:
           samsarix-ethics schema policy-composition >/dev/null
           samsarix-ethics schema policy-coverage >/dev/null
           samsarix-ethics schema policy-lint >/dev/null
+          samsarix-ethics schema policy-shadow >/dev/null
           for policy in examples/policies/*.json; do
             samsarix-ethics lint "$policy" --fail-on suggestion
           done
@@ -102,6 +103,12 @@ jobs:
           set -e
           test "$comparison_status" -eq 1
           python -c 'import json; value=json.load(open("/tmp/policy-impact.json")); assert value["authorization_changes"] == 1'
+          samsarix-ethics shadow \
+            --baseline examples/policies/safe-agent-actions.json \
+            --candidate examples/policies/safe-agent-actions-candidate.json \
+            --input examples/actions/read-restricted-resource.json \
+            --format json >/tmp/policy-shadow.json
+          python -c 'import json; value=json.load(open("/tmp/policy-shadow.json")); assert value["status"] == "changed"; assert value["authoritative"]["outcome"] == "allow"; assert value["candidate"]["outcome"] == "review"'
           python examples/tool_gate_demo.py
       - name: Build distributions
         if: matrix.python-version == '3.11'
@@ -124,6 +131,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-composition >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-coverage >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-lint >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-shadow >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
@@ -133,6 +141,7 @@ jobs:
               AuditRecord,
               Policy,
               PolicyLintSeverity,
+              PolicyShadowEvaluator,
               PolicyTestSuite,
               ToolGate,
               compare_policies,
@@ -183,6 +192,14 @@ jobs:
           comparison = compare_policies(policy, candidate, suite)
           assert comparison.authorization_changes == 1
           assert comparison.identical is False
+          shadow = PolicyShadowEvaluator(policy, candidate).evaluate(
+              {"action": {"capabilities": ["resource:read"]}}
+          )
+          assert shadow.authoritative_decision.allowed is True
+          assert shadow.candidate_decision is not None
+          assert shadow.candidate_decision.outcome.value == "deny"
+          assert shadow.authorization_changed is True
+          assert "action" not in shadow.to_dict()
           composition = compose_policies(
               [policy, candidate],
               policy_id="wheel-layered",
