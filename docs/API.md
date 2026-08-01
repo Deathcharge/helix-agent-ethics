@@ -44,7 +44,7 @@ raise `InputValidationError` and must be treated as non-authorization.
 serialization. `ContextFieldType` contains `array`, `boolean`, `integer`, `null`, `number`,
 `object`, and `string`. See [CONTEXT_CONTRACTS.md](CONTEXT_CONTRACTS.md).
 
-### `PolicyEngine(policy, *, context_contract=None).evaluate(context) -> Decision`
+### `PolicyEngine(policy, *, context_contract=None, deployment_lock=None).evaluate(context) -> Decision`
 
 Evaluates every rule deterministically. Raises `InputValidationError` when the context is not a
 bounded JSON object and `EvaluationError` if an operator cannot safely evaluate the supplied types
@@ -52,8 +52,10 @@ or a `$ref` is missing. Construction computes `policy_fingerprint` once for reus
 decision.
 
 When a contract is supplied, construction validates policy compatibility and every evaluation
-enforces the contract before rule matching. The immutable contract is exposed as
-`engine.context_contract`.
+enforces the contract before rule matching. The immutable contract and its canonical fingerprint
+are exposed as `engine.context_contract` and `engine.context_contract_fingerprint`. When a
+`DeploymentLock` is supplied, construction verifies exact policy and contract identity/content
+before evaluation and exposes it as `engine.deployment_lock`.
 
 ### `PolicyEngine(policy).evaluate_many(contexts) -> tuple[Decision, ...]`
 
@@ -86,6 +88,34 @@ object keys are sorted; array order is retained, so rule and condition order rem
 provenance. Serialization streams through the hash without building a second encoded byte buffer.
 `PolicyEngine`, `ToolGate`, and `BoundToolGate` expose the same precomputed value as
 `policy_fingerprint`; callers should use this helper instead of implementing their own serializer.
+
+### `fingerprint_context_contract(contract) -> str`
+
+Returns the authoritative `v1:sha256:<hex>` fingerprint for a validated `ContextContract`.
+Canonical JSON uses sorted object keys, retains field semantics after strict model normalization,
+and includes a context-contract-specific fingerprint-version domain separator. The textual format
+matches policy fingerprints, but the distinct canonical domain prevents cross-artifact reuse.
+
+## Exact deployment locks
+
+### `create_deployment_lock(policy, context_contract=None) -> DeploymentLock`
+
+Creates a frozen version 1 artifact containing policy ID, version, and canonical fingerprint plus
+the same metadata for an optional context contract. `DeploymentLock.to_dict()` returns the strict
+JSON shape; `DeploymentLock.from_dict(value)` validates that shape without claiming the referenced
+artifacts match.
+
+### `verify_deployment_lock(lock, policy, context_contract=None) -> None`
+
+Recomputes canonical metadata and rejects any ID, version, fingerprint, or contract-presence
+mismatch with `DeploymentLockValidationError`. Comparisons use constant-time digest comparison.
+`PolicyEngine` and `ToolGate` accept the same optional lock and verify it at construction.
+
+### `load_deployment_lock(path) -> DeploymentLock`
+
+Loads a strict UTF-8 JSON lock with the 64 KiB `MAX_DEPLOYMENT_LOCK_BYTES` limit and shared JSON
+structural limits. File and model errors are reported as `DeploymentLockValidationError`. See
+[DEPLOYMENT_LOCKS.md](DEPLOYMENT_LOCKS.md) for the rollout and trust model.
 
 ### `write_policy(path, policy, *, force=False) -> Path`
 
@@ -175,13 +205,14 @@ fingerprint with constant-time comparisons of both ID and digest before adding t
 approval to `context`. A `tool_call_id` without approval is rejected rather than silently ignored.
 The `context.approval` field is reserved and cannot be injected through ordinary context metadata.
 
-### `ToolGate(policy, *, context_contract=None, audit_log=None, audit_sink=None)`
+### `ToolGate(policy, *, context_contract=None, deployment_lock=None, audit_log=None, audit_sink=None)`
 
 Provides a fail-closed boundary immediately before an in-process side effect:
 
 When `context_contract` is supplied, gate construction validates the policy and every normalized
-tool-call context is checked before evaluation. `ToolGate.context_contract` and
-`BoundToolGate.context_contract` expose the same immutable value.
+tool-call context is checked before evaluation. When `deployment_lock` is supplied, exact artifact
+verification occurs during construction. `ToolGate` and `BoundToolGate` expose
+`context_contract`, `context_contract_fingerprint`, and `deployment_lock`.
 
 - `bind(tool_name, *, capabilities=()) -> BoundToolGate` validates and freezes trusted
   registration metadata once;
@@ -237,11 +268,11 @@ runs.
 ### `get_policy_schema()`, `get_context_contract_schema()`, and other schema accessors
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, application
-context contracts, regression suites, comparison, composition, coverage, lint and shadow reports,
+context contracts, deployment locks, regression suites, comparison, composition, coverage, lint and shadow reports,
 the normalized tool-call context, bound approval records, and metadata-only audit records. The
 other accessors are `get_policy_test_schema`, `get_policy_comparison_schema`,
 `get_policy_composition_schema`, `get_policy_coverage_schema`, `get_policy_lint_schema`,
-`get_policy_shadow_schema`, `get_tool_context_schema`, `get_tool_approval_schema`, and
+`get_policy_shadow_schema`, `get_deployment_lock_schema`, `get_tool_context_schema`, `get_tool_approval_schema`, and
 `get_audit_record_schema`. These calls perform no network access and callers may mutate a returned
 value without changing future calls.
 

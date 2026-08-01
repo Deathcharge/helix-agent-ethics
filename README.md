@@ -67,8 +67,10 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 
 ```text
 samsarix-ethics init POLICY.json [--force]
-samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-lint|policy-shadow|context-contract|tool-context|tool-approval|audit-record]
+samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--format text|json]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-lint|policy-shadow|context-contract|deployment-lock|tool-context|tool-approval|audit-record]
+samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
+samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
 samsarix-ethics compose --id ID --version VERSION --policy SOURCE.json [--policy SOURCE.json ...] \
                         --output POLICY.json [--description TEXT] [--force] [--format text|json]
 samsarix-ethics lint POLICY.json [--fail-on none|security-warning|warning|suggestion]
@@ -82,7 +84,7 @@ samsarix-ethics compare --baseline BASELINE.json --candidate CANDIDATE.json \
 samsarix-ethics shadow --baseline BASELINE.json --candidate CANDIDATE.json \
                        [--context-contract CONTRACT.json] [--input INPUT.json|-] \
                        [--format json|text]
-samsarix-ethics check --policy POLICY.json [--context-contract CONTRACT.json]
+samsarix-ethics check --policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json]
                       [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
 samsarix-ethics --help
@@ -120,6 +122,7 @@ samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
 samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
 samsarix-ethics schema context-contract > context-contract-v1.schema.json
+samsarix-ethics schema deployment-lock > deployment-lock-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
@@ -138,6 +141,23 @@ while permitting unrelated request fields such as opaque tool arguments. The sam
 `--context-contract` option is available on test, coverage, comparison, and shadow commands so
 lifecycle evidence can enforce the production fact boundary. See the
 [application context contract guide](docs/CONTEXT_CONTRACTS.md).
+
+Pin the exact reviewed policy and contract together, then enforce the lock during validation and
+live decisions:
+
+```bash
+samsarix-ethics lock create \
+  --policy examples/policies/tool-call-baseline.json \
+  --context-contract examples/contracts/tool-call-context.json \
+  > deployment-lock.json
+samsarix-ethics validate examples/policies/tool-call-baseline.json \
+  --context-contract examples/contracts/tool-call-context.json \
+  --deployment-lock deployment-lock.json
+```
+
+Any change to either artifact requires a new lock, even if its human-readable version is reused.
+Locks prove exact equality, not authorship or freshness; see the
+[deployment lock guide](docs/DEPLOYMENT_LOCKS.md).
 
 Compose organization-owned guardrails with application-owned permissions into one ordinary policy:
 
@@ -227,6 +247,7 @@ from samsarix_ethics import (
     compose_policies,
     load_policy,
     load_context_contract,
+    load_deployment_lock,
     load_policy_test_suite,
     lint_policy,
     measure_policy_coverage,
@@ -405,6 +426,8 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
 - Decisions, policy-test reports, and audit records carry a versioned SHA-256 fingerprint of the
   complete validated policy body; policy ID/version remain operator-authored labels.
+- Deployment locks can bind exact policy and context-contract content at validation and evaluation
+  boundaries; they are equality evidence, not signatures or rollback protection.
 - Caller-owned audit sinks receive the same versioned metadata-only record and no raw input.
 - `ToolGate` audits before execution when configured; an audit failure prevents the callback.
 - Audit retention, access controls, rotation, and tamper resistance belong to the embedding
@@ -453,7 +476,7 @@ before any registry upload.
 The product is a library plus CLI; it has no server or cloud component. The package separates
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
 versioned schemas, bounded I/O, authoring diagnostics, regression testing, rule coverage, policy
-impact comparison, layered composition, application context contracts,
+impact comparison, layered composition, application context contracts, exact deployment locks,
 baseline-authoritative shadow rollout, and
 presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
@@ -468,6 +491,8 @@ Deliberate limitations:
 - The engine evaluates explicit caller-supplied facts; it does not infer intent or truth.
 - Context contracts validate declared paths and types, not fact authenticity or every undeclared
   request field.
+- Deployment locks detect artifact mismatch but do not authenticate authors, secure distribution,
+  establish freshness, or prevent rollback.
 - Policies must be reviewed and tested for the embedding application's real threat model.
 
 ## Contributing and license

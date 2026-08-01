@@ -15,9 +15,10 @@ from .contracts import (
     validate_context_against_contract,
     validate_policy_context_contract,
 )
+from .deployment import DeploymentLock, verify_deployment_lock
 from .errors import EvaluationError, InputValidationError
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition
-from .provenance import fingerprint_policy
+from .provenance import fingerprint_context_contract, fingerprint_policy
 from .validation import validate_context
 
 _MISSING = object()
@@ -141,16 +142,30 @@ class PolicyEngine:
     as permission to execute an action.
     """
 
-    def __init__(self, policy: Policy, *, context_contract: ContextContract | None = None):
+    def __init__(
+        self,
+        policy: Policy,
+        *,
+        context_contract: ContextContract | None = None,
+        deployment_lock: DeploymentLock | None = None,
+    ) -> None:
         if not isinstance(policy, Policy):
             raise TypeError("policy must be a Policy")
         if context_contract is not None:
             if not isinstance(context_contract, ContextContract):
                 raise TypeError("context_contract must be a ContextContract or None")
             validate_policy_context_contract(policy, context_contract)
+        if deployment_lock is not None:
+            if not isinstance(deployment_lock, DeploymentLock):
+                raise TypeError("deployment_lock must be a DeploymentLock or None")
+            verify_deployment_lock(deployment_lock, policy, context_contract)
         self.policy = policy
         self.context_contract = context_contract
+        self.deployment_lock = deployment_lock
         self.policy_fingerprint = fingerprint_policy(policy)
+        self.context_contract_fingerprint = (
+            None if context_contract is None else fingerprint_context_contract(context_contract)
+        )
 
     def evaluate(self, context: Mapping[str, Any]) -> Decision:
         context = (

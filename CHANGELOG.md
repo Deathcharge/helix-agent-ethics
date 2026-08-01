@@ -57,6 +57,9 @@ All notable product changes are recorded here.
   Draft 2020-12 schema, and a runnable tool-call contract—all with zero runtime dependencies.
 - Contract-aware regression, coverage, comparison, and shadow APIs/CLI so pre-deployment and
   rollout evidence enforces the same declared fact boundary as production evaluation.
+- Canonical domain-separated context-contract fingerprints and strict versioned deployment locks
+  that bind exact policy/contract content across CLI validation, live checks, `PolicyEngine`, and
+  `ToolGate`, with a bundled schema and continuously verified real deployment example.
 
 ### Changed
 

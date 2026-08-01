@@ -148,6 +148,8 @@ samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
 samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
+samsarix-ethics schema context-contract > context-contract-v1.schema.json
+samsarix-ethics schema deployment-lock > deployment-lock-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json

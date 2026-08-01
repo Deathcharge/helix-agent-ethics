@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/deployment-lock/v1.json",
+  "title": "Samsarix Agent Ethics deployment lock v1",
+  "description": "Exact canonical policy and optional context-contract content pinned for activation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["deployment_lock_version", "policy", "context_contract"],
+  "properties": {
+    "deployment_lock_version": {"const": 1},
+    "policy": {"$ref": "#/$defs/artifact"},
+    "context_contract": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/artifact"}
+      ]
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "fingerprint"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "version": {"$ref": "#/$defs/identifier"},
+        "fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    }
+  }
+}

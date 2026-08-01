@@ -9,9 +9,12 @@ from typing import Any
 import pytest
 
 from samsarix_ethics import (
+    ContextContract,
+    ContextContractValidationError,
     Policy,
     PolicyEngine,
     PolicyValidationError,
+    fingerprint_context_contract,
     fingerprint_policy,
 )
 
@@ -132,3 +135,71 @@ def test_policy_fingerprint_rejects_wrong_type_and_invalid_direct_model(
     malformed = replace(Policy.from_dict(policy_document), description=object())  # type: ignore[arg-type]
     with pytest.raises(PolicyValidationError, match="cannot be fingerprinted"):
         fingerprint_policy(malformed)
+
+
+def test_context_contract_fingerprint_has_stable_known_vector() -> None:
+    contract = ContextContract.from_dict(
+        {
+            "context_contract_version": 1,
+            "id": "fingerprint-vector",
+            "version": "2026.08",
+            "description": "Unicode snow: 雪",
+            "fields": {
+                "action": {"type": "object"},
+                "action.score": {"type": "number", "required": False},
+                "action.tags": {"type": "array", "items": "string"},
+            },
+        }
+    )
+
+    assert fingerprint_context_contract(contract) == (
+        "v1:sha256:c9151569038cdf98ad03d9adbefeb2887db5585e8a88a4ce9091a2e2f0874d42"
+    )
+
+
+def test_context_contract_fingerprint_is_canonical_and_content_sensitive() -> None:
+    value = {
+        "context_contract_version": 1,
+        "id": "canonical",
+        "version": "1",
+        "fields": {
+            "action": {"type": "object"},
+            "action.operation": {"type": "string"},
+        },
+    }
+    reordered = {
+        "fields": {
+            "action.operation": {"required": True, "type": "string"},
+            "action": {"required": True, "type": "object"},
+        },
+        "version": "1",
+        "id": "canonical",
+        "context_contract_version": 1,
+    }
+    changed = deepcopy(value)
+    changed["description"] = "changed"
+
+    assert fingerprint_context_contract(
+        ContextContract.from_dict(value)
+    ) == fingerprint_context_contract(ContextContract.from_dict(reordered))
+    assert fingerprint_context_contract(
+        ContextContract.from_dict(value)
+    ) != fingerprint_context_contract(ContextContract.from_dict(changed))
+
+
+def test_context_contract_fingerprint_rejects_invalid_models() -> None:
+    with pytest.raises(TypeError, match="contract must be"):
+        fingerprint_context_contract(object())  # type: ignore[arg-type]
+    malformed = replace(
+        ContextContract.from_dict(
+            {
+                "context_contract_version": 1,
+                "id": "malformed",
+                "version": "1",
+                "fields": {},
+            }
+        ),
+        description=object(),  # type: ignore[arg-type]
+    )
+    with pytest.raises(ContextContractValidationError, match="cannot be fingerprinted"):
+        fingerprint_context_contract(malformed)

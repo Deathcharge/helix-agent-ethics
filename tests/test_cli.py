@@ -35,6 +35,7 @@ def test_help_and_version() -> None:
     assert "compose" in help_result.stdout
     assert "coverage" in help_result.stdout
     assert "lint" in help_result.stdout
+    assert "lock" in help_result.stdout
     assert "schema" in help_result.stdout
     assert "shadow" in help_result.stdout
     assert "test" in help_result.stdout
@@ -132,6 +133,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy_lint = _run_cli("schema", "policy-lint")
     policy_shadow = _run_cli("schema", "policy-shadow")
     context_contract = _run_cli("schema", "context-contract")
+    deployment_lock = _run_cli("schema", "deployment-lock")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     audit_record = _run_cli("schema", "audit-record")
@@ -152,12 +154,107 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_shadow.stdout)["$id"].endswith("/policy-shadow/v1.json")
     assert context_contract.returncode == 0
     assert json.loads(context_contract.stdout)["$id"].endswith("/context-contract/v1.json")
+    assert deployment_lock.returncode == 0
+    assert json.loads(deployment_lock.stdout)["$id"].endswith("/deployment-lock/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
     assert json.loads(tool_approval.stdout)["$id"].endswith("/tool-approval/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
+
+
+def test_deployment_lock_create_verify_and_enforce(
+    tmp_path: Path, write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_path = write_json("locked-policy.json", policy_document)
+    contract_path = write_json(
+        "locked-contract.json",
+        {
+            "context_contract_version": 1,
+            "id": "locked-context",
+            "version": "1",
+            "fields": {
+                "action": {"type": "object"},
+                "action.operation": {"type": "string"},
+            },
+        },
+    )
+    created = _run_cli(
+        "lock",
+        "create",
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+    )
+    assert created.returncode == 0
+    lock_document = json.loads(created.stdout)
+    assert lock_document["deployment_lock_version"] == 1
+    assert lock_document["policy"]["fingerprint"].startswith("v1:sha256:")
+    assert lock_document["context_contract"]["id"] == "locked-context"
+    lock_path = tmp_path / "deployment-lock.json"
+    lock_path.write_text(created.stdout, encoding="utf-8")
+
+    verified = _run_cli(
+        "lock",
+        "verify",
+        str(lock_path),
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+    )
+    validated = _run_cli(
+        "validate",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        "--deployment-lock",
+        str(lock_path),
+        "--format",
+        "json",
+    )
+    checked = _run_cli(
+        "check",
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        "--deployment-lock",
+        str(lock_path),
+        stdin='{"action":{"operation":"read"}}',
+    )
+
+    assert verified.returncode == 0
+    assert "Verified deployment lock" in verified.stdout
+    assert validated.returncode == 0
+    assert json.loads(validated.stdout)["deployment_lock_verified"] is True
+    assert checked.returncode == 0
+
+    changed_policy = deepcopy(policy_document)
+    changed_policy["description"] = "unreviewed mutation"
+    changed_policy_path = write_json("changed-policy.json", changed_policy)
+    mismatch = _run_cli(
+        "lock",
+        "verify",
+        str(lock_path),
+        "--policy",
+        str(changed_policy_path),
+        "--context-contract",
+        str(contract_path),
+    )
+    omitted_contract = _run_cli(
+        "validate",
+        str(policy_path),
+        "--deployment-lock",
+        str(lock_path),
+    )
+
+    assert mismatch.returncode == 2
+    assert "deployment lock does not match the policy" in mismatch.stderr
+    assert omitted_contract.returncode == 2
+    assert "context-contract presence does not match" in omitted_contract.stderr
 
 
 def test_context_contract_validates_policy_and_live_input(

@@ -30,7 +30,8 @@ are bounded and type-checked. The embedding application remains responsible for:
 - treating every exception and nonzero CLI exit as non-authorization;
 - preventing time-of-check/time-of-use races;
 - protecting and reviewing policy files;
-- recording the expected policy fingerprint at deployment when exact policy provenance matters;
+- creating, reviewing, authenticating, and enforcing a deployment lock when exact policy and
+  context-contract provenance matters;
 - enforcing only the authoritative baseline decision during shadow rollout and separately
   monitoring candidate status, latency, changes, and errors;
 - controlling audit destination credentials, network egress, idempotency, access, rotation,
@@ -77,8 +78,17 @@ before rule evaluation. A contract is trusted configuration, not authentication:
 that identity, capability, approval, tenant, or risk facts came from a trusted source, and it
 deliberately permits unrelated input fields. Applications must derive and protect trusted facts
 outside model-controlled payloads and use a full application validator when the entire request
-must be closed. Current decisions and reports do not bind a contract fingerprint; preserve and
-review the exact contract artifact through deployment configuration when its provenance matters.
+must be closed. Current decisions and reports do not bind a contract fingerprint;
+`fingerprint_context_contract` and deployment locks make exact artifact equality enforceable, but
+do not authenticate the source of those facts or artifacts.
+
+A `DeploymentLock` binds policy and optional contract IDs, versions, and canonical content
+fingerprints. Lock verification rejects mismatch before evaluation, but the lock is not a digital
+signature, approval, freshness proof, transparency record, secure distribution protocol, or
+rollback control. Anyone able to replace both the artifacts and lock can create a self-consistent
+set. Protect them together with repository review, deployment access controls, independently
+trusted release identity, and organization-required signing. Lock metadata can act as an equality
+oracle and should receive the same operational access controls as policy fingerprints.
 
 The policy fingerprint is deterministic mutation/equality evidence, not a digital signature. It
 does not authenticate a policy author, prove review, prevent rollback, or secure policy

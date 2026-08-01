@@ -23,6 +23,10 @@ class ContextContractValidationError(SamsarixEthicsError):
     """Raised when a context contract is malformed or incompatible with a policy."""
 
 
+class DeploymentLockValidationError(SamsarixEthicsError):
+    """Raised when a deployment lock is malformed or does not match its artifacts."""
+
+
 class PolicyCompositionError(SamsarixEthicsError):
     """Raised when validated policy sources cannot be composed safely."""
 
