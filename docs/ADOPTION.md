@@ -196,6 +196,22 @@ This is exact-content selection, not a control plane. Locks do not sign, distrib
 refresh, or roll back artifacts and do not identify an approver. Repository review, build
 provenance, deployment credentials, and any required signing system remain caller-owned.
 
+## Implemented gap: privacy-aware evaluation explanations
+
+Matched rule IDs and authored reasons explain successful branches but do not show why other rules
+missed. OPA provides structured evaluation traces and separately warns that decision-log inputs can
+contain sensitive data requiring masking.
+
+Agent Ethics now uses the production evaluator to emit a smaller `PolicyExplanation`: each rule
+and condition is marked matched, not matched, or short-circuited without retaining input, policy
+values, `$ref` targets, descriptions, or messages. The report identifies decisive/default outcome
+provenance, exact policy content, and the optional context-contract fingerprint. CLI, engine, gate,
+and bound-gate entry points share one schema and behavior.
+
+This improves trusted operator debugging without becoming a general trace engine. Field paths,
+operators, rule metadata, outcomes, and statuses remain visible and can be queried repeatedly as an
+authorization oracle, so explanations are not suitable for unauthenticated production exposure.
+
 ## Implemented gap: layered policy ownership
 
 One application policy is sufficient for a prototype but forces organization guardrails and

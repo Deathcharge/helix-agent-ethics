@@ -315,6 +315,9 @@ External validation gates:
 
 ## Known risks
 
+- A policy explanation is value-minimized single-input diagnostics, not proof of policy correctness;
+  repeated access reveals authorization behavior and belongs behind operator authentication.
+
 - Policy correctness is only as good as operator rules and caller-supplied facts.
 - A policy fingerprint proves exact canonical content equality, not authorship, review, freshness,
   secure distribution, or rollback protection.

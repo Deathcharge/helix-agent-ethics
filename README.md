@@ -68,7 +68,8 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-lint|policy-shadow|context-contract|deployment-lock|tool-context|tool-approval|audit-record]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-shadow|context-contract|deployment-lock|tool-context|tool-approval|audit-record]
+samsarix-ethics explain --policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--input INPUT.json|-] [--format json|text]
 samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
 samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
 samsarix-ethics compose --id ID --version VERSION --policy SOURCE.json [--policy SOURCE.json ...] \
@@ -119,6 +120,7 @@ samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
 samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
+samsarix-ethics schema policy-explanation > policy-explanation-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
 samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
 samsarix-ethics schema context-contract > context-contract-v1.schema.json
@@ -158,6 +160,19 @@ samsarix-ethics validate examples/policies/tool-call-baseline.json \
 Any change to either artifact requires a new lock, even if its human-readable version is reused.
 Locks prove exact equality, not authorship or freshness; see the
 [deployment lock guide](docs/DEPLOYMENT_LOCKS.md).
+
+Diagnose a concrete result without serializing input, policy values, or messages:
+
+```bash
+samsarix-ethics explain \
+  --policy examples/policies/safe-agent-actions.json \
+  --input examples/actions/read-resource.json \
+  --format text
+```
+
+The report marks each condition `matched`, `not_matched`, or `not_evaluated`, identifies decisive
+rules, and binds the exact policy plus optional context contract. Treat it as operator-only
+diagnostic metadata; see the [policy explanation guide](docs/POLICY_EXPLANATIONS.md).
 
 Compose organization-owned guardrails with application-owned permissions into one ordinary policy:
 
@@ -264,6 +279,7 @@ decision = engine.evaluate(
         "context": {"human_approved": False},
     }
 )
+explanation = engine.explain({"action": {"operation": "read"}})
 
 if decision.allowed:
     print(decision.decision_id, decision.reasons)
@@ -428,6 +444,8 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
   complete validated policy body; policy ID/version remain operator-authored labels.
 - Deployment locks can bind exact policy and context-contract content at validation and evaluation
   boundaries; they are equality evidence, not signatures or rollback protection.
+- Policy explanations expose value-minimized rule/condition status without input, literals, or
+  messages, but remain an authorization oracle that requires operator-only access.
 - Caller-owned audit sinks receive the same versioned metadata-only record and no raw input.
 - `ToolGate` audits before execution when configured; an audit failure prevents the callback.
 - Audit retention, access controls, rotation, and tamper resistance belong to the embedding
@@ -477,7 +495,7 @@ The product is a library plus CLI; it has no server or cloud component. The pack
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
 versioned schemas, bounded I/O, authoring diagnostics, regression testing, rule coverage, policy
 impact comparison, layered composition, application context contracts, exact deployment locks,
-baseline-authoritative shadow rollout, and
+value-minimized policy explanations, baseline-authoritative shadow rollout, and
 presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
@@ -493,6 +511,8 @@ Deliberate limitations:
   request field.
 - Deployment locks detect artifact mismatch but do not authenticate authors, secure distribution,
   establish freshness, or prevent rollback.
+- Explanations cover one supplied input and disclose rule/path/operator status; they do not prove
+  policy correctness or hide authorization behavior from a caller allowed to query them.
 - Policies must be reviewed and tested for the embedding application's real threat model.
 
 ## Contributing and license

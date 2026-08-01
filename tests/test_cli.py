@@ -34,6 +34,7 @@ def test_help_and_version() -> None:
     assert "compare" in help_result.stdout
     assert "compose" in help_result.stdout
     assert "coverage" in help_result.stdout
+    assert "explain" in help_result.stdout
     assert "lint" in help_result.stdout
     assert "lock" in help_result.stdout
     assert "schema" in help_result.stdout
@@ -130,6 +131,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy_comparison = _run_cli("schema", "policy-comparison")
     policy_composition = _run_cli("schema", "policy-composition")
     policy_coverage = _run_cli("schema", "policy-coverage")
+    policy_explanation = _run_cli("schema", "policy-explanation")
     policy_lint = _run_cli("schema", "policy-lint")
     policy_shadow = _run_cli("schema", "policy-shadow")
     context_contract = _run_cli("schema", "context-contract")
@@ -148,6 +150,8 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_composition.stdout)["$id"].endswith("/policy-composition/v1.json")
     assert policy_coverage.returncode == 0
     assert json.loads(policy_coverage.stdout)["$id"].endswith("/policy-coverage/v1.json")
+    assert policy_explanation.returncode == 0
+    assert json.loads(policy_explanation.stdout)["$id"].endswith("/policy-explanation/v1.json")
     assert policy_lint.returncode == 0
     assert json.loads(policy_lint.stdout)["$id"].endswith("/policy-lint/v1.json")
     assert policy_shadow.returncode == 0
@@ -225,12 +229,27 @@ def test_deployment_lock_create_verify_and_enforce(
         str(lock_path),
         stdin='{"action":{"operation":"read"}}',
     )
+    explained = _run_cli(
+        "explain",
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        "--deployment-lock",
+        str(lock_path),
+        stdin='{"action":{"operation":"read"}}',
+    )
 
     assert verified.returncode == 0
     assert "Verified deployment lock" in verified.stdout
     assert validated.returncode == 0
     assert json.loads(validated.stdout)["deployment_lock_verified"] is True
     assert checked.returncode == 0
+    assert explained.returncode == 0
+    assert (
+        json.loads(explained.stdout)["context_contract_fingerprint"]
+        == lock_document["context_contract"]["fingerprint"]
+    )
 
     changed_policy = deepcopy(policy_document)
     changed_policy["description"] = "unreviewed mutation"
@@ -255,6 +274,41 @@ def test_deployment_lock_create_verify_and_enforce(
     assert "deployment lock does not match the policy" in mismatch.stderr
     assert omitted_contract.returncode == 2
     assert "context-contract presence does not match" in omitted_contract.stderr
+
+
+def test_explain_command_is_value_minimized_and_uses_decision_exit_codes(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_document["rules"][1]["conditions"].append(
+        {"field": "action.secret", "operator": "eq", "value": "policy-secret"}
+    )
+    policy_path = write_json("explain-policy.json", policy_document)
+
+    allowed = _run_cli(
+        "explain",
+        "--policy",
+        str(policy_path),
+        stdin='{"action":{"operation":"read","secret":"policy-secret"}}',
+    )
+    denied_text = _run_cli(
+        "explain",
+        "--policy",
+        str(policy_path),
+        "--format",
+        "text",
+        stdin='{"action":{"operation":"delete","secret":"private-input"}}',
+    )
+
+    assert allowed.returncode == 0
+    document = json.loads(allowed.stdout)
+    assert document["outcome"] == "allow"
+    assert document["decisive_rule_ids"] == ["allow-read"]
+    assert document["rules"][1]["conditions"][0]["status"] == "matched"
+    assert "policy-secret" not in allowed.stdout
+    assert denied_text.returncode == 3
+    assert "Outcome: DENY" in denied_text.stdout
+    assert "[NOT_EVALUATED] #1 action.secret eq" in denied_text.stdout
+    assert "private-input" not in denied_text.stdout
 
 
 def test_context_contract_validates_policy_and_live_input(

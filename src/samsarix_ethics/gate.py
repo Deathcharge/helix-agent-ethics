@@ -19,6 +19,7 @@ from .contracts import ContextContract
 from .deployment import DeploymentLock
 from .engine import PolicyEngine
 from .errors import InputValidationError, ToolCallDeniedError, ToolCallReviewRequiredError
+from .explanation import PolicyExplanation
 from .models import Decision, Outcome, Policy
 from .validation import thaw_json_value, validate_context
 
@@ -269,6 +270,31 @@ class ToolGate:
             )
         )
 
+    def explain(
+        self,
+        tool_name: str,
+        arguments: Mapping[str, Any],
+        *,
+        capabilities: Iterable[str] = (),
+        actor: Mapping[str, Any] | None = None,
+        context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
+    ) -> PolicyExplanation:
+        """Explain a normalized tool call without emitting an authorization audit record."""
+
+        return self._engine.explain(
+            build_tool_context(
+                tool_name,
+                arguments,
+                capabilities=capabilities,
+                actor=actor,
+                context=context,
+                tool_call_id=tool_call_id,
+                approval=approval,
+            )
+        )
+
     def enforce(
         self,
         tool_name: str,
@@ -483,6 +509,27 @@ class BoundToolGate:
         """Evaluate one call using this binding's trusted metadata."""
 
         return self._gate.evaluate(
+            self._tool_name,
+            arguments,
+            capabilities=self._capabilities,
+            actor=actor,
+            context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
+        )
+
+    def explain(
+        self,
+        arguments: Mapping[str, Any],
+        *,
+        actor: Mapping[str, Any] | None = None,
+        context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
+    ) -> PolicyExplanation:
+        """Explain one call using this binding's trusted metadata."""
+
+        return self._gate.explain(
             self._tool_name,
             arguments,
             capabilities=self._capabilities,

@@ -80,6 +80,19 @@ closed. An empty batch returns an empty tuple.
 
 `Decision.to_dict()` returns a JSON-serializable dictionary and still excludes the raw input.
 
+### `PolicyEngine(...).explain(context) -> PolicyExplanation`
+
+Uses the same bounded validation, context contract, deployment lock, short-circuit condition
+evaluation, error behavior, precedence, and default as `evaluate`. The deterministic report binds
+the policy fingerprint and optional context-contract fingerprint and records rule/condition status
+without input, condition values, `$ref` targets, descriptions, messages, UUIDs, or timestamps.
+
+`PolicyExplanation.rules` contains declaration-ordered frozen `RuleExplanation` values. Each has
+frozen `ConditionExplanation` entries with `MATCHED`, `NOT_MATCHED`, or `NOT_EVALUATED` status.
+Matched rule IDs retain normal priority/ID order; `decisive_rule_ids` identifies matches whose
+allow/deny/review effect supplied the outcome. `default_applied` is true when no decisive rule
+matched. See [POLICY_EXPLANATIONS.md](POLICY_EXPLANATIONS.md).
+
 ### `fingerprint_policy(policy) -> str`
 
 Returns the authoritative `v1:sha256:<hex>` fingerprint of a validated `Policy`. The canonical
@@ -214,6 +227,10 @@ tool-call context is checked before evaluation. When `deployment_lock` is suppli
 verification occurs during construction. `ToolGate` and `BoundToolGate` expose
 `context_contract`, `context_contract_fingerprint`, and `deployment_lock`.
 
+`ToolGate.explain(...)` normalizes the same call fields and returns a `PolicyExplanation` without
+authorizing, executing, or emitting an authorization audit record. `BoundToolGate.explain(...)`
+uses its immutable registered tool name and capabilities.
+
 - `bind(tool_name, *, capabilities=()) -> BoundToolGate` validates and freezes trusted
   registration metadata once;
 - `evaluate(...) -> Decision` evaluates the normalized call and optionally appends audit metadata;
@@ -268,10 +285,11 @@ runs.
 ### `get_policy_schema()`, `get_context_contract_schema()`, and other schema accessors
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, application
-context contracts, deployment locks, regression suites, comparison, composition, coverage, lint and shadow reports,
+context contracts, deployment locks, regression suites, comparison, composition, coverage,
+explanation, lint and shadow reports,
 the normalized tool-call context, bound approval records, and metadata-only audit records. The
 other accessors are `get_policy_test_schema`, `get_policy_comparison_schema`,
-`get_policy_composition_schema`, `get_policy_coverage_schema`, `get_policy_lint_schema`,
+`get_policy_composition_schema`, `get_policy_coverage_schema`, `get_policy_explanation_schema`, `get_policy_lint_schema`,
 `get_policy_shadow_schema`, `get_deployment_lock_schema`, `get_tool_context_schema`, `get_tool_approval_schema`, and
 `get_audit_record_schema`. These calls perform no network access and callers may mutate a returned
 value without changing future calls.

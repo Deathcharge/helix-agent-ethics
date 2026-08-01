@@ -43,6 +43,7 @@ the legacy `helix-unified` repository.
 - `shadow.py`: baseline-authoritative live candidate observation and input-free rollout telemetry.
 - `coverage.py`: deterministic, input-free rule and outcome coverage with CI thresholds.
 - `diagnostics.py`: stable, value-minimized policy authoring findings and severity gates.
+- `explanation.py`: input- and value-free rule/condition evaluation explanations.
 - `gate.py`: normalized tool-call contexts, immutable registration bindings, and fail-closed
   sync/async callback enforcement.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
@@ -104,6 +105,12 @@ Diagnostics operate only on the validated immutable policy. They recognize fixed
 contradictory, duplicate, and missing-explanation shapes; no condition value is copied into a
 finding. Same-field literal equality/membership reasoning matches engine JSON equality, including
 the distinction between booleans and numbers, while dynamic references are not guessed.
+
+Explanations share the engine's exact validation and short-circuit evaluator. They retain
+declaration-ordered rule metadata and condition match/miss/skip status, then apply the same
+deny/review/allow/default precedence. They exclude input, policy literals, `$ref` targets, and
+messages. This keeps one semantic implementation while providing operator diagnostics, but the
+remaining status metadata is still an authorization oracle and belongs behind operator access.
 
 Composition operates on 1-32 validated policies and produces one ordinary policy so the existing
 engine, gate, test, coverage, comparison, lint, and audit contracts remain canonical. It preserves
