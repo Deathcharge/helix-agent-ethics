@@ -288,6 +288,7 @@ class Decision:
     evaluated_at: str
     policy_id: str
     policy_version: str
+    policy_fingerprint: str
     outcome: Outcome
     allowed: bool
     matched_rules: tuple[str, ...]

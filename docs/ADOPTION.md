@@ -98,3 +98,18 @@ execution, and async execution.
 This is framework-neutral and does not trust MCP annotations or model-generated labels. Existing
 registries can either select a prebuilt binding by tool name or continue using the lower-level
 `ToolGate` API when their own registration object already guarantees trusted metadata.
+
+## Implemented gap: exact policy provenance
+
+Policy ID and version are operator-authored labels. Without a content-derived identifier, an edit
+that accidentally reuses both labels can make distinct evaluations indistinguishable in a decision
+store. OPA's decision-log contract similarly associates evaluations with deployed bundle revisions,
+which confirms that policy artifact provenance belongs next to the decision rather than only in a
+separate deployment system.
+
+Agent Ethics now computes one domain-separated `v1:sha256` digest from the complete canonical
+validated policy when `PolicyEngine` is constructed. The engine reuses it in every decision;
+`ToolGate`, `BoundToolGate`, policy-test reports, CLI validation, and audit record v1 expose the same
+value. A pinned vector protects the serialization contract. The digest is mutation/equality
+evidence only: the embedding application still owns policy signing, review, distribution,
+freshness, and rollback prevention.

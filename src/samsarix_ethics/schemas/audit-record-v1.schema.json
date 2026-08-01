@@ -10,6 +10,7 @@
     "evaluated_at",
     "policy_id",
     "policy_version",
+    "policy_fingerprint",
     "outcome",
     "matched_rules",
     "warning_count"
@@ -32,6 +33,10 @@
     },
     "policy_version": {
       "$ref": "#/$defs/identifier"
+    },
+    "policy_fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
     },
     "outcome": {
       "enum": ["allow", "deny", "review"]

@@ -66,8 +66,10 @@ exit is intentional and suitable for shell or CI gates.
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json --audit-log decisions.jsonl
 ```
 
-`decisions.jsonl` receives decision metadata only. The input document is not copied. Decide access,
-rotation, retention, and deletion policy before enabling this in a real application.
+`decisions.jsonl` receives decision metadata only. The input document is not copied. Its
+`policy_fingerprint` identifies the exact canonical policy body evaluated even if an operator
+reuses a policy version label. Decide access, rotation, retention, and deletion policy before
+enabling this in a real application.
 
 ## 7. Enforce a real tool callback
 

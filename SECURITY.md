@@ -30,6 +30,7 @@ are bounded and type-checked. The embedding application remains responsible for:
 - treating every exception and nonzero CLI exit as non-authorization;
 - preventing time-of-check/time-of-use races;
 - protecting and reviewing policy files;
+- recording the expected policy fingerprint at deployment when exact policy provenance matters;
 - controlling audit destination credentials, network egress, idempotency, access, rotation,
   retention, integrity, and deletion.
 
@@ -50,6 +51,11 @@ output, and enforce replay protection in the application.
 cannot downgrade those labels per call. The application still owns the registry used to select the
 binding. Treat MCP and other remote tool annotations as untrusted hints unless their source and
 meaning are independently trusted.
+
+The policy fingerprint is deterministic mutation/equality evidence, not a digital signature. It
+does not authenticate a policy author, prove review, prevent rollback, or secure policy
+distribution. Because a digest can also act as an equality oracle for a guessable private policy,
+applications should apply suitable access controls to audit destinations that store it.
 
 ## Relevant vulnerability classes
 

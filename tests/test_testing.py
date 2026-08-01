@@ -135,6 +135,23 @@ def test_tool_context_schema_matches_builder_contract() -> None:
             validator.validate(invalid)
 
 
+def test_audit_schema_requires_current_policy_fingerprint() -> None:
+    decision = PolicyEngine(Policy.from_dict(SAMPLE_POLICY)).evaluate(
+        {"action": {"operation": "read"}}
+    )
+    valid = AuditRecord.from_decision(decision).to_dict()
+    missing = dict(valid)
+    missing.pop("policy_fingerprint")
+    malformed = {**valid, "policy_fingerprint": "sha256:not-versioned"}
+    validator = Draft202012Validator(get_audit_record_schema())
+
+    validator.validate(valid)
+    with pytest.raises(ValidationError):
+        validator.validate(missing)
+    with pytest.raises(ValidationError):
+        validator.validate(malformed)
+
+
 def test_schema_access_returns_fresh_values() -> None:
     changed_audit = get_audit_record_schema()
     changed_audit["title"] = "changed"
@@ -171,6 +188,7 @@ def test_policy_test_report_preserves_pass_fail_and_privacy(
 
     report = run_policy_tests(Policy.from_dict(policy_document), suite)
     payload = report.to_dict()
+    assert payload["policy_fingerprint"].startswith("v1:sha256:")
 
     assert report.passed == 1
     assert report.failed == 1

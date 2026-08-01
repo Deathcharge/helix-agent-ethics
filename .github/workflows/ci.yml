@@ -80,7 +80,13 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
           /tmp/samsarix-wheel/bin/python - <<'PY'
-          from samsarix_ethics import AUDIT_RECORD_VERSION, AuditRecord, Policy, ToolGate
+          from samsarix_ethics import (
+              AUDIT_RECORD_VERSION,
+              AuditRecord,
+              Policy,
+              ToolGate,
+              fingerprint_policy,
+          )
 
           policy = Policy.from_dict({
               "schema_version": 1,
@@ -106,9 +112,12 @@ jobs:
           )
           assert result.value == "executed T-100"
           assert result.decision.allowed
+          assert result.decision.policy_fingerprint == fingerprint_policy(policy)
+          assert read_ticket.policy_fingerprint == gate.policy_fingerprint
           assert read_ticket.capabilities == ("resource:read",)
           assert len(records) == 1
           assert records[0].audit_record_version == AUDIT_RECORD_VERSION == 1
+          assert records[0].policy_fingerprint == result.decision.policy_fingerprint
           PY
       - name: Upload verified distributions
         if: matrix.python-version == '3.11'

@@ -12,6 +12,7 @@ from typing import Any, cast
 
 from .errors import EvaluationError, InputValidationError
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition
+from .provenance import fingerprint_policy
 from .validation import validate_context
 
 _MISSING = object()
@@ -136,7 +137,10 @@ class PolicyEngine:
     """
 
     def __init__(self, policy: Policy):
+        if not isinstance(policy, Policy):
+            raise TypeError("policy must be a Policy")
         self.policy = policy
+        self.policy_fingerprint = fingerprint_policy(policy)
 
     def evaluate(self, context: Mapping[str, Any]) -> Decision:
         context = validate_context(context)
@@ -183,6 +187,7 @@ class PolicyEngine:
             evaluated_at=datetime.now(UTC).isoformat(),
             policy_id=self.policy.id,
             policy_version=self.policy.version,
+            policy_fingerprint=self.policy_fingerprint,
             outcome=outcome,
             allowed=outcome == Outcome.ALLOW,
             matched_rules=matched_ids,

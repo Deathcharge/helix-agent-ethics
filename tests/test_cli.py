@@ -50,7 +50,9 @@ def test_check_exit_codes_and_json(write_json: Any, policy_document: dict[str, A
     )
 
     assert allowed.returncode == 0
-    assert json.loads(allowed.stdout)["outcome"] == "allow"
+    allowed_decision = json.loads(allowed.stdout)
+    assert allowed_decision["outcome"] == "allow"
+    assert allowed_decision["policy_fingerprint"].startswith("v1:sha256:")
     assert denied.returncode == 3
     assert json.loads(denied.stdout)["outcome"] == "deny"
     assert review.returncode == 4
@@ -80,7 +82,9 @@ def test_validate_and_init_commands(
     overwrite = _run_cli("init", str(sample_path))
 
     assert validate.returncode == 0
-    assert json.loads(validate.stdout)["rule_count"] == 2
+    validation = json.loads(validate.stdout)
+    assert validation["rule_count"] == 2
+    assert validation["policy_fingerprint"].startswith("v1:sha256:")
     assert initialize.returncode == 0
     assert sample_path.exists()
     assert overwrite.returncode == 2
@@ -108,6 +112,7 @@ def test_text_output_and_audit_log(
 
     assert result.returncode == 0
     assert "Outcome: ALLOW" in result.stdout
+    assert "Policy fingerprint: v1:sha256:" in result.stdout
     assert "Reasons:" in result.stdout
     assert json.loads(audit_path.read_text(encoding="utf-8"))["outcome"] == "allow"
 

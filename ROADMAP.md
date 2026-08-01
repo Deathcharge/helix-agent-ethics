@@ -21,6 +21,8 @@ adoption remain separate evidence-based decisions.
   Samsarix Agent Framework at an exact Agent Ethics commit.
 - [x] Expose one immutable metadata-only audit record to a caller-supplied sink while preserving
   the existing JSONL API and fail-closed behavior.
+- [x] Bind decisions and audit evidence to the exact canonical policy body, independent of
+  operator-authored policy ID/version labels.
 
 ## Release candidate
 

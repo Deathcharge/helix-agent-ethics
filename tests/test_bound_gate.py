@@ -38,6 +38,7 @@ def test_bind_canonicalizes_and_detaches_trusted_metadata() -> None:
     assert isinstance(bound, BoundToolGate)
     assert bound.gate is gate
     assert bound.policy is gate.policy
+    assert bound.policy_fingerprint == gate.policy_fingerprint
     assert bound.tool_name == "read_ticket"
     assert bound.capabilities == ("data:sensitive", "resource:read")
     with pytest.raises(FrozenInstanceError):
