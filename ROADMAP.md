@@ -27,6 +27,8 @@ adoption remain separate evidence-based decisions.
   reports before policy rollout.
 - [x] Reuse the same suites for input-free rule coverage and explicit CI thresholds so passing
   expectations cannot silently leave policy branches unexercised.
+- [x] Add stable severity-coded authoring diagnostics without condition-value disclosure or
+  heuristic claims about application intent.
 
 ## Release candidate
 

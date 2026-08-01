@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/policy-lint/v1.json",
+  "title": "Samsarix Agent Ethics policy lint report v1",
+  "description": "Value-minimized deterministic authoring diagnostics for one validated policy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lint_version",
+    "policy_id",
+    "policy_version",
+    "policy_fingerprint",
+    "fail_on",
+    "total_findings",
+    "security_warnings",
+    "warnings",
+    "suggestions",
+    "blocking_findings",
+    "passed",
+    "findings"
+  ],
+  "properties": {
+    "lint_version": {"const": 1},
+    "policy_id": {"$ref": "#/$defs/identifier"},
+    "policy_version": {"$ref": "#/$defs/identifier"},
+    "policy_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "fail_on": {"enum": ["none", "security-warning", "warning", "suggestion"]},
+    "total_findings": {"$ref": "#/$defs/count"},
+    "security_warnings": {"$ref": "#/$defs/count"},
+    "warnings": {"$ref": "#/$defs/count"},
+    "suggestions": {"$ref": "#/$defs/count"},
+    "blocking_findings": {"$ref": "#/$defs/count"},
+    "passed": {"type": "boolean"},
+    "findings": {
+      "type": "array",
+      "maxItems": 20000,
+      "items": {"$ref": "#/$defs/finding"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20000
+    },
+    "finding": {
+      "oneOf": [
+        {"$ref": "#/$defs/default_allow_finding"},
+        {"$ref": "#/$defs/unconditional_allow_finding"},
+        {"$ref": "#/$defs/unreachable_rule_finding"},
+        {"$ref": "#/$defs/duplicate_condition_finding"},
+        {"$ref": "#/$defs/missing_message_finding"}
+      ]
+    },
+    "default_allow_finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message", "rule_id", "condition_indices"],
+      "properties": {
+        "code": {"const": "SAE001"},
+        "severity": {"const": "security-warning"},
+        "message": {"const": "Policy defaults to allow when no decisive rule matches."},
+        "rule_id": {"type": "null"},
+        "condition_indices": {"$ref": "#/$defs/no_condition_indices"}
+      }
+    },
+    "unconditional_allow_finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message", "rule_id", "condition_indices"],
+      "properties": {
+        "code": {"const": "SAE002"},
+        "severity": {"const": "security-warning"},
+        "message": {"const": "Allow rule has no conditions and matches every valid input."},
+        "rule_id": {"$ref": "#/$defs/identifier"},
+        "condition_indices": {"$ref": "#/$defs/no_condition_indices"}
+      }
+    },
+    "unreachable_rule_finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message", "rule_id", "condition_indices"],
+      "properties": {
+        "code": {"const": "SAE101"},
+        "severity": {"const": "warning"},
+        "message": {"const": "Rule can never match because its conditions are contradictory."},
+        "rule_id": {"$ref": "#/$defs/identifier"},
+        "condition_indices": {"$ref": "#/$defs/condition_indices"}
+      }
+    },
+    "duplicate_condition_finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message", "rule_id", "condition_indices"],
+      "properties": {
+        "code": {"const": "SAE201"},
+        "severity": {"const": "suggestion"},
+        "message": {"const": "Rule repeats a semantically identical condition."},
+        "rule_id": {"$ref": "#/$defs/identifier"},
+        "condition_indices": {
+          "allOf": [
+            {"$ref": "#/$defs/condition_indices"},
+            {"minItems": 2}
+          ]
+        }
+      }
+    },
+    "missing_message_finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message", "rule_id", "condition_indices"],
+      "properties": {
+        "code": {"const": "SAE202"},
+        "severity": {"const": "suggestion"},
+        "message": {"const": "Rule relies on a generated explanation because message is empty."},
+        "rule_id": {"$ref": "#/$defs/identifier"},
+        "condition_indices": {"$ref": "#/$defs/no_condition_indices"}
+      }
+    },
+    "no_condition_indices": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "condition_indices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 0, "maximum": 31}
+    }
+  }
+}

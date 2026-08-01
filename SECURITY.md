@@ -41,6 +41,9 @@ Policy-test, comparison, and coverage reports also exclude case inputs. They sti
 names, policy and rule identifiers, fingerprints, and bounded evaluation errors; do not place
 secrets in those operator-authored labels, and protect reports as operational metadata. Coverage
 proves only that a supplied case matched a rule, not that every condition path or input is safe.
+Lint reports omit condition values, descriptions, and rule messages, but expose rule identifiers
+and zero-based condition locations. A clean lint report covers only documented deterministic
+findings and is not evidence that an allow rule reflects application intent or least privilege.
 Caller-supplied audit sinks are trusted application code invoked synchronously before authorization;
 their failures prevent tool execution, but their transport and downstream storage are outside this
 package's boundary.

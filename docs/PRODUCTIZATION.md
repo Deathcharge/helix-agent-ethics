@@ -111,6 +111,11 @@ Bounded review used current primary sources:
   [OpenFGA model testing](https://openfga.dev/docs/modeling/testing) recommends exercising every
   application relation. Rule-match coverage fits the existing JSON language without pretending it
   has source-line coverage.
+- [OPA's style guidance](https://www.openpolicyagent.org/docs/style-guide) recommends strict checks
+  and linting for policy mistakes, while
+  [IAM Access Analyzer validation](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-validation.html)
+  separates security warnings, warnings, and suggestions. A small certain-finding set is safer for
+  this schema-free language than inferred business-intent diagnostics.
 - Official `actions/upload-artifact` v6+ and `actions/download-artifact` v7+ releases use the
   Node 24 action runtime required by current GitHub-hosted runners.
 - Official [`actions/attest-build-provenance` v4 release guidance](https://github.com/actions/attest-build-provenance/releases/tag/v4.1.1)
@@ -199,6 +204,8 @@ certification or ethics truth.
   authorization changes, metadata-only changes, and fail-closed errors without reporting inputs.
 - [x] Report declaration-ordered rule coverage, outcome counts, and input-free evaluation errors
   over bounded suites, with an explicit CI threshold.
+- [x] Add stable, value-minimized authoring diagnostics for permissive defaults, unconditional
+  allows, provably impossible/duplicate conditions, and missing explanations.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [ ] Add policy-set composition/version migration after real adopter feedback.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
@@ -237,7 +244,7 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 228 real tests; latest local run: 228 passed, 96.11% total coverage with branch measurement.
+- Added 235 real tests; latest local run: 235 passed, 96.23% total coverage with branch measurement.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
@@ -270,6 +277,8 @@ certification or ethics truth.
   that detects a sensitive-read change from allow to review while omitting every case input.
 - Added a versioned rule-coverage report/API/CLI/schema with exact threshold semantics; the
   included twelve-rule tool policy demonstrates 100% rule coverage across all three outcomes.
+- Added a versioned policy-lint report/API/CLI/schema with five stable finding codes and explicit
+  severity gates; every bundled policy passes the strict suggestion-level CI gate.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -296,6 +305,8 @@ External validation gates:
   exhaustive semantic equivalence or evidence for inputs the suite did not cover.
 - Rule coverage proves that at least one successful supplied case matched a rule, not that every
   condition boundary, precedence interaction, type, or possible input was tested.
+- A clean lint report covers a deliberately small set of certain authoring patterns, not application
+  intent, least privilege, domain-schema correctness, or exhaustive reachability.
 - The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own

@@ -20,6 +20,7 @@ from .comparison import (
     compare_policies,
 )
 from .coverage import PolicyCoverageReport, measure_policy_coverage
+from .diagnostics import PolicyLintReport, PolicyLintSeverity, lint_policy
 from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .io import append_audit_record, load_context, load_policy, write_sample_policy
@@ -29,6 +30,7 @@ from .schema import (
     get_audit_record_schema,
     get_policy_comparison_schema,
     get_policy_coverage_schema,
+    get_policy_lint_schema,
     get_policy_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
@@ -94,6 +96,16 @@ def _parser() -> argparse.ArgumentParser:
     )
     coverage.add_argument("--format", choices=("json", "text"), default="text")
 
+    lint = subparsers.add_parser("lint", help="report deterministic policy authoring findings")
+    lint.add_argument("policy", help="path to a JSON policy")
+    lint.add_argument(
+        "--fail-on",
+        choices=("none", *(severity.value for severity in PolicyLintSeverity)),
+        default=PolicyLintSeverity.SECURITY_WARNING.value,
+        help="lowest finding severity that exits 1; default: security-warning",
+    )
+    lint.add_argument("--format", choices=("json", "text"), default="text")
+
     compare = subparsers.add_parser(
         "compare", help="compare baseline and candidate behavior over a regression suite"
     )
@@ -111,6 +123,7 @@ def _parser() -> argparse.ArgumentParser:
             "policy-test",
             "policy-comparison",
             "policy-coverage",
+            "policy-lint",
             "tool-context",
             "tool-approval",
             "audit-record",
@@ -240,6 +253,31 @@ def _render_coverage_report(report: PolicyCoverageReport, output_format: str) ->
     return "\n".join(lines)
 
 
+def _render_lint_report(report: PolicyLintReport, output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(report.to_dict(), indent=2, sort_keys=True)
+    lines = [f"Policy: {report.policy_id}@{report.policy_version} ({report.policy_fingerprint})"]
+    for finding in report.findings:
+        location = "policy"
+        if finding.rule_id is not None:
+            location = f"rule {finding.rule_id}"
+            if finding.condition_indices:
+                indices = ",".join(str(index) for index in finding.condition_indices)
+                location += f" conditions[{indices}]"
+        lines.append(
+            f"{finding.severity.value.upper()} {finding.code.value} {location}: {finding.message}"
+        )
+    if not report.findings:
+        lines.append("No findings.")
+    status = "passed" if report.passed else "FAILED"
+    lines.append(
+        f"Summary: {status}; {report.security_warnings} security warnings, "
+        f"{report.warnings} warnings, {report.suggestions} suggestions, "
+        f"{report.blocking_findings} blocking"
+    )
+    return "\n".join(lines)
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -266,6 +304,7 @@ def main(
                 "policy-test": get_policy_test_schema,
                 "policy-comparison": get_policy_comparison_schema,
                 "policy-coverage": get_policy_coverage_schema,
+                "policy-lint": get_policy_lint_schema,
                 "tool-context": get_tool_context_schema,
                 "tool-approval": get_tool_approval_schema,
                 "audit-record": get_audit_record_schema,
@@ -283,6 +322,12 @@ def main(
             return EXIT_ALLOWED if comparison_report.identical else EXIT_TEST_FAILED
 
         policy = load_policy(arguments.policy)
+        if arguments.command == "lint":
+            fail_on = None if arguments.fail_on == "none" else PolicyLintSeverity(arguments.fail_on)
+            lint_report = lint_policy(policy, fail_on=fail_on)
+            print(_render_lint_report(lint_report, arguments.format), file=output)
+            return EXIT_ALLOWED if lint_report.passed else EXIT_TEST_FAILED
+
         if arguments.command == "coverage":
             suite = load_policy_test_suite(arguments.suite)
             coverage_report = measure_policy_coverage(policy, suite, threshold=arguments.threshold)

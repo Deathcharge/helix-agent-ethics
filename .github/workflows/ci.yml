@@ -60,6 +60,10 @@ jobs:
             examples/tests/tool-call-baseline.tests.json
           samsarix-ethics schema policy-comparison >/dev/null
           samsarix-ethics schema policy-coverage >/dev/null
+          samsarix-ethics schema policy-lint >/dev/null
+          for policy in examples/policies/*.json; do
+            samsarix-ethics lint "$policy" --fail-on suggestion
+          done
           samsarix-ethics coverage \
             --policy examples/policies/tool-call-baseline.json \
             examples/tests/tool-call-baseline.tests.json \
@@ -96,6 +100,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-comparison >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-coverage >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-lint >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
@@ -104,10 +109,12 @@ jobs:
               AUDIT_RECORD_VERSION,
               AuditRecord,
               Policy,
+              PolicyLintSeverity,
               PolicyTestSuite,
               ToolGate,
               compare_policies,
               fingerprint_policy,
+              lint_policy,
               measure_policy_coverage,
           )
 
@@ -119,6 +126,7 @@ jobs:
               "rules": [{
                   "id": "allow-read",
                   "effect": "allow",
+                  "message": "Read capability is allowed.",
                   "conditions": [{
                       "field": "action.capabilities",
                       "operator": "contains",
@@ -142,6 +150,9 @@ jobs:
                   "expected_outcome": "allow",
               }],
           })
+          lint_report = lint_policy(policy, fail_on=PolicyLintSeverity.SUGGESTION)
+          assert lint_report.findings == ()
+          assert lint_report.passed is True
           coverage = measure_policy_coverage(policy, suite, threshold=100)
           assert coverage.complete is True
           assert coverage.threshold_met is True

@@ -33,6 +33,7 @@ def test_help_and_version() -> None:
     assert "check" in help_result.stdout
     assert "compare" in help_result.stdout
     assert "coverage" in help_result.stdout
+    assert "lint" in help_result.stdout
     assert "schema" in help_result.stdout
     assert "test" in help_result.stdout
     assert version_result.returncode == 0
@@ -125,6 +126,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy_tests = _run_cli("schema", "policy-test")
     policy_comparison = _run_cli("schema", "policy-comparison")
     policy_coverage = _run_cli("schema", "policy-coverage")
+    policy_lint = _run_cli("schema", "policy-lint")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     audit_record = _run_cli("schema", "audit-record")
@@ -137,12 +139,61 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_comparison.stdout)["$id"].endswith("/policy-comparison/v1.json")
     assert policy_coverage.returncode == 0
     assert json.loads(policy_coverage.stdout)["$id"].endswith("/policy-coverage/v1.json")
+    assert policy_lint.returncode == 0
+    assert json.loads(policy_lint.stdout)["$id"].endswith("/policy-lint/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
     assert json.loads(tool_approval.stdout)["$id"].endswith("/tool-approval/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
+
+
+def test_lint_command_reports_findings_and_enforces_explicit_severity(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    clean_path = write_json("clean-lint-policy.json", policy_document)
+    dangerous_path = write_json(
+        "dangerous-lint-policy.json",
+        {
+            "schema_version": 1,
+            "id": "dangerous",
+            "version": "1",
+            "default_effect": "allow",
+            "rules": [
+                {
+                    "id": "allow-everything",
+                    "effect": "allow",
+                    "message": "This is intentionally unconditional for the diagnostic.",
+                    "conditions": [],
+                }
+            ],
+        },
+    )
+    suggestion_document = deepcopy(policy_document)
+    suggestion_document["rules"][0]["message"] = ""
+    suggestion_path = write_json("suggestion-lint-policy.json", suggestion_document)
+
+    clean = _run_cli("lint", str(clean_path))
+    dangerous = _run_cli("lint", str(dangerous_path), "--format", "json")
+    report_only = _run_cli("lint", str(dangerous_path), "--fail-on", "none")
+    suggestion_default = _run_cli("lint", str(suggestion_path))
+    suggestion_strict = _run_cli("lint", str(suggestion_path), "--fail-on", "suggestion")
+
+    assert clean.returncode == 0
+    assert "No findings." in clean.stdout
+    assert dangerous.returncode == 1
+    payload = json.loads(dangerous.stdout)
+    assert [finding["code"] for finding in payload["findings"]] == ["SAE001", "SAE002"]
+    assert payload["security_warnings"] == 2
+    assert payload["blocking_findings"] == 2
+    assert payload["passed"] is False
+    assert report_only.returncode == 0
+    assert "Summary: passed" in report_only.stdout
+    assert suggestion_default.returncode == 0
+    assert "SUGGESTION SAE202 rule deny-delete" in suggestion_default.stdout
+    assert suggestion_strict.returncode == 1
+    assert "Summary: FAILED" in suggestion_strict.stdout
 
 
 def test_coverage_command_reports_uncovered_rules_and_enforces_threshold(

@@ -26,10 +26,12 @@ from samsarix_ethics import (
     get_audit_record_schema,
     get_policy_comparison_schema,
     get_policy_coverage_schema,
+    get_policy_lint_schema,
     get_policy_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
     get_tool_context_schema,
+    lint_policy,
     load_policy_test_suite,
     measure_policy_coverage,
     run_policy_tests,
@@ -48,6 +50,7 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     policy_schema = get_policy_schema()
     comparison_schema = get_policy_comparison_schema()
     coverage_schema = get_policy_coverage_schema()
+    lint_schema = get_policy_lint_schema()
     test_schema = get_policy_test_schema()
     tool_approval_schema = get_tool_approval_schema()
     tool_context_schema = get_tool_context_schema()
@@ -93,11 +96,15 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
         PolicyTestSuite.from_dict(example_suites[1]),
         threshold=100,
     ).to_dict()
+    lint_policy_document = copy.deepcopy(SAMPLE_POLICY)
+    lint_policy_document["default_effect"] = "allow"
+    lint_report = lint_policy(Policy.from_dict(lint_policy_document)).to_dict()
 
     Draft202012Validator.check_schema(audit_record_schema)
     Draft202012Validator.check_schema(policy_schema)
     Draft202012Validator.check_schema(comparison_schema)
     Draft202012Validator.check_schema(coverage_schema)
+    Draft202012Validator.check_schema(lint_schema)
     Draft202012Validator.check_schema(test_schema)
     Draft202012Validator.check_schema(tool_approval_schema)
     Draft202012Validator.check_schema(tool_context_schema)
@@ -110,10 +117,12 @@ def test_bundled_draft_2020_12_schemas_validate_examples() -> None:
     Draft202012Validator(audit_record_schema).validate(audit_record)
     Draft202012Validator(comparison_schema).validate(comparison_report)
     Draft202012Validator(coverage_schema).validate(coverage_report)
+    Draft202012Validator(lint_schema).validate(lint_report)
     assert audit_record_schema["$id"].endswith("/audit-record/v1.json")
     assert policy_schema["$id"].endswith("/policy/v1.json")
     assert comparison_schema["$id"].endswith("/policy-comparison/v1.json")
     assert coverage_schema["$id"].endswith("/policy-coverage/v1.json")
+    assert lint_schema["$id"].endswith("/policy-lint/v1.json")
     assert test_schema["$id"].endswith("/policy-test/v1.json")
     assert tool_approval_schema["$id"].endswith("/tool-approval/v1.json")
     assert tool_context_schema["$id"].endswith("/tool-context/v1.json")
@@ -130,6 +139,56 @@ def test_policy_schema_matches_strict_condition_contract() -> None:
         Draft202012Validator(schema).validate(exists_with_value)
     with pytest.raises(ValidationError):
         Draft202012Validator(schema).validate(scalar_membership)
+
+
+def test_policy_lint_schema_rejects_inconsistent_or_value_bearing_findings() -> None:
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "schema-lint-policy",
+            "version": "1",
+            "default_effect": "allow",
+            "rules": [
+                {"id": "allow-all", "effect": "allow", "conditions": []},
+                {
+                    "id": "impossible",
+                    "effect": "deny",
+                    "conditions": [
+                        {"field": "action.name", "operator": "eq", "value": "private"},
+                        {"field": "action.name", "operator": "neq", "value": "private"},
+                    ],
+                },
+                {
+                    "id": "duplicate",
+                    "effect": "review",
+                    "message": "Review this action.",
+                    "conditions": [
+                        {"field": "action.risk", "operator": "eq", "value": "high"},
+                        {"field": "action.risk", "operator": "eq", "value": "high"},
+                    ],
+                },
+            ],
+        }
+    )
+    valid = lint_policy(policy).to_dict()
+    validator = Draft202012Validator(get_policy_lint_schema())
+    mismatched_severity = copy.deepcopy(valid)
+    mismatched_severity["findings"][0]["severity"] = "suggestion"
+    value_bearing_message = copy.deepcopy(valid)
+    value_bearing_message["findings"][0]["message"] += " Value was secret-policy-value."
+
+    validator.validate(valid)
+    assert {finding["code"] for finding in valid["findings"]} == {
+        "SAE001",
+        "SAE002",
+        "SAE101",
+        "SAE201",
+        "SAE202",
+    }
+    with pytest.raises(ValidationError):
+        validator.validate(mismatched_severity)
+    with pytest.raises(ValidationError):
+        validator.validate(value_bearing_message)
 
 
 def test_tool_context_schema_matches_builder_contract() -> None:
@@ -188,6 +247,8 @@ def test_schema_access_returns_fresh_values() -> None:
     changed_comparison["title"] = "changed"
     changed_coverage = get_policy_coverage_schema()
     changed_coverage["title"] = "changed"
+    changed_lint = get_policy_lint_schema()
+    changed_lint["title"] = "changed"
     changed_tool_context = get_tool_context_schema()
     changed_tool_context["title"] = "changed"
     changed_tool_approval = get_tool_approval_schema()
@@ -196,6 +257,7 @@ def test_schema_access_returns_fresh_values() -> None:
     assert get_policy_schema()["title"] != "changed"
     assert get_policy_comparison_schema()["title"] != "changed"
     assert get_policy_coverage_schema()["title"] != "changed"
+    assert get_policy_lint_schema()["title"] != "changed"
     assert get_audit_record_schema()["title"] != "changed"
     assert get_tool_approval_schema()["title"] != "changed"
     assert get_tool_context_schema()["title"] != "changed"
