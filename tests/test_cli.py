@@ -133,6 +133,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy_coverage = _run_cli("schema", "policy-coverage")
     policy_explanation = _run_cli("schema", "policy-explanation")
     policy_lint = _run_cli("schema", "policy-lint")
+    policy_runtime_status = _run_cli("schema", "policy-runtime-status")
     policy_shadow = _run_cli("schema", "policy-shadow")
     context_contract = _run_cli("schema", "context-contract")
     deployment_lock = _run_cli("schema", "deployment-lock")
@@ -154,6 +155,10 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_explanation.stdout)["$id"].endswith("/policy-explanation/v1.json")
     assert policy_lint.returncode == 0
     assert json.loads(policy_lint.stdout)["$id"].endswith("/policy-lint/v1.json")
+    assert policy_runtime_status.returncode == 0
+    assert json.loads(policy_runtime_status.stdout)["$id"].endswith(
+        "/policy-runtime-status/v1.json"
+    )
     assert policy_shadow.returncode == 0
     assert json.loads(policy_shadow.stdout)["$id"].endswith("/policy-shadow/v1.json")
     assert context_contract.returncode == 0

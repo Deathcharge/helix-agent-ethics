@@ -68,7 +68,7 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-shadow|context-contract|deployment-lock|tool-context|tool-approval|audit-record]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|tool-context|tool-approval|audit-record]
 samsarix-ethics explain --policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--input INPUT.json|-] [--format json|text]
 samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
 samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
@@ -122,6 +122,7 @@ samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-explanation > policy-explanation-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
+samsarix-ethics schema policy-runtime-status > policy-runtime-status-v1.schema.json
 samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
 samsarix-ethics schema context-contract > context-contract-v1.schema.json
 samsarix-ethics schema deployment-lock > deployment-lock-v1.schema.json
@@ -252,11 +253,24 @@ monitor the JSON `status` separately. Each snapshot includes engine-only nanosec
 latency comparison. The versioned report excludes the action input and all reason/warning text.
 See the [shadow rollout guide](docs/POLICY_SHADOWING.md).
 
+Atomically activate that reviewed candidate inside a long-running process while existing tool
+bindings remain live:
+
+```bash
+python examples/policy_runtime_demo.py
+```
+
+The example changes a restricted read from `allow` to `review`, retains a monotonically increasing
+generation, and uses compare-and-swap activation. Candidate validation or deployment-lock failure
+leaves the last successful generation active. See the
+[atomic policy runtime guide](docs/POLICY_RUNTIME.md).
+
 ## Python API
 
 ```python
 from samsarix_ethics import (
     PolicyEngine,
+    PolicyRuntime,
     PolicyShadowEvaluator,
     compare_policies,
     compose_policies,
@@ -305,6 +319,10 @@ shadow = PolicyShadowEvaluator(policy, candidate).evaluate(
 print(shadow.status, shadow.authorization_changed)
 # Enforce only this baseline decision during the shadow rollout.
 authoritative_decision = shadow.authoritative_decision
+
+runtime = PolicyRuntime(policy)
+activated = runtime.activate(candidate, expected_generation=runtime.status.generation)
+print(activated.generation, activated.policy_fingerprint)
 
 tool_policy = load_policy("examples/policies/tool-call-baseline.json")
 tool_contract = load_context_contract("examples/contracts/tool-call-context.json")
@@ -437,6 +455,9 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
 - Shadow evaluation runs a detached input against the candidate only after a successful baseline
   evaluation. Its telemetry omits input and message text; the baseline remains authoritative even
   when the candidate changes or raises a domain error.
+- `PolicyRuntime` validates complete candidates before an atomic in-process swap, retains the last
+  successful generation on failure, and supports compare-and-swap conflict detection. It is not a
+  distributed policy control plane.
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
@@ -495,16 +516,19 @@ The product is a library plus CLI; it has no server or cloud component. The pack
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
 versioned schemas, bounded I/O, authoring diagnostics, regression testing, rule coverage, policy
 impact comparison, layered composition, application context contracts, exact deployment locks,
-value-minimized policy explanations, baseline-authoritative shadow rollout, and
+value-minimized policy explanations, baseline-authoritative shadow rollout, atomic live policy
+activation, and
 presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
 Deliberate limitations:
 
 - JSON policies only; no arbitrary code, regex, network data, or plugin execution.
-- In-process evaluation only; no policy distribution control plane.
+- In-process evaluation and activation only; no policy distribution or cross-host control plane.
 - Shadow evaluation is synchronous and does not provide sampling, remote telemetry, promotion, or
   rollback automation.
+- Runtime generations are process-local and non-persistent; the application owns desired state,
+  artifact transport, deployment authorization, monitoring, and restart recovery.
 - JSONL audit append is local and metadata-only, with no cross-process ordering guarantee.
 - The engine evaluates explicit caller-supplied facts; it does not infer intent or truth.
 - Context contracts validate declared paths and types, not fact authenticity or every undeclared

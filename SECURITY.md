@@ -34,6 +34,8 @@ are bounded and type-checked. The embedding application remains responsible for:
   context-contract provenance matters;
 - enforcing only the authoritative baseline decision during shadow rollout and separately
   monitoring candidate status, latency, changes, and errors;
+- authenticating deployment actors, protecting desired state, and coordinating activation across
+  processes or hosts when using `PolicyRuntime`;
 - controlling audit destination credentials, network egress, idempotency, access, rotation,
   retention, integrity, and deletion.
 
@@ -62,7 +64,8 @@ errors plus per-policy evaluation durations. A successful baseline remains autho
 candidate changes or raises a domain error; candidate health must therefore be monitored
 independently of the authorization result.
 Shadow evaluation is synchronous and may add latency or resource use. The package does not sample,
-queue, persist telemetry, promote candidates, or roll back policies.
+queue, or persist telemetry. `PolicyRuntime` can atomically promote or roll back already supplied
+artifacts inside one process; it does not authorize that change or distribute it across hosts.
 Caller-supplied audit sinks are trusted application code invoked synchronously before authorization;
 their failures prevent tool execution, but their transport and downstream storage are outside this
 package's boundary.
@@ -83,7 +86,8 @@ before rule evaluation. A contract is trusted configuration, not authentication:
 that identity, capability, approval, tenant, or risk facts came from a trusted source, and it
 deliberately permits unrelated input fields. Applications must derive and protect trusted facts
 outside model-controlled payloads and use a full application validator when the entire request
-must be closed. Current decisions and reports do not bind a contract fingerprint;
+must be closed. Decisions and most reports do not bind a contract fingerprint; policy
+explanations and runtime status do.
 `fingerprint_context_contract` and deployment locks make exact artifact equality enforceable, but
 do not authenticate the source of those facts or artifacts.
 
@@ -94,6 +98,15 @@ rollback control. Anyone able to replace both the artifacts and lock can create 
 set. Protect them together with repository review, deployment access controls, independently
 trusted release identity, and organization-required signing. Lock metadata can act as an equality
 oracle and should receive the same operational access controls as policy fingerprints.
+
+`PolicyRuntime` constructs and verifies a complete candidate before an atomic in-process swap and
+retains the last successful generation after candidate failure. Optional compare-and-swap protects
+against lost updates between cooperating callers of the same runtime object. It is not durable
+rollback prevention, deployment authorization, policy signing, artifact transport, leader
+election, multi-process synchronization, or cross-host consensus. Generation numbers restart with
+a new process and must not be treated as globally unique or monotonic security counters. Status
+omits policy content and action input but exposes artifact IDs, versions, fingerprints, activation
+time, and lock-verification state; protect it as operational metadata and equality-oracle material.
 
 The policy fingerprint is deterministic mutation/equality evidence, not a digital signature. It
 does not authenticate a policy author, prove review, prevent rollback, or secure policy

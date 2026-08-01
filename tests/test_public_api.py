@@ -47,6 +47,10 @@ def test_public_api_is_importable() -> None:
     assert "ConditionExplanation" in samsarix_ethics.__all__
     assert "ConditionExplanationStatus" in samsarix_ethics.__all__
     assert "get_policy_explanation_schema" in samsarix_ethics.__all__
+    assert "PolicyRuntime" in samsarix_ethics.__all__
+    assert "PolicyRuntimeStatus" in samsarix_ethics.__all__
+    assert "PolicyActivationError" in samsarix_ethics.__all__
+    assert "get_policy_runtime_status_schema" in samsarix_ethics.__all__
     assert "lint_policy" in samsarix_ethics.__all__
     assert "PolicyLintReport" in samsarix_ethics.__all__
     assert "PolicyShadowEvaluator" in samsarix_ethics.__all__
@@ -64,6 +68,7 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.POLICY_COVERAGE_VERSION == 1
     assert samsarix_ethics.POLICY_EXPLANATION_VERSION == 1
     assert samsarix_ethics.POLICY_LINT_VERSION == 1
+    assert samsarix_ethics.POLICY_RUNTIME_STATUS_VERSION == 1
     assert samsarix_ethics.POLICY_SHADOW_VERSION == 1
     assert samsarix_ethics.TOOL_CALL_APPROVAL_VERSION == 1
     assert samsarix_ethics.TOOL_CALL_FINGERPRINT_VERSION == 1

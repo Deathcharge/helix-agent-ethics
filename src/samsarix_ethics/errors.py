@@ -27,6 +27,10 @@ class DeploymentLockValidationError(SamsarixEthicsError):
     """Raised when a deployment lock is malformed or does not match its artifacts."""
 
 
+class PolicyActivationError(SamsarixEthicsError):
+    """Raised when an atomic policy activation cannot replace the live generation."""
+
+
 class PolicyCompositionError(SamsarixEthicsError):
     """Raised when validated policy sources cannot be composed safely."""
 

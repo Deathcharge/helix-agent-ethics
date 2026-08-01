@@ -15,6 +15,9 @@ untrusted action JSON ─> bounded parser ─> context object ──────
                                                                                ├─> optional metadata-only audit sink
                                                                                └─> ToolGate ─> callback or typed block
 
+validated policy + optional contract/lock ─> PolicyRuntime generation N ─> live gates
+validated complete candidate ─> compare-and-swap atomic activation ──────┘
+
 ordered trusted policy sources ─> composition validation ─> ordinary immutable Policy
 
 approved baseline ─> authoritative Decision ───────────────────────────────> caller enforcement
@@ -35,6 +38,7 @@ the legacy `helix-unified` repository.
 - `contracts.py`: immutable application fact declarations, policy compatibility, and runtime type
   enforcement.
 - `engine.py`: dotted-field resolution, typed condition operators, rule matching, and precedence.
+- `runtime.py`: last-known-good in-process generations, atomic activation, and coherent status.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and the legacy audit helper.
 - `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
@@ -69,7 +73,8 @@ accept unrelated request fields by design so opaque arguments need not be modele
 structure, not truth: the application remains responsible for authentic and current facts.
 Regression, coverage, comparison, and shadow workflows can pass the same contract into their
 internal engines so pre-deployment evidence does not use a weaker fact boundary than production.
-Current decision and report schemas do not embed contract provenance. An optional deployment lock
+Decisions and most report schemas do not embed contract provenance; explanations and runtime
+status do. An optional deployment lock
 binds exact policy and contract content at engine or gate construction without copying either
 artifact into decisions.
 
@@ -127,7 +132,27 @@ outcome, matched-rule, warning-count, and message-change semantics cannot drift.
 decision IDs and timestamps for live correlation while excluding input and message text. They bind
 both policies to exact fingerprints and measure each engine call with a monotonic nanosecond
 duration. The synchronous candidate work can add latency and resource use; sampling, queues,
-monitoring, activation, and rollback are caller-owned control-plane work.
+and monitoring are caller-owned control-plane work. A candidate may be promoted through the
+in-process atomic runtime after external approval, but remote distribution remains caller-owned.
+
+### Atomic activation keeps the last known good generation
+
+`PolicyRuntime` constructs a complete candidate `PolicyEngine` before acquiring its live-state
+lock. Policy/contract compatibility and deployment-lock verification therefore fail before the
+current generation can change. Under the lock, optional compare-and-swap checks the expected
+generation and one assignment replaces the engine plus its immutable status. A stale deployer gets
+`PolicyActivationError`; it never silently overwrites a newer activation.
+
+Evaluation captures an engine reference under the lock and releases it before validation and rule
+work. In-flight calls complete on one generation; later calls see the new one. Batches capture once
+for whole-batch consistency. Runtime-backed gates reuse that behavior and keep audit sinks and
+trusted tool bindings stable across activation. Generation status exposes exact policy/contract
+provenance without rules, paths, values, messages, or input.
+
+This lock coordinates threads in one process only. It does not persist desired state, elect a
+leader, authenticate a deployer, distribute artifacts, or coordinate hosts. Restart recovery and
+multi-process rollout need an external control plane that reconstructs the runtime from protected
+last-known-good artifacts.
 
 ### Deny and review override allow
 

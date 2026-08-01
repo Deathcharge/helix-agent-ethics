@@ -21,6 +21,7 @@ from .engine import PolicyEngine
 from .errors import InputValidationError, ToolCallDeniedError, ToolCallReviewRequiredError
 from .explanation import PolicyExplanation
 from .models import Decision, Outcome, Policy
+from .runtime import PolicyRuntime, PolicyRuntimeStatus
 from .validation import thaw_json_value, validate_context
 
 MAX_TOOL_CAPABILITIES = 64
@@ -168,22 +169,30 @@ class ToolGate:
 
     def __init__(
         self,
-        policy: Policy,
+        policy: Policy | PolicyRuntime,
         *,
         context_contract: ContextContract | None = None,
         deployment_lock: DeploymentLock | None = None,
         audit_log: str | Path | None = None,
         audit_sink: AuditSink | None = None,
     ) -> None:
-        if not isinstance(policy, Policy):
-            raise TypeError("policy must be a Policy")
+        if not isinstance(policy, (Policy, PolicyRuntime)):
+            raise TypeError("policy must be a Policy or PolicyRuntime")
         if audit_log is not None and audit_sink is not None:
             raise ValueError("audit_log and audit_sink are mutually exclusive")
-        self._engine = PolicyEngine(
-            policy,
-            context_contract=context_contract,
-            deployment_lock=deployment_lock,
-        )
+        self._engine: PolicyEngine | PolicyRuntime
+        if isinstance(policy, PolicyRuntime):
+            if context_contract is not None or deployment_lock is not None:
+                raise ValueError(
+                    "context_contract and deployment_lock must be configured on PolicyRuntime"
+                )
+            self._engine = policy
+        else:
+            self._engine = PolicyEngine(
+                policy,
+                context_contract=context_contract,
+                deployment_lock=deployment_lock,
+            )
         selected_sink: AuditSink | None = None
         if audit_log is not None:
             selected_sink = JsonlAuditSink(audit_log)
@@ -220,6 +229,12 @@ class ToolGate:
         """Return the verified exact-content deployment lock, when configured."""
 
         return self._engine.deployment_lock
+
+    @property
+    def runtime_status(self) -> PolicyRuntimeStatus | None:
+        """Return coherent live-generation metadata for a runtime-backed gate."""
+
+        return self._engine.status if isinstance(self._engine, PolicyRuntime) else None
 
     def bind(
         self,
@@ -467,6 +482,12 @@ class BoundToolGate:
         """Return the deployment lock verified by the parent gate."""
 
         return self._gate.deployment_lock
+
+    @property
+    def runtime_status(self) -> PolicyRuntimeStatus | None:
+        """Return coherent live-generation metadata for a runtime-backed parent gate."""
+
+        return self._gate.runtime_status
 
     @property
     def tool_name(self) -> str:

@@ -84,6 +84,7 @@ jobs:
           samsarix-ethics schema policy-coverage >/dev/null
           samsarix-ethics schema policy-lint >/dev/null
           samsarix-ethics schema policy-shadow >/dev/null
+          samsarix-ethics schema policy-runtime-status >/dev/null
           for policy in examples/policies/*.json; do
             samsarix-ethics lint "$policy" --fail-on suggestion
           done
@@ -110,6 +111,7 @@ jobs:
             --format json >/tmp/policy-shadow.json
           python -c 'import json; value=json.load(open("/tmp/policy-shadow.json")); assert value["status"] == "changed"; assert value["authoritative"]["outcome"] == "allow"; assert value["candidate"]["outcome"] == "review"'
           python examples/tool_gate_demo.py
+          python examples/policy_runtime_demo.py
       - name: Build distributions
         if: matrix.python-version == '3.11'
         run: python -m build --no-isolation
@@ -132,6 +134,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-coverage >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-lint >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-shadow >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-runtime-status >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
@@ -143,6 +146,7 @@ jobs:
               AuditRecord,
               Policy,
               PolicyLintSeverity,
+              PolicyRuntime,
               PolicyShadowEvaluator,
               PolicyTestSuite,
               ToolGate,
@@ -223,6 +227,12 @@ jobs:
           assert len(records) == 1
           assert records[0].audit_record_version == AUDIT_RECORD_VERSION == 1
           assert records[0].policy_fingerprint == result.decision.policy_fingerprint
+          runtime = PolicyRuntime(policy)
+          runtime_gate = ToolGate(runtime).bind("read_ticket", capabilities=["resource:read"])
+          assert runtime_gate.evaluate({"ticket_id": "T-200"}).allowed is True
+          candidate_status = runtime.activate(candidate, expected_generation=1)
+          assert candidate_status.generation == 2
+          assert runtime_gate.evaluate({"ticket_id": "T-200"}).outcome.value == "deny"
           PY
       - name: Upload verified distributions
         if: matrix.python-version == '3.11'

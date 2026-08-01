@@ -216,6 +216,8 @@ certification or ethics truth.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [x] Add deterministic central policy-set composition with common-default and global-ID checks,
   value-minimized source provenance, and an ordinary deployable policy result.
+- [x] Add atomic last-known-good in-process policy activation with compare-and-swap generations,
+  coherent status, and live tool-gate integration.
 - [ ] Add policy-format version migration only after a second format and adopter need exist.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
 
@@ -296,6 +298,10 @@ certification or ethics truth.
   remain non-authoritative, and per-policy monotonic durations expose `PolicyEngine.evaluate` time
   while excluding input loading/validation, telemetry delivery, and end-to-end action latency.
   Serialized reports omit input plus reason/warning text.
+- Added an atomic `PolicyRuntime` that fully validates candidate policy/contract/lock sets before
+  swapping them into live gates, retains the last good generation after failure, rejects stale
+  concurrent activation, and pins batches to one generation. Distribution and durable desired
+  state remain external control-plane responsibilities.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -330,7 +336,10 @@ External validation gates:
 - Composition proves deterministic aggregation of trusted source artifacts, not source authorship,
   safe distribution, freshness, tenant isolation, or correctness of the combined business policy.
 - Shadow evaluation proves only the two policies' behavior for one supplied action. It adds
-  synchronous work and provides no sampling, durable telemetry, automatic promotion, or rollback.
+  synchronous work and provides no sampling or durable telemetry. In-process promotion/rollback
+  still requires external authorization and does not coordinate processes or hosts.
+- Runtime generation numbers are process-local and reset at restart; they are not global freshness
+  or rollback-prevention evidence.
 - The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own

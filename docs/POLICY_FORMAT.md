@@ -137,9 +137,9 @@ securely.
 ## JSON Schema
 
 The wheel contains Draft 2020-12 schemas for policies, policy-test suites, policy-comparison,
-policy-composition, policy-coverage, policy-explanation, policy-lint, and policy-shadow reports,
-context contracts, deployment locks, normalized tool-call contexts, bound approval records, and
-audit records. Print fresh copies without a network request:
+policy-composition, policy-coverage, policy-explanation, policy-lint, policy-runtime status, and
+policy-shadow reports, context contracts, deployment locks, normalized tool-call contexts, bound
+approval records, and audit records. Print fresh copies without a network request:
 
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
@@ -149,6 +149,7 @@ samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-explanation > policy-explanation-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
+samsarix-ethics schema policy-runtime-status > policy-runtime-status-v1.schema.json
 samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
 samsarix-ethics schema context-contract > context-contract-v1.schema.json
 samsarix-ethics schema deployment-lock > deployment-lock-v1.schema.json

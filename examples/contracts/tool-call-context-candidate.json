@@ -1,0 +1,17 @@
+{
+  "context_contract_version": 1,
+  "id": "tool-call-context",
+  "version": "1.1.0-candidate",
+  "description": "Candidate tool-call facts adding optional data sensitivity for rollout.",
+  "fields": {
+    "tool_context_version": {"type": "integer"},
+    "actor": {"type": "object"},
+    "action": {"type": "object"},
+    "action.kind": {"type": "string"},
+    "action.capabilities": {"type": "array", "items": "string"},
+    "context": {"type": "object"},
+    "context.approval": {"type": "object", "required": false},
+    "context.approval.approved": {"type": "boolean", "required": false},
+    "context.data_sensitivity": {"type": "string", "required": false}
+  }
+}
