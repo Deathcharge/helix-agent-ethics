@@ -8,7 +8,9 @@ from __future__ import annotations
 import inspect
 import json
 import os
+import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -16,6 +18,11 @@ from .errors import AuditLogError
 from .models import Decision
 
 AUDIT_RECORD_VERSION = 1
+_AUDIT_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
+_DECISION_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+_EVALUATED_AT = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,8 +39,48 @@ class AuditRecord:
     audit_record_version: int = AUDIT_RECORD_VERSION
 
     def __post_init__(self) -> None:
-        if self.audit_record_version != AUDIT_RECORD_VERSION:
+        if (
+            isinstance(self.audit_record_version, bool)
+            or self.audit_record_version != AUDIT_RECORD_VERSION
+        ):
             raise ValueError(f"audit_record_version must be {AUDIT_RECORD_VERSION}")
+        if not isinstance(self.decision_id, str) or not _DECISION_ID.fullmatch(self.decision_id):
+            raise ValueError("decision_id must be a lowercase UUID string")
+        if (
+            not isinstance(self.evaluated_at, str)
+            or len(self.evaluated_at) > 64
+            or not _EVALUATED_AT.fullmatch(self.evaluated_at)
+        ):
+            raise ValueError("evaluated_at must be an RFC 3339 date-time of at most 64 characters")
+        try:
+            datetime.fromisoformat(self.evaluated_at)
+        except ValueError as exc:
+            raise ValueError("evaluated_at must be a valid RFC 3339 date-time") from exc
+        for field, value in (
+            ("policy_id", self.policy_id),
+            ("policy_version", self.policy_version),
+        ):
+            if not isinstance(value, str) or not _AUDIT_IDENTIFIER.fullmatch(value):
+                raise ValueError(f"{field} must be a 1-128 character identifier")
+        if not isinstance(self.outcome, str) or self.outcome not in {"allow", "deny", "review"}:
+            raise ValueError("outcome must be allow, deny, or review")
+        if not isinstance(self.matched_rules, tuple):
+            raise TypeError("matched_rules must be a tuple")
+        if len(self.matched_rules) > 1_000:
+            raise ValueError("matched_rules exceeds the limit of 1000")
+        if any(
+            not isinstance(rule_id, str) or not _AUDIT_IDENTIFIER.fullmatch(rule_id)
+            for rule_id in self.matched_rules
+        ):
+            raise ValueError("matched_rules must contain 1-128 character identifiers")
+        if len(set(self.matched_rules)) != len(self.matched_rules):
+            raise ValueError("matched_rules must not contain duplicates")
+        if (
+            isinstance(self.warning_count, bool)
+            or not isinstance(self.warning_count, int)
+            or not 0 <= self.warning_count <= 1_000
+        ):
+            raise ValueError("warning_count must be an integer from 0 to 1000")
 
     @classmethod
     def from_decision(cls, decision: Decision) -> AuditRecord:

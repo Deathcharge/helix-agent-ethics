@@ -24,6 +24,12 @@ def get_policy_schema() -> dict[str, Any]:
     return _load_schema("policy-v1.schema.json")
 
 
+def get_audit_record_schema() -> dict[str, Any]:
+    """Return a fresh copy of the audit-record version 1 JSON Schema."""
+
+    return _load_schema("audit-record-v1.schema.json")
+
+
 def get_policy_test_schema() -> dict[str, Any]:
     """Return a fresh copy of the policy-test suite version 1 JSON Schema."""
 

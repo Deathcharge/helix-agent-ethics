@@ -68,7 +68,7 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|tool-context]
+samsarix-ethics schema [policy|policy-test|tool-context|audit-record]
 samsarix-ethics test --policy POLICY.json TESTS.json [--format text|json]
 samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
@@ -102,6 +102,7 @@ Print the versioned Draft 2020-12 schemas for editors, CI, or code generation:
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
+samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```
 
 The bundled regression suite proves allow, deny, review, missing-approval, and warning behavior

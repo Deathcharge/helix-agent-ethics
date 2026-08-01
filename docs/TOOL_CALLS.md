@@ -96,6 +96,8 @@ configured sink exactly once, and only then returns or enforces the outcome. A c
 return `None`; any exception or other return becomes `AuditLogError` and prevents a tool callback.
 The package never retries. If an application sink retries after an uncertain external commit, its
 destination may receive the same `decision_id` more than once and must own idempotency.
+Export the record's Draft 2020-12 contract with
+`samsarix-ethics schema audit-record > audit-record-v1.schema.json`.
 
 ## Asynchronous enforcement
 

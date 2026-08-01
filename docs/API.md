@@ -94,11 +94,11 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()`, `get_policy_test_schema()`, and `get_tool_context_schema()`
+### `get_policy_schema()`, `get_policy_test_schema()`, `get_tool_context_schema()`, and `get_audit_record_schema()`
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
-suites, and the normalized tool-call context. These calls perform no network access and callers
-may mutate the returned value without changing future calls.
+suites, the normalized tool-call context, and metadata-only audit records. These calls perform no
+network access and callers may mutate the returned value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`
 

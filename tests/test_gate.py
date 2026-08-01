@@ -313,7 +313,7 @@ def test_tool_gate_rejects_invalid_or_conflicting_sinks(tmp_path: Path) -> None:
         return None
 
     with pytest.raises(TypeError, match="synchronous callable"):
-        ToolGate(_gate_policy(), audit_sink=async_sink)
+        ToolGate(_gate_policy(), audit_sink=async_sink)  # type: ignore[arg-type]
 
 
 def test_tool_gate_closes_and_rejects_sink_coroutine_result() -> None:

@@ -25,7 +25,12 @@ from .gate import (
 )
 from .io import append_audit_record, load_context, load_policy
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
-from .schema import get_policy_schema, get_policy_test_schema, get_tool_context_schema
+from .schema import (
+    get_audit_record_schema,
+    get_policy_schema,
+    get_policy_test_schema,
+    get_tool_context_schema,
+)
 from .testing import (
     MAX_POLICY_TEST_BYTES,
     PolicyTestCase,
@@ -74,6 +79,7 @@ __all__ = [
     "ToolGate",
     "append_audit_record",
     "build_tool_context",
+    "get_audit_record_schema",
     "get_policy_schema",
     "get_policy_test_schema",
     "get_tool_context_schema",

@@ -77,6 +77,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
           /tmp/samsarix-wheel/bin/python - <<'PY'
           from samsarix_ethics import AUDIT_RECORD_VERSION, AuditRecord, Policy, ToolGate
 
