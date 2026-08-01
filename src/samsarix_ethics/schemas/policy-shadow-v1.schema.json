@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/policy-shadow/v1.json",
+  "title": "Samsarix Agent Ethics policy shadow evaluation v1",
+  "description": "Input-free telemetry from a baseline-authoritative candidate policy evaluation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "shadow_version",
+    "status",
+    "changes",
+    "authorization_changed",
+    "authoritative",
+    "candidate"
+  ],
+  "properties": {
+    "shadow_version": {"const": 1},
+    "status": {"enum": ["unchanged", "changed", "error"]},
+    "changes": {
+      "type": "array",
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "outcome",
+          "matched_rules",
+          "warning_count",
+          "reason_messages",
+          "warning_messages"
+        ]
+      }
+    },
+    "authorization_changed": {"type": "boolean"},
+    "authoritative": {"$ref": "#/$defs/successful_snapshot"},
+    "candidate": {
+      "oneOf": [
+        {"$ref": "#/$defs/successful_snapshot"},
+        {"$ref": "#/$defs/error_snapshot"}
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "unchanged"}}},
+      "then": {
+        "properties": {
+          "changes": {"maxItems": 0},
+          "authorization_changed": {"const": false},
+          "candidate": {"$ref": "#/$defs/successful_snapshot"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "changed"}}},
+      "then": {
+        "properties": {
+          "changes": {"minItems": 1},
+          "candidate": {"$ref": "#/$defs/successful_snapshot"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "error"}}},
+      "then": {
+        "properties": {
+          "changes": {"maxItems": 0},
+          "authorization_changed": {"const": false},
+          "candidate": {"$ref": "#/$defs/error_snapshot"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"changes": {"contains": {"const": "outcome"}}}},
+      "then": {"properties": {"authorization_changed": {"const": true}}},
+      "else": {"properties": {"authorization_changed": {"const": false}}}
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
+    },
+    "decision_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "matched_rules": {
+      "type": "array",
+      "maxItems": 1000,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/identifier"}
+    },
+    "base_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "policy_version",
+        "policy_fingerprint",
+        "decision_id",
+        "evaluated_at",
+        "outcome",
+        "matched_rules",
+        "warning_count",
+        "evaluated_rules",
+        "evaluation_duration_ns",
+        "error"
+      ],
+      "properties": {
+        "policy_id": {"$ref": "#/$defs/identifier"},
+        "policy_version": {"$ref": "#/$defs/identifier"},
+        "policy_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "decision_id": {"type": ["string", "null"]},
+        "evaluated_at": {"type": ["string", "null"]},
+        "outcome": {"type": ["string", "null"], "enum": ["allow", "deny", "review", null]},
+        "matched_rules": {"$ref": "#/$defs/matched_rules"},
+        "warning_count": {"type": ["integer", "null"], "minimum": 0, "maximum": 1000},
+        "evaluated_rules": {"type": ["integer", "null"], "minimum": 0, "maximum": 1000},
+        "evaluation_duration_ns": {"type": "integer", "minimum": 0},
+        "error": {"type": ["string", "null"], "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "successful_snapshot": {
+      "allOf": [
+        {"$ref": "#/$defs/base_snapshot"},
+        {
+          "properties": {
+            "decision_id": {"$ref": "#/$defs/decision_id"},
+            "evaluated_at": {"type": "string", "format": "date-time", "maxLength": 64},
+            "outcome": {"enum": ["allow", "deny", "review"]},
+            "warning_count": {"type": "integer"},
+            "evaluated_rules": {"type": "integer"},
+            "error": {"const": null}
+          }
+        }
+      ]
+    },
+    "error_snapshot": {
+      "allOf": [
+        {"$ref": "#/$defs/base_snapshot"},
+        {
+          "properties": {
+            "decision_id": {"const": null},
+            "evaluated_at": {"const": null},
+            "outcome": {"const": null},
+            "matched_rules": {"maxItems": 0},
+            "warning_count": {"const": null},
+            "evaluated_rules": {"const": null},
+            "error": {"type": "string"}
+          }
+        }
+      ]
+    }
+  }
+}

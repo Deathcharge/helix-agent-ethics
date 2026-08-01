@@ -1,0 +1,19 @@
+{
+  "actor": {
+    "id": "support-agent"
+  },
+  "action": {
+    "operation": "read",
+    "risk": "low"
+  },
+  "resource": {
+    "type": "support-ticket",
+    "id": "ticket-example"
+  },
+  "context": {
+    "human_approved": false
+  },
+  "data": {
+    "sensitivity": "restricted"
+  }
+}

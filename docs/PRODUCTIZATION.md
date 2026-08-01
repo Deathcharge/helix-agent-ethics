@@ -291,6 +291,11 @@ certification or ethics truth.
 - Added bounded layered policy composition with atomic CLI output and exact source provenance. The
   existing twelve-rule support-agent policy is reproducibly assembled from eight organization
   guardrails and four application rules, then validated by its fourteen-case 100%-coverage suite.
+- Added baseline-authoritative shadow evaluation with a strict versioned telemetry schema. A live
+  candidate observes the same detached action after the baseline succeeds, candidate domain errors
+  remain non-authoritative, and per-policy monotonic durations expose `PolicyEngine.evaluate` time
+  while excluding input loading/validation, telemetry delivery, and end-to-end action latency.
+  Serialized reports omit input plus reason/warning text.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -321,6 +326,8 @@ External validation gates:
   intent, least privilege, domain-schema correctness, or exhaustive reachability.
 - Composition proves deterministic aggregation of trusted source artifacts, not source authorship,
   safe distribution, freshness, tenant isolation, or correctness of the combined business policy.
+- Shadow evaluation proves only the two policies' behavior for one supplied action. It adds
+  synchronous work and provides no sampling, durable telemetry, automatic promotion, or rollback.
 - The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own

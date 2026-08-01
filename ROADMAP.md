@@ -31,6 +31,8 @@ adoption remain separate evidence-based decisions.
   heuristic claims about application intent.
 - [x] Add deterministic central composition for organization guardrails plus application
   permissions, with exact source provenance and one ordinary deployable policy artifact.
+- [x] Add baseline-authoritative shadow evaluation so live candidate changes/errors can be
+  measured without granting the candidate enforcement authority or serializing action input.
 
 ## Release candidate
 

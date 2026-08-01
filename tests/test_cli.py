@@ -36,6 +36,7 @@ def test_help_and_version() -> None:
     assert "coverage" in help_result.stdout
     assert "lint" in help_result.stdout
     assert "schema" in help_result.stdout
+    assert "shadow" in help_result.stdout
     assert "test" in help_result.stdout
     assert version_result.returncode == 0
     assert version_result.stdout.strip() == "samsarix-ethics 0.1.0"
@@ -129,6 +130,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy_composition = _run_cli("schema", "policy-composition")
     policy_coverage = _run_cli("schema", "policy-coverage")
     policy_lint = _run_cli("schema", "policy-lint")
+    policy_shadow = _run_cli("schema", "policy-shadow")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     audit_record = _run_cli("schema", "audit-record")
@@ -145,6 +147,8 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_coverage.stdout)["$id"].endswith("/policy-coverage/v1.json")
     assert policy_lint.returncode == 0
     assert json.loads(policy_lint.stdout)["$id"].endswith("/policy-lint/v1.json")
+    assert policy_shadow.returncode == 0
+    assert json.loads(policy_shadow.stdout)["$id"].endswith("/policy-shadow/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
@@ -533,6 +537,132 @@ def test_compare_command_reports_evaluation_errors_without_inputs(
     assert "ERROR bad shape: baseline error:" in result.stdout
     assert "requires the input field to be an array" in result.stdout
     assert "do-not-report-this" not in result.stdout
+
+
+def test_shadow_command_keeps_baseline_exit_authoritative_and_omits_input(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    baseline_path = write_json("shadow-baseline.json", policy_document)
+    candidate_document = deepcopy(policy_document)
+    candidate_document["version"] = "2-candidate"
+    candidate_document["rules"].append(
+        {
+            "id": "review-read",
+            "effect": "review",
+            "message": "Candidate review text must not be serialized.",
+            "conditions": [{"field": "action.operation", "operator": "eq", "value": "read"}],
+        }
+    )
+    candidate_path = write_json("shadow-candidate.json", candidate_document)
+
+    changed = _run_cli(
+        "shadow",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        stdin='{"action":{"operation":"read"},"secret":"never-print-shadow-input"}',
+    )
+    denied = _run_cli(
+        "shadow",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        stdin='{"action":{"operation":"delete"}}',
+    )
+    review = _run_cli(
+        "shadow",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        stdin='{"action":{"operation":"write"}}',
+    )
+    text_result = _run_cli(
+        "shadow",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        "--format",
+        "text",
+        stdin='{"action":{"operation":"read"}}',
+    )
+
+    assert changed.returncode == 0
+    payload = json.loads(changed.stdout)
+    assert payload["status"] == "changed"
+    assert payload["authorization_changed"] is True
+    assert payload["authoritative"]["outcome"] == "allow"
+    assert payload["candidate"]["outcome"] == "review"
+    assert payload["authoritative"]["evaluation_duration_ns"] >= 0
+    assert payload["candidate"]["evaluation_duration_ns"] >= 0
+    assert "never-print-shadow-input" not in changed.stdout
+    assert "Candidate review text" not in changed.stdout
+    assert denied.returncode == 3
+    assert json.loads(denied.stdout)["authoritative"]["outcome"] == "deny"
+    assert review.returncode == 4
+    assert json.loads(review.stdout)["authoritative"]["outcome"] == "review"
+    assert text_result.returncode == 0
+    assert "Authoritative:" in text_result.stdout
+    assert "-> ALLOW" in text_result.stdout
+    assert "Candidate observation: REVIEW" in text_result.stdout
+    assert "Enforce: authoritative baseline decision" in text_result.stdout
+
+
+def test_shadow_command_candidate_error_does_not_override_baseline_allow(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    baseline_path = write_json("safe-shadow-baseline.json", policy_document)
+    candidate_path = write_json(
+        "error-shadow-candidate.json",
+        {
+            "schema_version": 1,
+            "id": "error-shadow-candidate",
+            "version": "2",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "array-only",
+                    "effect": "allow",
+                    "conditions": [
+                        {"field": "action.operation", "operator": "contains", "value": "read"}
+                    ],
+                }
+            ],
+        },
+    )
+
+    result = _run_cli(
+        "shadow",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        stdin='{"action":{"operation":"read"},"secret":"candidate-error-secret"}',
+    )
+    text_result = _run_cli(
+        "shadow",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        "--format",
+        "text",
+        stdin='{"action":{"operation":"read"}}',
+    )
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "error"
+    assert payload["authoritative"]["outcome"] == "allow"
+    assert payload["candidate"]["outcome"] is None
+    assert "requires the input field to be an array" in payload["candidate"]["error"]
+    assert "candidate-error-secret" not in result.stdout
+    assert text_result.returncode == 0
+    assert "Candidate error after" in text_result.stdout
+    assert "Shadow status: ERROR; changes: none" in text_result.stdout
 
 
 def test_policy_test_command_reports_pass_and_fail(

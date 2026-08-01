@@ -68,7 +68,7 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-lint|tool-context|tool-approval|audit-record]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-lint|policy-shadow|tool-context|tool-approval|audit-record]
 samsarix-ethics compose --id ID --version VERSION --policy SOURCE.json [--policy SOURCE.json ...] \
                         --output POLICY.json [--description TEXT] [--force] [--format text|json]
 samsarix-ethics lint POLICY.json [--fail-on none|security-warning|warning|suggestion]
@@ -78,6 +78,8 @@ samsarix-ethics coverage --policy POLICY.json TESTS.json \
                          [--threshold PERCENT] [--format text|json]
 samsarix-ethics compare --baseline BASELINE.json --candidate CANDIDATE.json \
                         TESTS.json [--format text|json]
+samsarix-ethics shadow --baseline BASELINE.json --candidate CANDIDATE.json \
+                       [--input INPUT.json|-] [--format json|text]
 samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
 samsarix-ethics --help
@@ -113,6 +115,7 @@ samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
 samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
+samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
@@ -181,11 +184,27 @@ The included candidate changes one sensitive-read case from `allow` to `review`,
 reports one authorization change and exits `1`. The versioned report never includes case inputs.
 See the [policy impact comparison guide](docs/POLICY_COMPARISON.md).
 
+Shadow that candidate on one live-shaped action while the approved baseline remains authoritative:
+
+```bash
+samsarix-ethics shadow \
+  --baseline examples/policies/safe-agent-actions.json \
+  --candidate examples/policies/safe-agent-actions-candidate.json \
+  --input examples/actions/read-restricted-resource.json
+```
+
+The report observes baseline `allow` versus candidate `review`, but exits `0` because the baseline
+alone controls authorization. Candidate changes and errors are telemetry, not exit-code overrides;
+monitor the JSON `status` separately. Each snapshot includes engine-only nanosecond duration for
+latency comparison. The versioned report excludes the action input and all reason/warning text.
+See the [shadow rollout guide](docs/POLICY_SHADOWING.md).
+
 ## Python API
 
 ```python
 from samsarix_ethics import (
     PolicyEngine,
+    PolicyShadowEvaluator,
     compare_policies,
     compose_policies,
     load_policy,
@@ -220,6 +239,16 @@ impact = compare_policies(policy, candidate, suite)
 print(coverage.coverage_percent, coverage.threshold_met)
 print(lint_report.passed, len(lint_report.findings))
 print(impact.authorization_changes, impact.metadata_only_changes)
+
+shadow = PolicyShadowEvaluator(policy, candidate).evaluate(
+    {
+        "action": {"operation": "read", "risk": "low"},
+        "data": {"sensitivity": "restricted"},
+    }
+)
+print(shadow.status, shadow.authorization_changed)
+# Enforce only this baseline decision during the shadow rollout.
+authoritative_decision = shadow.authoritative_decision
 
 composition = compose_policies(
     [
@@ -345,6 +374,9 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
   not proof that permissions match business intent.
 - Policy composition rejects ambiguous defaults and identifiers and reports only source/target
   metadata; it does not authenticate, distribute, sign, or activate policy.
+- Shadow evaluation runs a detached input against the candidate only after a successful baseline
+  evaluation. Its telemetry omits input and message text; the baseline remains authoritative even
+  when the candidate changes or raises a domain error.
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
@@ -398,13 +430,16 @@ before any registry upload.
 The product is a library plus CLI; it has no server or cloud component. The package separates
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
 versioned schemas, bounded I/O, authoring diagnostics, regression testing, rule coverage, policy
-impact comparison, layered composition, and presentation/exit codes.
+impact comparison, layered composition, baseline-authoritative shadow rollout, and
+presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
 Deliberate limitations:
 
 - JSON policies only; no arbitrary code, regex, network data, or plugin execution.
 - In-process evaluation only; no policy distribution control plane.
+- Shadow evaluation is synchronous and does not provide sampling, remote telemetry, promotion, or
+  rollback automation.
 - JSONL audit append is local and metadata-only, with no cross-process ordering guarantee.
 - The engine evaluates explicit caller-supplied facts; it does not infer intent or truth.
 - Policies must be reviewed and tested for the embedding application's real threat model.
