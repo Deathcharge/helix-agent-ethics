@@ -97,6 +97,9 @@ def _parser() -> argparse.ArgumentParser:
 
     test_suite = subparsers.add_parser("test", help="run a JSON policy regression suite")
     test_suite.add_argument("--policy", required=True, help="path to a JSON policy")
+    test_suite.add_argument(
+        "--context-contract", help="validate the policy and suite inputs against this contract"
+    )
     test_suite.add_argument("suite", help="path to a JSON policy-test suite")
     test_suite.add_argument("--format", choices=("json", "text"), default="text")
 
@@ -104,6 +107,9 @@ def _parser() -> argparse.ArgumentParser:
         "coverage", help="measure rule coverage over a policy regression suite"
     )
     coverage.add_argument("--policy", required=True, help="path to a JSON policy")
+    coverage.add_argument(
+        "--context-contract", help="validate the policy and suite inputs against this contract"
+    )
     coverage.add_argument("suite", help="path to a JSON policy-test suite")
     coverage.add_argument(
         "--threshold",
@@ -129,6 +135,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     compare.add_argument("--baseline", required=True, help="path to the baseline JSON policy")
     compare.add_argument("--candidate", required=True, help="path to the candidate JSON policy")
+    compare.add_argument(
+        "--context-contract", help="validate both policies and suite inputs against this contract"
+    )
     compare.add_argument("suite", help="path to a JSON policy-test suite")
     compare.add_argument("--format", choices=("json", "text"), default="text")
 
@@ -137,6 +146,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     shadow.add_argument("--baseline", required=True, help="path to the authoritative JSON policy")
     shadow.add_argument("--candidate", required=True, help="path to the observational JSON policy")
+    shadow.add_argument(
+        "--context-contract", help="validate both policies and the live input against this contract"
+    )
     shadow.add_argument(
         "--input", default="-", help="path to a JSON input object; default: standard input"
     )
@@ -443,7 +455,17 @@ def main(
             baseline = load_policy(arguments.baseline)
             candidate = load_policy(arguments.candidate)
             suite = load_policy_test_suite(arguments.suite)
-            comparison_report = compare_policies(baseline, candidate, suite)
+            context_contract = (
+                load_context_contract(arguments.context_contract)
+                if arguments.context_contract
+                else None
+            )
+            comparison_report = compare_policies(
+                baseline,
+                candidate,
+                suite,
+                context_contract=context_contract,
+            )
             print(_render_comparison_report(comparison_report, arguments.format), file=output)
             return EXIT_ALLOWED if comparison_report.identical else EXIT_TEST_FAILED
 
@@ -451,7 +473,16 @@ def main(
             baseline = load_policy(arguments.baseline)
             candidate = load_policy(arguments.candidate)
             context = load_context(arguments.input, stdin=binary_input)
-            shadow_evaluation = PolicyShadowEvaluator(baseline, candidate).evaluate(context)
+            context_contract = (
+                load_context_contract(arguments.context_contract)
+                if arguments.context_contract
+                else None
+            )
+            shadow_evaluation = PolicyShadowEvaluator(
+                baseline,
+                candidate,
+                context_contract=context_contract,
+            ).evaluate(context)
             print(_render_shadow_evaluation(shadow_evaluation, arguments.format), file=output)
             return _decision_exit(shadow_evaluation.authoritative_decision.outcome)
 
@@ -464,7 +495,17 @@ def main(
 
         if arguments.command == "coverage":
             suite = load_policy_test_suite(arguments.suite)
-            coverage_report = measure_policy_coverage(policy, suite, threshold=arguments.threshold)
+            context_contract = (
+                load_context_contract(arguments.context_contract)
+                if arguments.context_contract
+                else None
+            )
+            coverage_report = measure_policy_coverage(
+                policy,
+                suite,
+                threshold=arguments.threshold,
+                context_contract=context_contract,
+            )
             print(_render_coverage_report(coverage_report, arguments.format), file=output)
             return EXIT_ALLOWED if coverage_report.threshold_met else EXIT_TEST_FAILED
 
@@ -508,7 +549,16 @@ def main(
 
         if arguments.command == "test":
             suite = load_policy_test_suite(arguments.suite)
-            test_report = run_policy_tests(policy, suite)
+            context_contract = (
+                load_context_contract(arguments.context_contract)
+                if arguments.context_contract
+                else None
+            )
+            test_report = run_policy_tests(
+                policy,
+                suite,
+                context_contract=context_contract,
+            )
             print(_render_test_report(test_report, arguments.format), file=output)
             return EXIT_ALLOWED if test_report.successful else EXIT_TEST_FAILED
 

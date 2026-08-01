@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from .contracts import ContextContract
 from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .models import Outcome, Policy
@@ -115,6 +116,7 @@ def measure_policy_coverage(
     suite: PolicyTestSuite,
     *,
     threshold: int = 0,
+    context_contract: ContextContract | None = None,
 ) -> PolicyCoverageReport:
     """Measure which policy rules match a suite without retaining case inputs."""
 
@@ -125,7 +127,7 @@ def measure_policy_coverage(
     if isinstance(threshold, bool) or not isinstance(threshold, int) or not 0 <= threshold <= 100:
         raise ValueError("threshold must be an integer from 0 to 100")
 
-    engine = PolicyEngine(policy)
+    engine = PolicyEngine(policy, context_contract=context_contract)
     matched_rule_ids: set[str] = set()
     outcome_counts = {outcome: 0 for outcome in Outcome}
     error_cases: list[PolicyCoverageError] = []

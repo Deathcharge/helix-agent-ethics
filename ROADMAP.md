@@ -35,6 +35,8 @@ adoption remain separate evidence-based decisions.
   measured without granting the candidate enforcement authority or serializing action input.
 - [x] Add application context contracts that reject undeclared policy facts and incompatible
   operator types before deployment, then enforce required fact types at the runtime boundary.
+- [x] Apply one shared context contract across policy regression, coverage, comparison, and shadow
+  workflows so lifecycle evidence cannot silently use weaker input validation than production.
 
 ## Release candidate
 

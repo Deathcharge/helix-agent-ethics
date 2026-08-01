@@ -12,6 +12,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from .contracts import ContextContract
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import InputValidationError, PolicyTestValidationError, SamsarixEthicsError
 from .io import _parse_json, _read_file
@@ -276,10 +277,15 @@ def load_policy_test_suite(path: str | Path) -> PolicyTestSuite:
         raise PolicyTestValidationError(str(exc)) from exc
 
 
-def run_policy_tests(policy: Policy, suite: PolicyTestSuite) -> PolicyTestReport:
+def run_policy_tests(
+    policy: Policy,
+    suite: PolicyTestSuite,
+    *,
+    context_contract: ContextContract | None = None,
+) -> PolicyTestReport:
     """Run every case, preserving failures and evaluation errors in one report."""
 
-    engine = PolicyEngine(policy)
+    engine = PolicyEngine(policy, context_contract=context_contract)
     results: list[PolicyTestResult] = []
     for case in suite.cases:
         try:

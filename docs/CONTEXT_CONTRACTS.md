@@ -81,6 +81,37 @@ Construction rejects a policy-contract mismatch. Each evaluation first applies t
 bounded JSON validation, then rejects a missing required fact, wrong declared type, or wrong array
 item type with `InputValidationError`. Treat every such error as non-authorization.
 
+## Regression and rollout lifecycle
+
+Use the same contract for policy regression, coverage, baseline/candidate comparison, and live
+shadow observation:
+
+```bash
+samsarix-ethics test --policy policy.json --context-contract contract.json policy.tests.json
+samsarix-ethics coverage --policy policy.json --context-contract contract.json policy.tests.json
+samsarix-ethics compare --baseline baseline.json --candidate candidate.json \
+  --context-contract contract.json policy.tests.json
+samsarix-ethics shadow --baseline baseline.json --candidate candidate.json \
+  --context-contract contract.json --input action.json
+```
+
+The corresponding Python APIs accept `context_contract=...`: `run_policy_tests`,
+`measure_policy_coverage`, `compare_policies`, and `PolicyShadowEvaluator`. Policy/contract
+incompatibility is a configuration error raised before cases or live input are evaluated. Contract
+input failures become ordinary input-free test/coverage/comparison errors; a baseline contract
+failure in shadow evaluation propagates as non-authorization.
+
+Comparison and shadow evaluation require one shared contract for baseline and candidate. For an
+additive schema migration, deploy optional new facts in the contract first, populate them, and only
+then evaluate a policy that references them. This keeps baseline and candidate evidence within one
+declared application boundary. Removing or changing fact types requires a separately reviewed
+migration; this API does not compare two different application schemas.
+
+Version 1 decision, test, coverage, comparison, shadow, and audit records do not embed a contract
+fingerprint. Preserve the reviewed contract artifact and its version alongside deployment or CI
+configuration when exact lifecycle provenance matters. Policy fingerprints continue to identify
+only policy content.
+
 ## Security boundary and limitations
 
 A contract describes expected structure; it does not prove that a fact is authentic, current, or

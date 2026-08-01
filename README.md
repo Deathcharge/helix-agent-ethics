@@ -73,13 +73,15 @@ samsarix-ethics compose --id ID --version VERSION --policy SOURCE.json [--policy
                         --output POLICY.json [--description TEXT] [--force] [--format text|json]
 samsarix-ethics lint POLICY.json [--fail-on none|security-warning|warning|suggestion]
                               [--format text|json]
-samsarix-ethics test --policy POLICY.json TESTS.json [--format text|json]
-samsarix-ethics coverage --policy POLICY.json TESTS.json \
+samsarix-ethics test --policy POLICY.json [--context-contract CONTRACT.json] \
+                     TESTS.json [--format text|json]
+samsarix-ethics coverage --policy POLICY.json [--context-contract CONTRACT.json] TESTS.json \
                          [--threshold PERCENT] [--format text|json]
 samsarix-ethics compare --baseline BASELINE.json --candidate CANDIDATE.json \
-                        TESTS.json [--format text|json]
+                        [--context-contract CONTRACT.json] TESTS.json [--format text|json]
 samsarix-ethics shadow --baseline BASELINE.json --candidate CANDIDATE.json \
-                       [--input INPUT.json|-] [--format json|text]
+                       [--context-contract CONTRACT.json] [--input INPUT.json|-] \
+                       [--format json|text]
 samsarix-ethics check --policy POLICY.json [--context-contract CONTRACT.json]
                       [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
@@ -132,7 +134,9 @@ samsarix-ethics validate examples/policies/tool-call-baseline.json \
 ```
 
 Context contracts are opt-in, versioned, and dependency-free. They validate declared dotted paths
-while permitting unrelated request fields such as opaque tool arguments. See the
+while permitting unrelated request fields such as opaque tool arguments. The same
+`--context-contract` option is available on test, coverage, comparison, and shadow commands so
+lifecycle evidence can enforce the production fact boundary. See the
 [application context contract guide](docs/CONTEXT_CONTRACTS.md).
 
 Compose organization-owned guardrails with application-owned permissions into one ordinary policy:

@@ -167,9 +167,16 @@ operator/type combinations. `PolicyEngine` and `ToolGate` can then reject missin
 declared facts before rule evaluation. The bundled tool-call contract validates the existing
 twelve-rule baseline and runs through the real gate.
 
+Regression tests, coverage, baseline/candidate comparison, and live shadow evaluation accept the
+same contract, preventing lifecycle evidence from silently using only generic JSON validation.
+One shared contract applies to both sides of a rollout; additive migrations should introduce new
+optional facts before policies reference them.
+
 This does not implement Cedar principals/resources/actions, close undeclared request fields, prove
 fact authenticity, or replace a consumer's full application schema. Contract adoption and source
-pin updates in downstream repositories remain separately reviewed changes.
+pin updates in downstream repositories remain separately reviewed changes. Version 1 decision and
+report formats do not yet carry contract fingerprints, so deployment configuration must preserve
+the reviewed contract artifact separately.
 
 ## Implemented gap: layered policy ownership
 
