@@ -22,6 +22,7 @@ are bounded and type-checked. The embedding application remains responsible for:
 
 - authenticating the actor and supplying trustworthy facts;
 - assigning tool capability labels outside model control;
+- binding tool names and capability labels once at trusted registration time where practical;
 - storing pending-call fingerprints before review, authenticating reviewers, enforcing approval
   expiry, and atomically consuming approvals once;
 - enforcing the returned decision immediately before the protected side effect, either with
@@ -44,6 +45,11 @@ tool, arguments, capabilities, and actor. This is mutation detection, not authen
 objects are ordinary application values, and parsing one with `from_dict` proves only that its JSON
 shape is valid. Keep approval records in trusted server-side storage, never derive them from model
 output, and enforce replay protection in the application.
+
+`ToolGate.bind(...)` freezes a tool name and canonical capability tuple so invocation payloads
+cannot downgrade those labels per call. The application still owns the registry used to select the
+binding. Treat MCP and other remote tool annotations as untrusted hints unless their source and
+meaning are independently trusted.
 
 ## Relevant vulnerability classes
 

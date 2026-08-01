@@ -78,11 +78,10 @@ denied, external writes as reviewable, and unknown capabilities as reviewable:
 from samsarix_ethics import ToolGate, load_policy
 
 gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
-result = gate.execute(
-    "read_ticket",
+read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
+result = read_ticket.execute(
     {"ticket_id": "T-100"},
     lambda arguments: {"ticket_id": arguments["ticket_id"], "status": "open"},
-    capabilities=["resource:read"],
     actor={"id": "support-agent"},
 )
 assert result.decision.allowed

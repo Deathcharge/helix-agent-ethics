@@ -9,7 +9,6 @@ from samsarix_ethics import (
     ToolCallApproval,
     ToolCallDeniedError,
     ToolGate,
-    fingerprint_tool_call,
     load_policy,
 )
 
@@ -21,22 +20,20 @@ def main() -> None:
         load_policy(root / "policies/tool-call-baseline.json"),
         audit_sink=audit_records.append,
     )
+    read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
+    delete_ticket = gate.bind("delete_ticket", capabilities=["destructive"])
 
-    read = gate.execute(
-        "read_ticket",
+    read = read_ticket.execute(
         {"ticket_id": "T-100"},
         lambda arguments: {"ticket_id": arguments["ticket_id"], "status": "open"},
-        capabilities=["resource:read"],
         actor={"id": "support-agent"},
     )
     print(f"allowed {read.decision.decision_id}: {read.value}")
 
     try:
-        gate.execute(
-            "delete_ticket",
+        delete_ticket.execute(
             {"ticket_id": "T-100"},
             lambda _arguments: print("this callback must not run"),
-            capabilities=["destructive"],
             actor={"id": "support-agent"},
         )
     except ToolCallDeniedError as exc:
@@ -44,18 +41,14 @@ def main() -> None:
 
     delete_arguments = {"ticket_id": "T-100"}
     delete_actor = {"id": "support-agent"}
-    fingerprint = fingerprint_tool_call(
+    fingerprint = delete_ticket.fingerprint(
         "delete-call-100",
-        "delete_ticket",
         delete_arguments,
-        capabilities=["destructive"],
         actor=delete_actor,
     )
-    approved = gate.execute(
-        "delete_ticket",
+    approved = delete_ticket.execute(
         delete_arguments,
         lambda arguments: {"deleted": arguments["ticket_id"]},
-        capabilities=["destructive"],
         actor=delete_actor,
         tool_call_id="delete-call-100",
         approval=ToolCallApproval("delete-call-100", True, fingerprint),

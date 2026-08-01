@@ -86,6 +86,11 @@ Bounded review used current primary sources:
   paused tool calls while warning that human approval is not itself application authorization.
 - [MCP client security guidance](https://modelcontextprotocol.io/docs/develop/clients/client-best-practices)
   emphasizes per-call confirmation and keeping authorization decisions outside model control.
+- [OpenAI Agents SDK tools](https://openai.github.io/openai-agents-python/tools/) and
+  [LangChain middleware](https://docs.langchain.com/oss/python/langchain/middleware/custom) attach
+  execution interception to registered tool objects rather than trusting model-supplied metadata.
+- The [MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema) explicitly says
+  tool annotations are hints and must not drive decisions when their server is untrusted.
 
 Consequent decisions: validate before use; deny/review override allow; expose reasons and a decision
 ID; omit raw input from audit records; preserve a first-class human-review outcome; do not claim
@@ -157,6 +162,8 @@ certification or ethics truth.
   JSONL compatibility and failing closed on configured sink errors.
 - [x] Bind structured human-review evidence to the exact tool-call ID, normalized arguments,
   capabilities, and actor before allowing a resumed call.
+- [x] Add immutable registration-time tool bindings so per-call payloads cannot downgrade trusted
+  tool identity or capability labels.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [ ] Add policy-set composition/version migration after real adopter feedback.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
@@ -195,7 +202,7 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 184 real tests; latest local run: 184 passed, 95.33% total coverage with branch measurement.
+- Added 191 real tests; latest local run: 191 passed, 95.46% total coverage with branch measurement.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
@@ -220,6 +227,8 @@ certification or ethics truth.
   runs before authorization, fails closed, does not retry, and preserves the JSONL path API.
 - Added bounded versioned tool-call fingerprints and immutable structured approvals; a mutation to
   the call ID, tool, arguments, capabilities, or actor now fails before policy, audit, or execution.
+- Added frozen bound-tool gates that reuse trusted registration metadata for fingerprinting,
+  evaluation, sync execution, and async execution without per-call capability parameters.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit

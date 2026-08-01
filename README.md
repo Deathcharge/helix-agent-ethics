@@ -143,11 +143,10 @@ invokes the callback only after an allow decision:
 from samsarix_ethics import ToolGate, load_policy
 
 gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
-result = gate.execute(
-    "read_ticket",
+read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
+result = read_ticket.execute(
     {"ticket_id": "T-100"},
     lambda arguments: ticket_store.read(arguments["ticket_id"]),
-    capabilities=["resource:read"],
     actor={"id": "support-agent"},
 )
 print(result.decision.decision_id, result.value)
@@ -157,28 +156,21 @@ For a paused human-review flow, bind the authenticated decision to the exact fra
 tool name, arguments, capabilities, and actor that were displayed for review:
 
 ```python
-from samsarix_ethics import ToolCallApproval, fingerprint_tool_call
+from samsarix_ethics import ToolCallApproval
 
 call_id = "email-call-100"
 arguments = {"to": "customer@example.com", "subject": "Case update"}
 actor = {"id": "support-agent"}
+send_email = gate.bind("send_email", capabilities=["external:write"])
 
 # Persist this server-side with the pending call before requesting review.
-pending_fingerprint = fingerprint_tool_call(
-    call_id,
-    "send_email",
-    arguments,
-    capabilities=["external:write"],
-    actor=actor,
-)
+pending_fingerprint = send_email.fingerprint(call_id, arguments, actor=actor)
 
 # Construct this only from an authenticated reviewer decision and stored fingerprint.
 approval = ToolCallApproval(call_id, True, pending_fingerprint)
-result = gate.execute(
-    "send_email",
+result = send_email.execute(
     arguments,
     lambda prepared: mailer.send(**prepared),
-    capabilities=["external:write"],
     actor=actor,
     tool_call_id=call_id,
     approval=approval,
@@ -189,6 +181,8 @@ result = gate.execute(
 evaluation, audit delivery, or execution. The application still owns reviewer authentication,
 expiration, atomic one-time consumption, and protected pending-call storage. A parsed
 `ToolCallApproval` is evidence supplied by the caller, not proof that its source is authentic.
+`gate.bind(...)` also freezes the application-owned tool name and capability labels once at
+registration, so untrusted invocation data cannot downgrade them per call.
 
 `execute_async` provides the same fail-closed boundary for async callbacks. Denials raise
 `ToolCallDeniedError`; review outcomes raise `ToolCallReviewRequiredError`; neither invokes the

@@ -86,3 +86,15 @@ approval validates its shape only, and runtime context remains outside the finge
 authorization and risk facts can be evaluated immediately before execution. The next consumer
 compatibility increment is to adopt this contract in Samsarix Agent Framework and rerun its
 consumer-owned integration matrix against the exact Agent Ethics merge commit.
+
+## Implemented gap: trusted registration profiles
+
+Frameworks expose a tool name and handler at registration, making that boundary the natural place
+to attach application-owned risk metadata. `ToolGate.bind(...)` now returns a frozen
+`BoundToolGate` whose name and canonical capability tuple cannot be changed per call. It shares the
+same audit sink and policy as its parent and supports fingerprints, structured approvals, sync
+execution, and async execution.
+
+This is framework-neutral and does not trust MCP annotations or model-generated labels. Existing
+registries can either select a prebuilt binding by tool name or continue using the lower-level
+`ToolGate` API when their own registration object already guarantees trusted metadata.
