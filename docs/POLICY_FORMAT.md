@@ -103,12 +103,15 @@ No interpolation or expression evaluation occurs.
 ## Resource limits
 
 - policy file: 1 MiB;
+- policy-test suite file: 4 MiB;
 - input object: 256 KiB;
-- JSON nesting: 32 levels;
-- combined container entries: 10,000;
+- JSON nesting: 32 levels per evaluation input, policy rule, or policy-test case;
+- combined container entries: 10,000 per evaluation input, policy rule, or policy-test case;
 - individual strings: 65,536 characters;
 - rules: 1,000 per policy;
 - conditions: 32 per rule.
+
+These bounds are independent; a file-size limit may be reached before a list-count limit.
 
 Duplicate JSON keys, non-UTF-8 input, `NaN`, and infinities are invalid.
 

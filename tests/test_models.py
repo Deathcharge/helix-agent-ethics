@@ -129,6 +129,31 @@ def test_boolean_policy_schema_version_is_rejected(policy_document: dict[str, An
         Policy.from_dict(policy_document)
 
 
+def test_policy_container_limit_is_applied_per_rule() -> None:
+    conditions = [
+        {"field": f"facts.value_{index}", "operator": "eq", "value": index} for index in range(32)
+    ]
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "large-policy",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": f"rule-{index}",
+                    "effect": "allow",
+                    "conditions": conditions,
+                }
+                for index in range(80)
+            ],
+        }
+    )
+
+    assert len(policy.rules) == 80
+    assert len(policy.rules[0].conditions) == 32
+
+
 def test_exists_condition_serializes_without_value() -> None:
     condition = PolicyCondition.from_dict(
         {"field": "actor.id", "operator": "exists"}, location="condition"

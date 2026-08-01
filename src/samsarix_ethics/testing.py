@@ -38,6 +38,8 @@ class PolicyTestStatus(StrEnum):
 def _mapping(value: Any, location: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise PolicyTestValidationError(f"{location} must be a JSON object")
+    if not all(isinstance(key, str) for key in value):
+        raise PolicyTestValidationError(f"{location} contains a non-string object key")
     return value
 
 
@@ -150,10 +152,6 @@ class PolicyTestSuite:
 
     @classmethod
     def from_dict(cls, value: Any) -> PolicyTestSuite:
-        try:
-            validate_json_shape(value, label="policy test suite")
-        except InputValidationError as exc:
-            raise PolicyTestValidationError(str(exc)) from exc
         data = _mapping(value, "policy test suite")
         _keys(
             data,

@@ -223,7 +223,6 @@ class Policy:
 
     @classmethod
     def from_dict(cls, value: Any) -> Policy:
-        _validate_policy_json_shape(value, "policy")
         data = _expect_mapping(value, "policy")
         _check_keys(
             data,

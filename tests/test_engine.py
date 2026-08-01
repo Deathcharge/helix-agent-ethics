@@ -275,6 +275,27 @@ def test_batch_evaluation_reports_item_and_size_errors(policy_document: dict[str
         engine.evaluate_many(repeat({}, MAX_BATCH_ITEMS + 1))
 
 
+def test_batch_evaluation_indexes_evaluation_errors() -> None:
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "batch-errors",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "numeric-comparison",
+                    "effect": "allow",
+                    "conditions": [{"field": "value", "operator": "gt", "value": 1}],
+                }
+            ],
+        }
+    )
+
+    with pytest.raises(EvaluationError, match=r"batch item 1.*does not accept booleans"):
+        PolicyEngine(policy).evaluate_many([{"value": 2}, {"value": True}])
+
+
 def test_review_and_warning_rules_are_explained() -> None:
     policy = Policy.from_dict(
         {

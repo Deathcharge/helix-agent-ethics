@@ -201,4 +201,6 @@ class PolicyEngine:
                 decisions.append(self.evaluate(context))
             except InputValidationError as exc:
                 raise InputValidationError(f"evaluation batch item {index}: {exc}") from exc
+            except EvaluationError as exc:
+                raise EvaluationError(f"evaluation batch item {index}: {exc}") from exc
         return tuple(decisions)

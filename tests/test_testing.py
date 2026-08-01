@@ -241,6 +241,24 @@ def test_policy_test_inputs_are_recursively_immutable() -> None:
     assert suite.to_dict()["cases"][0]["input"] == {"action": {"operation": "read"}}
 
 
+def test_policy_test_container_limit_is_applied_per_case() -> None:
+    suite = PolicyTestSuite.from_dict(
+        {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "name": f"case {index}",
+                    "input": {"items": list(range(32))},
+                    "expected_outcome": "deny",
+                }
+                for index in range(300)
+            ],
+        }
+    )
+
+    assert len(suite.cases) == 300
+
+
 def test_direct_policy_test_case_rejects_non_string_key() -> None:
     with pytest.raises(PolicyTestValidationError, match="non-string object key"):
         PolicyTestCase.from_dict(
