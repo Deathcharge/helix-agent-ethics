@@ -16,19 +16,23 @@ adoption remain separate evidence-based decisions.
 - Preserve the pre-productization default under a rollback ref before merging; do not delete legacy history.
 - Versioned policy/test schemas, policy regression suites, and bounded batch evaluation are in the
   release candidate; preserve their compatibility fixtures as the language evolves.
-- Review priority: add one fail-closed downstream integration with a consumer-owned contract test.
-- A fail-closed in-process tool gate and baseline tool-capability policy pack are implemented;
-  next prove them against a consumer-owned contract in a downstream repository.
+- [x] Add one fail-closed downstream integration with a consumer-owned contract test.
+- A fail-closed in-process tool gate and baseline tool-capability policy pack are integrated into
+  Samsarix Agent Framework at an exact Agent Ethics commit.
+- Next priority: expose one immutable metadata-only audit record to a caller-supplied sink while
+  preserving the existing JSONL API and fail-closed behavior.
 
 ## Release candidate
 
 - Build and install the wheel in a clean environment.
-- Prove one real consumer and a versioned compatibility fixture.
+- [x] Prove one real consumer and a versioned compatibility fixture.
 - Publish only after package-name ownership, licensing, provenance, and rollback are recorded.
 
 Current hardening backlog:
 
-- No published package/release or downstream integration evidence.
+- No published package/release, public third-party adopter, or production deployment evidence.
+- The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible,
+  not a publicly reproducible external case study.
 - Installed-wheel smoke coverage exists locally and in CI, but publication provenance and signing
   are not yet configured.
 - The “ethics” name may still overpromise relative to a deterministic authorization/policy gate.
@@ -38,9 +42,9 @@ Current hardening backlog:
 ## Samsarix adoption
 
 - Define a public API, event, schema, artifact, or deployment contract before connecting to Samsarix Unified.
-- Add a consumer-owned contract fixture covering authentication, privacy, limits, errors, and version compatibility.
+- [x] Add a consumer-owned contract fixture covering authentication, privacy, limits, errors, and version compatibility.
 - Make one implementation canonical; remove or freeze duplicate behavior only after parity and rollback are proven.
-- Record an owner, support level, compatibility window, and measurable adoption signal.
+- [x] Record an owner, support level, compatibility window, and measurable adoption signal.
 
 ## Completion evidence
 
