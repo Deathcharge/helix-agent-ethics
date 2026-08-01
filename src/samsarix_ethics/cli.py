@@ -21,6 +21,7 @@ from .schema import (
     get_audit_record_schema,
     get_policy_schema,
     get_policy_test_schema,
+    get_tool_approval_schema,
     get_tool_context_schema,
 )
 from .testing import PolicyTestReport, load_policy_test_suite, run_policy_tests
@@ -63,7 +64,7 @@ def _parser() -> argparse.ArgumentParser:
     schema.add_argument(
         "kind",
         nargs="?",
-        choices=("policy", "policy-test", "tool-context", "audit-record"),
+        choices=("policy", "policy-test", "tool-context", "tool-approval", "audit-record"),
         default="policy",
         help="schema to print; default: policy",
     )
@@ -141,6 +142,7 @@ def main(
                 "policy": get_policy_schema,
                 "policy-test": get_policy_test_schema,
                 "tool-context": get_tool_context_schema,
+                "tool-approval": get_tool_approval_schema,
                 "audit-record": get_audit_record_schema,
             }
             schema = schema_loaders[arguments.kind]()

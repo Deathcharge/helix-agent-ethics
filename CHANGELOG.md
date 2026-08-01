@@ -30,6 +30,8 @@ All notable product changes are recorded here.
   construction, and an exportable Draft 2020-12 audit-record schema.
 - Retained verified wheel/source artifacts for every successful CI build plus least-privilege GitHub
   build-provenance attestations for distributions built from `main`.
+- Immutable structured `ToolCallApproval` records, bounded deterministic exact-call fingerprints,
+  fail-closed binding in every `ToolGate` path, and an exportable Draft 2020-12 approval schema.
 
 ### Changed
 
@@ -42,6 +44,8 @@ All notable product changes are recorded here.
 - Frozen policy-test inputs are thawed into fresh JSON before evaluation, preserving array support
   without weakening the public in-memory JSON contract.
 - The bounded `subset_of` operator lets allow rules reject mixed known and unknown capability sets.
+- The bundled tool-call policy now consumes the reserved structured approval record instead of an
+  unbound `context.human_approved` boolean.
 
 ### Removed
 

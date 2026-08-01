@@ -113,7 +113,14 @@
           "capabilities": ["destructive"],
           "arguments": {"record_id": "R-100"}
         },
-        "context": {"human_approved": false}
+        "context": {
+          "approval": {
+            "approval_version": 1,
+            "tool_call_id": "delete-call-1",
+            "approved": false,
+            "tool_call_fingerprint": "v1:sha256:3bb74e12c7f159794979accdb1a136c3555200d8be886db8079ce4ce80074090"
+          }
+        }
       },
       "expected_outcome": "deny",
       "expected_matched_rules": ["deny-destructive-after-rejection"],
@@ -130,7 +137,14 @@
           "capabilities": ["destructive"],
           "arguments": {"record_id": "R-100"}
         },
-        "context": {"human_approved": true}
+        "context": {
+          "approval": {
+            "approval_version": 1,
+            "tool_call_id": "delete-call-1",
+            "approved": true,
+            "tool_call_fingerprint": "v1:sha256:3bb74e12c7f159794979accdb1a136c3555200d8be886db8079ce4ce80074090"
+          }
+        }
       },
       "expected_outcome": "allow",
       "expected_matched_rules": ["allow-approved-destructive"],
@@ -164,7 +178,14 @@
           "capabilities": ["external:write"],
           "arguments": {"to": "customer@example.com"}
         },
-        "context": {"human_approved": false}
+        "context": {
+          "approval": {
+            "approval_version": 1,
+            "tool_call_id": "email-call-1",
+            "approved": false,
+            "tool_call_fingerprint": "v1:sha256:6fcc02da0faa3f5f90cda55cfe61b5b4f283fd936ac4b5c1636b71742fe2a539"
+          }
+        }
       },
       "expected_outcome": "deny",
       "expected_matched_rules": ["deny-external-after-rejection"],
@@ -181,7 +202,14 @@
           "capabilities": ["external:write"],
           "arguments": {"to": "customer@example.com"}
         },
-        "context": {"human_approved": true}
+        "context": {
+          "approval": {
+            "approval_version": 1,
+            "tool_call_id": "email-call-1",
+            "approved": true,
+            "tool_call_fingerprint": "v1:sha256:6fcc02da0faa3f5f90cda55cfe61b5b4f283fd936ac4b5c1636b71742fe2a539"
+          }
+        }
       },
       "expected_outcome": "allow",
       "expected_matched_rules": ["allow-approved-external"],

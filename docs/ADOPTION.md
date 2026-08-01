@@ -70,3 +70,19 @@ more than once. Idempotency, HTTP delivery, queues, retries, credentials, retent
 tamper-evident storage therefore stay with the embedding application until a concrete adopter
 validates a narrower requirement. The built-in JSONL path remains the local sink and retains its
 current fail-closed behavior.
+
+## Implemented gap: approval-bound resume
+
+The same framework research exposed a narrower authorization gap: a plain approved boolean can be
+replayed with changed arguments after a reviewer sees the original request. Agent Ethics now
+provides a versioned `ToolCallApproval` and `fingerprint_tool_call`. `ToolGate` compares the stored
+fingerprint with the current normalized call before policy evaluation, audit delivery, or callback
+execution. The binding covers the framework call ID, tool-context version, tool name, arguments,
+canonical capability labels, and actor.
+
+The library deliberately does not own reviewer identity, an approval database, expiry, or replay
+state. Those controls require application authentication and atomic durable storage. Parsing an
+approval validates its shape only, and runtime context remains outside the fingerprint so fresh
+authorization and risk facts can be evaluated immediately before execution. The next consumer
+compatibility increment is to adopt this contract in Samsarix Agent Framework and rerun its
+consumer-owned integration matrix against the exact Agent Ethics merge commit.

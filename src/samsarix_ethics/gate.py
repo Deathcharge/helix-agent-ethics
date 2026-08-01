@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import hmac
 import inspect
 import re
 from collections.abc import Awaitable, Callable, Iterable, Mapping
@@ -12,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar, cast
 
+from .approval import ToolCallApproval, _fingerprint_prepared_tool_call
 from .audit import AuditSink, JsonlAuditSink, _emit_audit_record, _validated_sink
 from .engine import PolicyEngine
 from .errors import InputValidationError, ToolCallDeniedError, ToolCallReviewRequiredError
@@ -53,6 +55,50 @@ def _capability_list(capabilities: Iterable[str]) -> list[str]:
     return sorted(values)
 
 
+def _prepare_tool_call(
+    tool_name: str,
+    arguments: Mapping[str, Any],
+    *,
+    capabilities: Iterable[str],
+    actor: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if not isinstance(tool_name, str) or not _TOOL_IDENTIFIER.fullmatch(tool_name):
+        raise InputValidationError("tool name must be a 1-128 character identifier")
+    arguments_value = _json_object(arguments, label="tool arguments")
+    actor_value = _json_object({} if actor is None else actor, label="tool actor")
+    action = {
+        "kind": "tool_call",
+        "operation": tool_name,
+        "capabilities": _capability_list(capabilities),
+        "arguments": arguments_value,
+    }
+    return actor_value, action
+
+
+def fingerprint_tool_call(
+    tool_call_id: str,
+    tool_name: str,
+    arguments: Mapping[str, Any],
+    *,
+    capabilities: Iterable[str] = (),
+    actor: Mapping[str, Any] | None = None,
+) -> str:
+    """Return a bounded v1 fingerprint for one exact normalized tool call."""
+
+    actor_value, action = _prepare_tool_call(
+        tool_name,
+        arguments,
+        capabilities=capabilities,
+        actor=actor,
+    )
+    return _fingerprint_prepared_tool_call(
+        tool_call_id,
+        tool_context_version=TOOL_CONTEXT_VERSION,
+        actor=actor_value,
+        action=action,
+    )
+
+
 def build_tool_context(
     tool_name: str,
     arguments: Mapping[str, Any],
@@ -60,23 +106,46 @@ def build_tool_context(
     capabilities: Iterable[str] = (),
     actor: Mapping[str, Any] | None = None,
     context: Mapping[str, Any] | None = None,
+    tool_call_id: str | None = None,
+    approval: ToolCallApproval | None = None,
 ) -> dict[str, Any]:
     """Build a validated, detached policy context for one proposed tool call."""
 
-    if not isinstance(tool_name, str) or not _TOOL_IDENTIFIER.fullmatch(tool_name):
-        raise InputValidationError("tool name must be a 1-128 character identifier")
-    arguments_value = _json_object(arguments, label="tool arguments")
-    actor_value = _json_object({} if actor is None else actor, label="tool actor")
+    actor_value, action = _prepare_tool_call(
+        tool_name,
+        arguments,
+        capabilities=capabilities,
+        actor=actor,
+    )
     context_value = _json_object({} if context is None else context, label="tool context")
+    if "approval" in context_value:
+        raise InputValidationError(
+            "tool context field 'approval' is reserved; use the approval argument"
+        )
+    if approval is None and tool_call_id is not None:
+        raise InputValidationError("tool_call_id requires a tool-call approval")
+    if approval is not None:
+        if not isinstance(approval, ToolCallApproval):
+            raise TypeError("approval must be a ToolCallApproval")
+        if tool_call_id is None:
+            raise InputValidationError("tool_call_id is required with a tool-call approval")
+        current_fingerprint = _fingerprint_prepared_tool_call(
+            tool_call_id,
+            tool_context_version=TOOL_CONTEXT_VERSION,
+            actor=actor_value,
+            action=action,
+        )
+        call_id_matches = hmac.compare_digest(tool_call_id, approval.tool_call_id)
+        fingerprint_matches = hmac.compare_digest(
+            current_fingerprint, approval.tool_call_fingerprint
+        )
+        if not call_id_matches or not fingerprint_matches:
+            raise InputValidationError("tool-call approval does not match the proposed tool call")
+        context_value["approval"] = approval.to_dict()
     value = {
         "tool_context_version": TOOL_CONTEXT_VERSION,
         "actor": actor_value,
-        "action": {
-            "kind": "tool_call",
-            "operation": tool_name,
-            "capabilities": _capability_list(capabilities),
-            "arguments": arguments_value,
-        },
+        "action": action,
         "context": context_value,
     }
     validate_context(value, label="tool-call policy context")
@@ -141,6 +210,8 @@ class ToolGate:
         capabilities: Iterable[str] = (),
         actor: Mapping[str, Any] | None = None,
         context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
     ) -> Decision:
         """Evaluate one proposed call and append its audit record when configured."""
 
@@ -151,6 +222,8 @@ class ToolGate:
                 capabilities=capabilities,
                 actor=actor,
                 context=context,
+                tool_call_id=tool_call_id,
+                approval=approval,
             )
         )
 
@@ -162,6 +235,8 @@ class ToolGate:
         capabilities: Iterable[str] = (),
         actor: Mapping[str, Any] | None = None,
         context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
     ) -> Decision:
         """Return an allow decision or raise a typed fail-closed exception."""
 
@@ -171,6 +246,8 @@ class ToolGate:
             capabilities=capabilities,
             actor=actor,
             context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
         )
         return self._require_allow(decision)
 
@@ -182,6 +259,8 @@ class ToolGate:
         capabilities: Iterable[str],
         actor: Mapping[str, Any] | None,
         context: Mapping[str, Any] | None,
+        tool_call_id: str | None,
+        approval: ToolCallApproval | None,
     ) -> tuple[Decision, dict[str, Any]]:
         prepared = build_tool_context(
             tool_name,
@@ -189,6 +268,8 @@ class ToolGate:
             capabilities=capabilities,
             actor=actor,
             context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
         )
         decision = self._require_allow(self._evaluate_context(prepared))
         action = cast(dict[str, Any], prepared["action"])
@@ -203,6 +284,8 @@ class ToolGate:
         capabilities: Iterable[str] = (),
         actor: Mapping[str, Any] | None = None,
         context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
     ) -> ToolExecutionResult[_ResultT]:
         """Authorize and execute a callback with the detached validated arguments."""
 
@@ -223,6 +306,8 @@ class ToolGate:
             capabilities=capabilities,
             actor=actor,
             context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
         )
         return ToolExecutionResult(decision=decision, value=executor(prepared_arguments))
 
@@ -235,6 +320,8 @@ class ToolGate:
         capabilities: Iterable[str] = (),
         actor: Mapping[str, Any] | None = None,
         context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
     ) -> ToolExecutionResult[_ResultT]:
         """Authorize and await a callback with the detached validated arguments."""
 
@@ -246,6 +333,8 @@ class ToolGate:
             capabilities=capabilities,
             actor=actor,
             context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
         )
         return ToolExecutionResult(
             decision=decision,

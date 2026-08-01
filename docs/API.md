@@ -51,13 +51,32 @@ closed. An empty batch returns an empty tuple.
 
 ## Tool-call enforcement
 
-### `build_tool_context(tool_name, arguments, *, capabilities=(), actor=None, context=None)`
+### `fingerprint_tool_call(tool_call_id, tool_name, arguments, *, capabilities=(), actor=None)`
+
+Returns a `v1:sha256:<hex>` fingerprint over the normalized framework call ID, tool-context
+version, tool name, validated arguments, canonical capability list, and actor. Canonical input is
+streamed through the hash and limited to `MAX_TOOL_CALL_FINGERPRINT_BYTES` (1 MiB). Invalid or
+oversized calls raise `InputValidationError`. Runtime context is deliberately excluded so fresh
+authentication, risk, and environment facts can be re-read before execution.
+
+### `ToolCallApproval(tool_call_id, approved, tool_call_fingerprint)`
+
+A frozen versioned record that binds an approve/deny result to one framework call ID and one tool
+fingerprint. `from_dict(value)` strictly parses the bundled JSON shape and `to_dict()` returns a
+detached value. Parsing validates structure only; applications must authenticate the reviewer and
+load the fingerprint from protected server-side pending-call state.
+
+### `build_tool_context(tool_name, arguments, *, capabilities=(), actor=None, context=None, tool_call_id=None, approval=None)`
 
 Builds a detached, bounded JSON context using the versioned shape documented in
 [TOOL_CALLS.md](TOOL_CALLS.md). Tool and capability identifiers are 1-128 characters; each call
 may declare up to `MAX_TOOL_CAPABILITIES` (64) unique capabilities. The returned context uses
 `tool_context_version = TOOL_CONTEXT_VERSION` (currently `1`), uses
-`action.kind = "tool_call"`, and never retains the caller's mutable dictionaries.
+`action.kind = "tool_call"`, and never retains the caller's mutable dictionaries. When an approval
+is supplied, the current framework `tool_call_id` is required. The builder recomputes the
+fingerprint with constant-time comparisons of both ID and digest before adding the structured
+approval to `context`. A `tool_call_id` without approval is rejected rather than silently ignored.
+The `context.approval` field is reserved and cannot be injected through ordinary context metadata.
 
 ### `ToolGate(policy, *, audit_log=None, audit_sink=None)`
 
@@ -70,6 +89,11 @@ Provides a fail-closed boundary immediately before an in-process side effect:
   callable objects, which must use `execute_async`;
 - `await execute_async(..., executor, ...) -> ToolExecutionResult[T]` does the same for an async
   callback.
+
+Each method accepts the optional `tool_call_id=...` and `approval=ToolCallApproval(...)` keywords;
+they must be supplied together. An ID or fingerprint mismatch raises `InputValidationError` before
+a decision, audit record, or callback exists. The gate does not authenticate, expire, or consume
+approvals; applications own those stateful responsibilities.
 
 `ToolExecutionResult` contains the authorizing `decision` and callback `value`. A deny raises
 `ToolCallDeniedError`; review raises `ToolCallReviewRequiredError`. Both derive from
@@ -86,6 +110,7 @@ decision from authorizing a callback. The package invokes the sink exactly once 
 - `PolicyCondition.from_dict(value, location=...)` and `PolicyCondition.to_dict()`
 - `Effect`: `allow`, `deny`, `review`, `warn`, `audit`
 - `Outcome`: `allow`, `deny`, `review`
+- `ToolCallApproval.from_dict(value)` and `ToolCallApproval.to_dict()`
 
 Models are frozen dataclasses. Policy condition arrays and objects are recursively frozen, and
 `to_dict()` returns fresh JSON containers, so retaining or serializing a source document cannot
@@ -94,11 +119,12 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()`, `get_policy_test_schema()`, `get_tool_context_schema()`, and `get_audit_record_schema()`
+### `get_policy_schema()`, `get_policy_test_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
-suites, the normalized tool-call context, and metadata-only audit records. These calls perform no
-network access and callers may mutate the returned value without changing future calls.
+suites, the normalized tool-call context, bound approval records, and metadata-only audit records.
+These calls perform no network access and callers may mutate the returned value without changing
+future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`
 

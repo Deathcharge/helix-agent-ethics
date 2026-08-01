@@ -18,7 +18,7 @@ callback only when the decision is `allow`.
     "capabilities": ["external:write", "data:sensitive"],
     "arguments": {"to": "customer@example.com"}
   },
-  "context": {"human_approved": false, "request_id": "req-100"}
+  "context": {"request_id": "req-100"}
 }
 ```
 
@@ -29,7 +29,8 @@ The contract is intentionally ordinary JSON so other runtimes can build the same
 importing this package. `tool_context_version` matches the exported `TOOL_CONTEXT_VERSION`.
 `operation` is the registered tool name. `arguments` are the validated arguments proposed for that
 exact invocation. `actor` and `context` contain trusted facts supplied by the embedding
-application.
+application. The `context.approval` field is reserved for a verified `ToolCallApproval` supplied
+through the dedicated API; normal context input cannot populate it.
 
 Capabilities are policy-facing labels assigned by the tool registry, never by model output. The
 builder rejects duplicates and returns them in canonical lexical order. The baseline pack
@@ -50,9 +51,11 @@ that allow.
 
 ```python
 from samsarix_ethics import (
+    ToolCallApproval,
     ToolCallDeniedError,
     ToolCallReviewRequiredError,
     ToolGate,
+    fingerprint_tool_call,
     load_policy,
 )
 
@@ -61,14 +64,32 @@ gate = ToolGate(
     audit_log="decisions.jsonl",
 )
 
+call_id = "call_01JXYZ"
+arguments = {"to": "customer@example.com", "subject": "Case update"}
+capabilities = ["external:write"]
+actor = {"id": "support-agent"}
+
+# Create and persist this fingerprint with the pending call before review.
+pending_fingerprint = fingerprint_tool_call(
+    call_id,
+    "send_email",
+    arguments,
+    capabilities=capabilities,
+    actor=actor,
+)
+
+# Construct this only after an authenticated reviewer approves the stored pending call.
+approval = ToolCallApproval(call_id, True, pending_fingerprint)
+
 try:
     result = gate.execute(
         "send_email",
-        {"to": "customer@example.com", "subject": "Case update"},
+        arguments,
         lambda arguments: mailer.send(**arguments),
-        capabilities=["external:write"],
-        actor={"id": "support-agent"},
-        context={"human_approved": True},
+        capabilities=capabilities,
+        actor=actor,
+        tool_call_id=call_id,
+        approval=approval,
     )
 except ToolCallDeniedError as exc:
     record_denial(exc.decision)
@@ -131,14 +152,35 @@ import-time dependency. The policy package and runtime remain independently vers
 
 ## Human review lifecycle
 
-A review decision is not authorization. Persist the application's own pending call and approval
-state, obtain a human decision, then call `execute` or `execute_async` again with fresh trusted
-facts such as `context={"human_approved": True}`. The second evaluation happens immediately before
-the side effect and produces the decision that authorizes it.
+A review decision is not authorization. A safe resume flow is:
 
-Do not execute from a stale decision, let model output set `human_approved`, or treat evaluation,
-validation, or audit failures as allow. If the callback itself fails, its exception propagates;
-the audit record proves authorization, not successful completion.
+1. Assign a unique framework `tool_call_id`, call `fingerprint_tool_call(...)`, and persist that
+   fingerprint with the exact pending tool name, arguments, capability labels, and actor before
+   asking for review.
+2. Authenticate the reviewer and record their decision against that server-side pending record.
+3. Atomically mark an approved pending record consumed while constructing
+   `ToolCallApproval(tool_call_id, approved, stored_fingerprint)`. Enforce an application-defined
+   expiry and reject already-consumed records.
+4. Call `execute` or `execute_async` with the proposed call, its current `tool_call_id`, and the
+   approval. `ToolGate` normalizes the current call, recomputes its fingerprint, and rejects a changed ID, tool, arguments,
+   capabilities, or actor before policy evaluation, audit delivery, or callback execution.
+5. Re-read other time-sensitive authorization and risk facts immediately before execution.
+
+Do not recompute the stored approval fingerprint from resubmitted client input after review. That
+would approve the mutation instead of detecting it. The v1 fingerprint deliberately excludes
+general runtime `context`, allowing fresh session, risk, and authorization facts to be evaluated;
+it binds the call ID, context-contract version, tool name, validated arguments, canonical
+capabilities, and actor. Use `fingerprint_tool_call` as the authoritative v1 serializer rather than
+inventing a language-specific encoding.
+
+`ToolCallApproval.from_dict` performs strict shape validation only. It does not authenticate the
+record, verify reviewer identity, apply an expiry, or prove one-time use. Those stateful controls
+belong to the embedding application and should use durable server-side state. Model output and
+untrusted client context must never construct or select an approval.
+
+Do not execute from a stale decision or treat evaluation, validation, approval-store, or audit
+failures as allow. If the callback itself fails, its exception propagates; the audit record proves
+authorization, not successful completion.
 
 ## Privacy and audit
 
@@ -146,3 +188,7 @@ Tool arguments may contain secrets or personal data. Decisions, block exceptions
 reports, and the built-in JSONL audit omit arguments. The embedding application owns redaction of
 its own logs and traces, custom-sink transport security and idempotency, durable pending-call
 storage, reviewer authentication, audit retention, and post-execution outcome records.
+
+Export the approval transport/storage shape with
+`samsarix-ethics schema tool-approval > tool-approval-v1.schema.json`. The fingerprint is opaque
+evidence generated by the Python API; schema validity is not approval authenticity.

@@ -22,6 +22,8 @@ are bounded and type-checked. The embedding application remains responsible for:
 
 - authenticating the actor and supplying trustworthy facts;
 - assigning tool capability labels outside model control;
+- storing pending-call fingerprints before review, authenticating reviewers, enforcing approval
+  expiry, and atomically consuming approvals once;
 - enforcing the returned decision immediately before the protected side effect, either with
   `ToolGate` or an equivalent boundary;
 - treating every exception and nonzero CLI exit as non-authorization;
@@ -36,6 +38,12 @@ code, loads no plugins, and stores no raw evaluation input in its built-in audit
 Caller-supplied audit sinks are trusted application code invoked synchronously before authorization;
 their failures prevent tool execution, but their transport and downstream storage are outside this
 package's boundary.
+
+`ToolGate` rejects a `ToolCallApproval` when its fingerprint does not match the normalized call ID,
+tool, arguments, capabilities, and actor. This is mutation detection, not authentication: approval
+objects are ordinary application values, and parsing one with `from_dict` proves only that its JSON
+shape is valid. Keep approval records in trusted server-side storage, never derive them from model
+output, and enforce replay protection in the application.
 
 ## Relevant vulnerability classes
 
