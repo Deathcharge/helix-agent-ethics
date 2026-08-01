@@ -10,6 +10,7 @@ from enum import StrEnum
 from typing import Any, cast
 
 from ._decision_observation import decision_change_names
+from .contracts import ContextContract
 from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .models import Decision, Outcome, Policy
@@ -176,6 +177,8 @@ def compare_policies(
     baseline: Policy,
     candidate: Policy,
     suite: PolicyTestSuite,
+    *,
+    context_contract: ContextContract | None = None,
 ) -> PolicyComparisonReport:
     """Compare two policies over the same bounded suite without reporting case inputs."""
 
@@ -186,8 +189,8 @@ def compare_policies(
     if not isinstance(suite, PolicyTestSuite):
         raise TypeError("suite must be a PolicyTestSuite")
 
-    baseline_engine = PolicyEngine(baseline)
-    candidate_engine = PolicyEngine(candidate)
+    baseline_engine = PolicyEngine(baseline, context_contract=context_contract)
+    candidate_engine = PolicyEngine(candidate, context_contract=context_contract)
     results: list[PolicyComparisonResult] = []
     for case in suite.cases:
         baseline_evaluation = _evaluate_case(baseline_engine, case)

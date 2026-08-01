@@ -20,10 +20,15 @@ from samsarix_ethics import (
     Outcome,
     Policy,
     PolicyEngine,
+    PolicyShadowEvaluator,
+    PolicyTestSuite,
     ToolGate,
+    compare_policies,
     get_context_contract_schema,
     load_context_contract,
     load_policy,
+    measure_policy_coverage,
+    run_policy_tests,
     validate_context_against_contract,
     validate_policy_context_contract,
 )
@@ -392,3 +397,63 @@ def test_bundled_tool_contract_validates_real_policy_and_gate() -> None:
     decision = gate.evaluate("read_ticket", {}, capabilities=("resource:read",))
 
     assert decision.outcome is Outcome.ALLOW
+
+
+def test_contract_is_enforced_across_regression_and_rollout_workflows() -> None:
+    contract = ContextContract.from_dict(
+        {
+            "context_contract_version": 1,
+            "id": "lifecycle",
+            "version": "1",
+            "fields": {
+                "action": {"type": "object"},
+                "action.operation": {"type": "string"},
+            },
+        }
+    )
+    policy = _policy({"field": "action.operation", "operator": "eq", "value": "read"})
+    valid_suite = PolicyTestSuite.from_dict(
+        {
+            "schema_version": 1,
+            "name": "valid lifecycle",
+            "cases": [
+                {
+                    "name": "read",
+                    "input": {"action": {"operation": "read"}},
+                    "expected_outcome": "allow",
+                }
+            ],
+        }
+    )
+    invalid_suite = PolicyTestSuite.from_dict(
+        {
+            "schema_version": 1,
+            "name": "invalid lifecycle",
+            "cases": [
+                {
+                    "name": "missing operation",
+                    "input": {"action": {}},
+                    "expected_outcome": "deny",
+                }
+            ],
+        }
+    )
+
+    assert run_policy_tests(policy, valid_suite, context_contract=contract).successful is True
+    assert measure_policy_coverage(policy, valid_suite, context_contract=contract).error_cases == ()
+    assert (
+        compare_policies(policy, policy, valid_suite, context_contract=contract).identical is True
+    )
+    shadow = PolicyShadowEvaluator(policy, policy, context_contract=contract)
+    assert shadow.context_contract is contract
+    assert shadow.evaluate({"action": {"operation": "read"}}).authorization_changed is False
+
+    test_report = run_policy_tests(policy, invalid_suite, context_contract=contract)
+    coverage_report = measure_policy_coverage(policy, invalid_suite, context_contract=contract)
+    comparison_report = compare_policies(policy, policy, invalid_suite, context_contract=contract)
+    assert test_report.errors == 1
+    assert "missing required contract field" in test_report.results[0].error
+    assert coverage_report.errors == 1
+    assert comparison_report.errors == 1
+    with pytest.raises(InputValidationError, match="missing required contract field"):
+        shadow.evaluate({"action": {}})

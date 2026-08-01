@@ -64,6 +64,9 @@ rejects undeclared policy paths and incompatible operator/type combinations; eva
 missing required facts, declared type mismatches, and declared array-item mismatches. Contracts
 accept unrelated request fields by design so opaque arguments need not be modeled. They establish
 structure, not truth: the application remains responsible for authentic and current facts.
+Regression, coverage, comparison, and shadow workflows can pass the same contract into their
+internal engines so pre-deployment evidence does not use a weaker fact boundary than production.
+Current decision and report schemas do not embed contract provenance.
 
 ### Schemas plus executable examples
 

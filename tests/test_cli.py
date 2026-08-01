@@ -237,6 +237,121 @@ def test_context_contract_rejects_policy_typo_before_cli_evaluation(
     assert "field 'action.operaton' is not declared" in result.stderr
 
 
+def test_context_contract_is_shared_by_cli_lifecycle_workflows(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_path = write_json("lifecycle-policy.json", policy_document)
+    contract_path = write_json(
+        "lifecycle-contract.json",
+        {
+            "context_contract_version": 1,
+            "id": "lifecycle-context",
+            "version": "1",
+            "fields": {
+                "action": {"type": "object"},
+                "action.operation": {"type": "string"},
+            },
+        },
+    )
+    suite_path = write_json(
+        "lifecycle.tests.json",
+        {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "name": "read",
+                    "input": {"action": {"operation": "read"}},
+                    "expected_outcome": "allow",
+                }
+            ],
+        },
+    )
+    contract_arguments = ("--context-contract", str(contract_path))
+
+    tested = _run_cli("test", "--policy", str(policy_path), *contract_arguments, str(suite_path))
+    covered = _run_cli(
+        "coverage", "--policy", str(policy_path), *contract_arguments, str(suite_path)
+    )
+    compared = _run_cli(
+        "compare",
+        "--baseline",
+        str(policy_path),
+        "--candidate",
+        str(policy_path),
+        *contract_arguments,
+        str(suite_path),
+    )
+    shadowed = _run_cli(
+        "shadow",
+        "--baseline",
+        str(policy_path),
+        "--candidate",
+        str(policy_path),
+        *contract_arguments,
+        stdin='{"action":{"operation":"read"}}',
+    )
+
+    assert tested.returncode == 0
+    assert covered.returncode == 0
+    assert compared.returncode == 0
+    assert shadowed.returncode == 0
+
+
+def test_context_contract_input_errors_fail_lifecycle_workflows_closed(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_path = write_json("invalid-lifecycle-policy.json", policy_document)
+    contract_path = write_json(
+        "invalid-lifecycle-contract.json",
+        {
+            "context_contract_version": 1,
+            "id": "lifecycle-context",
+            "version": "1",
+            "fields": {
+                "action": {"type": "object"},
+                "action.operation": {"type": "string"},
+            },
+        },
+    )
+    suite_path = write_json(
+        "invalid-lifecycle.tests.json",
+        {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "name": "missing operation",
+                    "input": {"action": {}},
+                    "expected_outcome": "review",
+                }
+            ],
+        },
+    )
+
+    tested = _run_cli(
+        "test",
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        str(suite_path),
+    )
+    shadowed = _run_cli(
+        "shadow",
+        "--baseline",
+        str(policy_path),
+        "--candidate",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        stdin='{"action":{}}',
+    )
+
+    assert tested.returncode == 1
+    assert "missing required contract field" in tested.stdout
+    assert shadowed.returncode == 2
+    assert "missing required contract field" in shadowed.stderr
+
+
 def test_compose_command_writes_reusable_policy_and_requires_explicit_overwrite(
     tmp_path: Path, write_json: Any, policy_document: dict[str, Any]
 ) -> None:

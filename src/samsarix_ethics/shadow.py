@@ -12,6 +12,7 @@ from time import perf_counter_ns
 from typing import Any, cast
 
 from ._decision_observation import decision_change_names
+from .contracts import ContextContract
 from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .models import Decision, Outcome, Policy
@@ -142,15 +143,22 @@ class PolicyShadowEvaluator:
     the returned telemetry and never replace the successful baseline decision.
     """
 
-    def __init__(self, baseline: Policy, candidate: Policy) -> None:
+    def __init__(
+        self,
+        baseline: Policy,
+        candidate: Policy,
+        *,
+        context_contract: ContextContract | None = None,
+    ) -> None:
         if not isinstance(baseline, Policy):
             raise TypeError("baseline must be a Policy")
         if not isinstance(candidate, Policy):
             raise TypeError("candidate must be a Policy")
         self.baseline_policy = baseline
         self.candidate_policy = candidate
-        self._baseline_engine = PolicyEngine(baseline)
-        self._candidate_engine = PolicyEngine(candidate)
+        self.context_contract = context_contract
+        self._baseline_engine = PolicyEngine(baseline, context_contract=context_contract)
+        self._candidate_engine = PolicyEngine(candidate, context_contract=context_contract)
 
     @property
     def baseline_policy_fingerprint(self) -> str:

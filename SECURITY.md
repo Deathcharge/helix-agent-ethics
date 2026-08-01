@@ -77,7 +77,8 @@ before rule evaluation. A contract is trusted configuration, not authentication:
 that identity, capability, approval, tenant, or risk facts came from a trusted source, and it
 deliberately permits unrelated input fields. Applications must derive and protect trusted facts
 outside model-controlled payloads and use a full application validator when the entire request
-must be closed.
+must be closed. Current decisions and reports do not bind a contract fingerprint; preserve and
+review the exact contract artifact through deployment configuration when its provenance matters.
 
 The policy fingerprint is deterministic mutation/equality evidence, not a digital signature. It
 does not authenticate a policy author, prove review, prevent rollback, or secure policy

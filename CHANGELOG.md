@@ -55,6 +55,8 @@ All notable product changes are recorded here.
 - Versioned, immutable application context contracts with deployment-time policy path/operator
   checking, runtime required/type enforcement, `PolicyEngine` and `ToolGate` integration, a bundled
   Draft 2020-12 schema, and a runnable tool-call contract—all with zero runtime dependencies.
+- Contract-aware regression, coverage, comparison, and shadow APIs/CLI so pre-deployment and
+  rollout evidence enforces the same declared fact boundary as production evaluation.
 
 ### Changed
 

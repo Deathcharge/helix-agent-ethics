@@ -116,12 +116,15 @@ The CLI equivalent is `samsarix-ethics compose --id ... --version ... --policy S
 
 ## Shadow policy rollout
 
-### `PolicyShadowEvaluator(baseline, candidate).evaluate(context) -> PolicyShadowEvaluation`
+### `PolicyShadowEvaluator(baseline, candidate, *, context_contract=None).evaluate(context) -> PolicyShadowEvaluation`
 
 Validates and detaches one bounded JSON context, evaluates the baseline first, and evaluates the
 candidate only after the baseline succeeds. Baseline input/evaluation errors propagate fail closed.
 A candidate `SamsarixEthicsError` becomes `status = PolicyShadowStatus.ERROR` telemetry without
 replacing the baseline decision; unexpected exceptions propagate.
+When supplied, one shared context contract validates both policies at construction and both engine
+evaluations. Baseline contract input errors propagate fail closed before candidate evaluation;
+candidate policy evaluation errors retain the existing observational telemetry behavior.
 
 `PolicyShadowEvaluation.authoritative_decision` is the complete baseline `Decision` that the
 application may enforce. `candidate_decision` is a complete observational `Decision` after success
@@ -247,7 +250,7 @@ value without changing future calls.
 Loads a UTF-8 JSON suite with a 4 MiB byte limit and the shared JSON structural limits. Suites
 contain 1-1,000 uniquely named cases. Raises `PolicyTestValidationError` for malformed suites.
 
-### `run_policy_tests(policy, suite) -> PolicyTestReport`
+### `run_policy_tests(policy, suite, *, context_contract=None) -> PolicyTestReport`
 
 Evaluates every case and records `PolicyTestStatus.PASS`, `FAIL`, or `ERROR`. A report includes
 operator-authored policy identity, its exact policy fingerprint, counts, expected and actual
@@ -256,6 +259,8 @@ every raw case input. `successful` is true only when all cases pass.
 
 `PolicyTestCase`, `PolicyTestSuite`, `PolicyTestResult`, and `PolicyTestReport` are frozen public
 models with JSON-serializable `to_dict()` methods.
+An optional context contract is validated when the engine is constructed and applied to every
+case. Per-case contract input failures are input-free `ERROR` results.
 
 ## Policy authoring diagnostics
 
@@ -279,7 +284,7 @@ selected gate passes, `1` for blocking findings, and `2` for invalid input or in
 
 ## Policy rule coverage
 
-### `measure_policy_coverage(policy, suite, *, threshold=0) -> PolicyCoverageReport`
+### `measure_policy_coverage(policy, suite, *, threshold=0, context_contract=None) -> PolicyCoverageReport`
 
 Evaluates each bounded suite input against one policy and records which rule IDs matched. The
 integer threshold must be from `0` to `100`. `threshold_met` is true only when exact covered/total
@@ -297,10 +302,12 @@ The CLI equivalent is `samsarix-ethics coverage --policy ... SUITE --threshold N
 when the threshold is met, `1` when it is missed or evaluation errors occur, and `2` for invalid
 input or invocation. Coverage is branch evidence over supplied cases, not proof that all condition
 boundaries or possible inputs were exercised. See [POLICY_COVERAGE.md](POLICY_COVERAGE.md).
+An optional shared context contract applies the same production fact checks to every coverage case;
+contract input errors fail the threshold and remain input-free.
 
 ## Policy impact comparison
 
-### `compare_policies(baseline, candidate, suite) -> PolicyComparisonReport`
+### `compare_policies(baseline, candidate, suite, *, context_contract=None) -> PolicyComparisonReport`
 
 Evaluates every bounded `PolicyTestSuite` case independently against two policies and returns a
 deterministic, input-free report. The suite's expected fields are not used for comparison; the
@@ -308,6 +315,8 @@ function directly compares each policy's actual outcome, ordered matched-rule ID
 reason messages, and warning messages. Message contents are compared internally but not retained in
 the report. Either-side evaluation failures become per-case `error` results rather than being
 mistaken for unchanged behavior.
+When supplied, one shared contract must accept both policies at construction and is enforced for
+both evaluations of every case. Contract input failures are per-case errors.
 
 The report uses `comparison_version = POLICY_COMPARISON_VERSION` (currently `1`) and includes both
 policies' ID, version, and exact fingerprint. Aggregate properties are:
