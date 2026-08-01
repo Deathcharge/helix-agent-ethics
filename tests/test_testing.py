@@ -17,6 +17,7 @@ from samsarix_ethics import (
     PolicyTestStatus,
     PolicyTestSuite,
     PolicyTestValidationError,
+    build_tool_context,
     get_policy_schema,
     get_policy_test_schema,
     get_tool_context_schema,
@@ -82,11 +83,44 @@ def test_policy_schema_matches_strict_condition_contract() -> None:
         Draft202012Validator(schema).validate(scalar_membership)
 
 
+def test_tool_context_schema_matches_builder_contract() -> None:
+    schema = get_tool_context_schema()
+    validator = Draft202012Validator(schema)
+    valid = build_tool_context(
+        "files.read",
+        {"path": "README.md"},
+        capabilities=("resource:read",),
+    )
+    invalid_values: list[dict[str, Any]] = []
+    for update in (
+        {"tool_context_version": 2},
+        {"action": {**valid["action"], "kind": "workflow"}},
+        {
+            "action": {
+                **valid["action"],
+                "capabilities": ["resource:read", "resource:read"],
+            }
+        },
+        {**valid, "unexpected": True},
+    ):
+        invalid = copy.deepcopy(valid)
+        invalid.update(update)
+        invalid_values.append(invalid)
+
+    validator.validate(valid)
+    for invalid in invalid_values:
+        with pytest.raises(ValidationError):
+            validator.validate(invalid)
+
+
 def test_schema_access_returns_fresh_values() -> None:
     changed = get_policy_schema()
     changed["title"] = "changed"
+    changed_tool_context = get_tool_context_schema()
+    changed_tool_context["title"] = "changed"
 
     assert get_policy_schema()["title"] != "changed"
+    assert get_tool_context_schema()["title"] != "changed"
 
 
 def test_policy_test_report_preserves_pass_fail_and_privacy(
