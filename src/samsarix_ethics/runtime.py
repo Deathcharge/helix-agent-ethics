@@ -17,6 +17,7 @@ from .engine import PolicyEngine
 from .errors import PolicyActivationError
 from .explanation import PolicyExplanation
 from .models import Decision, Policy
+from .policy_deployment import PolicyDeployment
 
 POLICY_RUNTIME_STATUS_VERSION = 1
 
@@ -101,6 +102,18 @@ class PolicyRuntime:
         self._lock = Lock()
         self._engine = engine
         self._status = _status(engine, 1)
+
+    @classmethod
+    def from_deployment(cls, deployment: PolicyDeployment) -> PolicyRuntime:
+        """Construct generation 1 from one internally verified deployment unit."""
+
+        if not isinstance(deployment, PolicyDeployment):
+            raise TypeError("deployment must be a PolicyDeployment")
+        return cls(
+            deployment.policy,
+            context_contract=deployment.context_contract,
+            deployment_lock=deployment.deployment_lock,
+        )
 
     def _capture(self) -> tuple[PolicyEngine, PolicyRuntimeStatus]:
         with self._lock:
@@ -197,3 +210,20 @@ class PolicyRuntime:
             self._engine = candidate
             self._status = next_status
             return next_status
+
+    def activate_deployment(
+        self,
+        deployment: PolicyDeployment,
+        *,
+        expected_generation: int | None = None,
+    ) -> PolicyRuntimeStatus:
+        """Atomically activate one already parsed and internally verified deployment."""
+
+        if not isinstance(deployment, PolicyDeployment):
+            raise TypeError("deployment must be a PolicyDeployment")
+        return self.activate(
+            deployment.policy,
+            context_contract=deployment.context_contract,
+            deployment_lock=deployment.deployment_lock,
+            expected_generation=expected_generation,
+        )

@@ -75,6 +75,10 @@ samsarix-ethics schema deployment-lock > deployment-lock-v1.schema.json
 Schema validity proves only shape. `lock verify` or `verify_deployment_lock` is required to compare
 the artifact with the actual policy and contract content.
 
+For coherent local transport and restart, package the complete artifacts plus this mandatory lock
+as one [`PolicyDeployment`](POLICY_DEPLOYMENTS.md). The single-file loader recomputes the same lock
+before returning and `PolicyRuntime` can activate the unit directly.
+
 ## Safe rollout workflow
 
 1. Review and test the policy and contract together.

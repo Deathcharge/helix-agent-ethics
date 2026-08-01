@@ -34,6 +34,7 @@ def test_help_and_version() -> None:
     assert "compare" in help_result.stdout
     assert "compose" in help_result.stdout
     assert "coverage" in help_result.stdout
+    assert "deployment" in help_result.stdout
     assert "explain" in help_result.stdout
     assert "lint" in help_result.stdout
     assert "lock" in help_result.stdout
@@ -137,6 +138,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy_shadow = _run_cli("schema", "policy-shadow")
     context_contract = _run_cli("schema", "context-contract")
     deployment_lock = _run_cli("schema", "deployment-lock")
+    policy_deployment = _run_cli("schema", "policy-deployment")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     audit_record = _run_cli("schema", "audit-record")
@@ -165,6 +167,8 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(context_contract.stdout)["$id"].endswith("/context-contract/v1.json")
     assert deployment_lock.returncode == 0
     assert json.loads(deployment_lock.stdout)["$id"].endswith("/deployment-lock/v1.json")
+    assert policy_deployment.returncode == 0
+    assert json.loads(policy_deployment.stdout)["$id"].endswith("/policy-deployment/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
@@ -296,6 +300,111 @@ def test_deployment_lock_create_verify_and_enforce(
     assert "deployment lock does not match the policy" in mismatch.stderr
     assert omitted_contract.returncode == 2
     assert "context-contract presence does not match" in omitted_contract.stderr
+
+
+def test_policy_deployment_create_verify_and_explicit_overwrite(
+    tmp_path: Path, write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    policy_path = write_json("deployment-policy.json", policy_document)
+    contract_path = write_json(
+        "deployment-contract.json",
+        {
+            "context_contract_version": 1,
+            "id": "deployment-context",
+            "version": "1",
+            "description": "Private deployment contract description.",
+            "fields": {
+                "action": {"type": "object"},
+                "action.operation": {"type": "string"},
+            },
+        },
+    )
+    output_path = tmp_path / "policy.deployment.json"
+
+    created = _run_cli(
+        "deployment",
+        "create",
+        "--policy",
+        str(policy_path),
+        "--context-contract",
+        str(contract_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert created.returncode == 0
+    assert "Created policy deployment" in created.stdout
+    assert "lock=verified" in created.stdout
+    assert str(output_path.resolve()) in created.stdout
+    assert "Test policy" not in created.stdout
+    assert "Private deployment contract" not in created.stdout
+    document = json.loads(output_path.read_text(encoding="utf-8"))
+    assert document["policy_deployment_version"] == 1
+    assert document["policy"] == policy_document
+    assert document["context_contract"]["id"] == "deployment-context"
+    assert document["deployment_lock"]["policy"]["fingerprint"].startswith("v1:sha256:")
+
+    verified = _run_cli("deployment", "verify", str(output_path))
+    checked = _run_cli(
+        "check",
+        "--deployment",
+        str(output_path),
+        stdin='{"action":{"operation":"read"}}',
+    )
+    explained = _run_cli(
+        "explain",
+        "--deployment",
+        str(output_path),
+        stdin='{"action":{"operation":"read"}}',
+    )
+    mixed_sources = _run_cli(
+        "check",
+        "--deployment",
+        str(output_path),
+        "--context-contract",
+        str(contract_path),
+        stdin='{"action":{"operation":"read"}}',
+    )
+    refused = _run_cli(
+        "deployment",
+        "create",
+        "--policy",
+        str(policy_path),
+        "--output",
+        str(output_path),
+    )
+    replaced = _run_cli(
+        "deployment",
+        "create",
+        "--policy",
+        str(policy_path),
+        "--output",
+        str(output_path),
+        "--force",
+    )
+
+    assert verified.returncode == 0
+    assert "Verified policy deployment" in verified.stdout
+    assert checked.returncode == 0
+    assert json.loads(checked.stdout)["outcome"] == "allow"
+    assert explained.returncode == 0
+    assert (
+        json.loads(explained.stdout)["context_contract_fingerprint"]
+        == document["deployment_lock"]["context_contract"]["fingerprint"]
+    )
+    assert mixed_sources.returncode == 2
+    assert "must not be supplied with --deployment" in mixed_sources.stderr
+    assert refused.returncode == 2
+    assert "refusing to overwrite" in refused.stderr
+    assert replaced.returncode == 0
+    assert json.loads(output_path.read_text(encoding="utf-8"))["context_contract"] is None
+
+    broken = deepcopy(document)
+    broken["policy"]["description"] = "unlocked mutation"
+    broken_path = write_json("broken.deployment.json", broken)
+    rejected = _run_cli("deployment", "verify", str(broken_path))
+    assert rejected.returncode == 2
+    assert "lock verification failed" in rejected.stderr
 
 
 def test_explain_command_is_value_minimized_and_uses_decision_exit_codes(

@@ -222,6 +222,31 @@ fetching or a distributed control plane: applications still own approval, authen
 artifact transport, durable desired state, restart recovery, health monitoring, and multi-host
 convergence.
 
+## Implemented gap: coherent deployment transport
+
+Atomic runtime activation begins only after the application has loaded Python objects. Delivering
+policy, contract, and lock as three mutable files still permits a restart or updater to read a
+mixed set between replacements. That fails safely but can create avoidable availability loss and
+complicates retention and rollback.
+
+OPA packages policy and related data into one bundle, validates the complete file set before
+activation, and can persist the last activated bundle for restart. ORAS supports pushing one file
+under an application-defined OCI artifact type, and Sigstore Cosign can verify a signed blob plus
+its bound digest. Those established boundaries favor a transport-neutral local unit rather than a
+Samsarix-specific registry or signing protocol.
+
+Agent Ethics now provides a strict `PolicyDeployment`: one deterministic JSON document with a
+complete policy, optional complete contract, and mandatory lock derived from both. One 4 MiB
+bounded read rejects duplicates, structural abuse, invalid nested formats, and internal drift.
+Atomic output refuses implicit or concurrently won targets. CLI create/verify, a self-contained
+schema, `PolicyRuntime.from_deployment`, and `activate_deployment` make the same unit usable from CI
+through restart and live promotion. A checked-in tool-call deployment must equal freshly loaded
+source artifacts on every test run.
+
+The deployment includes full policy content and is not a signature. Repository review, OCI
+repository/digest verification, Sigstore identity, durable desired state, authentication,
+promotion approval, replication, and multi-host convergence remain external responsibilities.
+
 ## Implemented gap: privacy-aware evaluation explanations
 
 Matched rule IDs and authored reasons explain successful branches but do not show why other rules

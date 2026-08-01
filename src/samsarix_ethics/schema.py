@@ -36,6 +36,43 @@ def get_deployment_lock_schema() -> dict[str, Any]:
     return _load_schema("deployment-lock-v1.schema.json")
 
 
+def get_policy_deployment_schema() -> dict[str, Any]:
+    """Return a self-contained policy-deployment version 1 JSON Schema."""
+
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://schemas.samsarix.com/agent-ethics/policy-deployment/v1.json",
+        "title": "Samsarix Agent Ethics policy deployment v1",
+        "description": (
+            "One policy, optional context contract, and mandatory matching deployment lock."
+        ),
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "policy_deployment_version",
+            "policy",
+            "context_contract",
+            "deployment_lock",
+        ],
+        "properties": {
+            "policy_deployment_version": {"const": 1},
+            "policy": {"$ref": "#/$defs/policy"},
+            "context_contract": {
+                "oneOf": [
+                    {"type": "null"},
+                    {"$ref": "#/$defs/context_contract"},
+                ]
+            },
+            "deployment_lock": {"$ref": "#/$defs/deployment_lock"},
+        },
+        "$defs": {
+            "policy": get_policy_schema(),
+            "context_contract": get_context_contract_schema(),
+            "deployment_lock": get_deployment_lock_schema(),
+        },
+    }
+
+
 def get_audit_record_schema() -> dict[str, Any]:
     """Return a fresh copy of the audit-record version 1 JSON Schema."""
 

@@ -68,10 +68,13 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|tool-context|tool-approval|audit-record]
-samsarix-ethics explain --policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--input INPUT.json|-] [--format json|text]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|audit-record]
+samsarix-ethics explain (--policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] | --deployment DEPLOYMENT.json) [--input INPUT.json|-] [--format json|text]
 samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
 samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
+samsarix-ethics deployment create --policy POLICY.json [--context-contract CONTRACT.json] \
+                                  --output DEPLOYMENT.json [--force]
+samsarix-ethics deployment verify DEPLOYMENT.json
 samsarix-ethics compose --id ID --version VERSION --policy SOURCE.json [--policy SOURCE.json ...] \
                         --output POLICY.json [--description TEXT] [--force] [--format text|json]
 samsarix-ethics lint POLICY.json [--fail-on none|security-warning|warning|suggestion]
@@ -85,9 +88,8 @@ samsarix-ethics compare --baseline BASELINE.json --candidate CANDIDATE.json \
 samsarix-ethics shadow --baseline BASELINE.json --candidate CANDIDATE.json \
                        [--context-contract CONTRACT.json] [--input INPUT.json|-] \
                        [--format json|text]
-samsarix-ethics check --policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json]
-                      [--input INPUT.json|-]
-                      [--audit-log decisions.jsonl] [--format json|text]
+samsarix-ethics check (--policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] | --deployment DEPLOYMENT.json)
+                      [--input INPUT.json|-] [--audit-log decisions.jsonl] [--format json|text]
 samsarix-ethics --help
 samsarix-ethics --version
 ```
@@ -126,6 +128,7 @@ samsarix-ethics schema policy-runtime-status > policy-runtime-status-v1.schema.j
 samsarix-ethics schema policy-shadow > policy-shadow-v1.schema.json
 samsarix-ethics schema context-contract > context-contract-v1.schema.json
 samsarix-ethics schema deployment-lock > deployment-lock-v1.schema.json
+samsarix-ethics schema policy-deployment > policy-deployment-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
@@ -161,6 +164,25 @@ samsarix-ethics validate examples/policies/tool-call-baseline.json \
 Any change to either artifact requires a new lock, even if its human-readable version is reused.
 Locks prove exact equality, not authorship or freshness; see the
 [deployment lock guide](docs/DEPLOYMENT_LOCKS.md).
+
+Package the exact policy, optional contract, and mandatory matching lock into one bounded,
+atomically written deployment unit:
+
+```bash
+samsarix-ethics deployment create \
+  --policy examples/policies/tool-call-baseline.json \
+  --context-contract examples/contracts/tool-call-context.json \
+  --output tool-call-baseline.deployment.json
+samsarix-ethics deployment verify tool-call-baseline.deployment.json
+samsarix-ethics check --deployment tool-call-baseline.deployment.json \
+  --input examples/actions/tool-read-config.json
+```
+
+One file prevents a loader from observing a policy/contract/lock mix during local rollout or
+restart. Its mandatory lock is verified before direct `check`/`explain` use or runtime activation.
+Separate `--context-contract` and `--deployment-lock` arguments are rejected with `--deployment`.
+It remains unsigned equality evidence; see the
+[single-file policy deployment guide](docs/POLICY_DEPLOYMENTS.md).
 
 Diagnose a concrete result without serializing input, policy values, or messages:
 
@@ -270,6 +292,7 @@ leaves the last successful generation active. See the
 ```python
 from samsarix_ethics import (
     PolicyEngine,
+    PolicyDeployment,
     PolicyRuntime,
     PolicyShadowEvaluator,
     compare_policies,
@@ -277,6 +300,7 @@ from samsarix_ethics import (
     load_policy,
     load_context_contract,
     load_deployment_lock,
+    load_policy_deployment,
     load_policy_test_suite,
     lint_policy,
     measure_policy_coverage,
@@ -323,6 +347,11 @@ authoritative_decision = shadow.authoritative_decision
 runtime = PolicyRuntime(policy)
 activated = runtime.activate(candidate, expected_generation=runtime.status.generation)
 print(activated.generation, activated.policy_fingerprint)
+
+deployment: PolicyDeployment = load_policy_deployment(
+    "examples/deployment/tool-call-baseline.deployment.json"
+)
+deployed_runtime = PolicyRuntime.from_deployment(deployment)
 
 tool_policy = load_policy("examples/policies/tool-call-baseline.json")
 tool_contract = load_context_contract("examples/contracts/tool-call-context.json")
@@ -465,6 +494,8 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
   complete validated policy body; policy ID/version remain operator-authored labels.
 - Deployment locks can bind exact policy and context-contract content at validation and evaluation
   boundaries; they are equality evidence, not signatures or rollback protection.
+- Single-file policy deployments prevent mixed local artifact reads and always contain a matching
+  lock; they do not authenticate origin, download artifacts, or coordinate hosts.
 - Policy explanations expose value-minimized rule/condition status without input, literals, or
   messages, but remain an authorization oracle that requires operator-only access.
 - Caller-owned audit sinks receive the same versioned metadata-only record and no raw input.
@@ -516,8 +547,8 @@ The product is a library plus CLI; it has no server or cloud component. The pack
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
 versioned schemas, bounded I/O, authoring diagnostics, regression testing, rule coverage, policy
 impact comparison, layered composition, application context contracts, exact deployment locks,
-value-minimized policy explanations, baseline-authoritative shadow rollout, atomic live policy
-activation, and
+single-file policy deployments, value-minimized policy explanations, baseline-authoritative
+shadow rollout, atomic live policy activation, and
 presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
@@ -535,6 +566,8 @@ Deliberate limitations:
   request field.
 - Deployment locks detect artifact mismatch but do not authenticate authors, secure distribution,
   establish freshness, or prevent rollback.
+- Policy deployments make one local file coherent but do not sign it, persist desired state,
+  verify transport identity, or make a distributed rollout atomic.
 - Explanations cover one supplied input and disclose rule/path/operator status; they do not prove
   policy correctness or hide authorization behavior from a caller allowed to query them.
 - Policies must be reviewed and tested for the embedding application's real threat model.

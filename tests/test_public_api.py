@@ -34,6 +34,12 @@ def test_public_api_is_importable() -> None:
     assert "verify_deployment_lock" in samsarix_ethics.__all__
     assert "load_deployment_lock" in samsarix_ethics.__all__
     assert "get_deployment_lock_schema" in samsarix_ethics.__all__
+    assert "PolicyDeployment" in samsarix_ethics.__all__
+    assert "PolicyDeploymentValidationError" in samsarix_ethics.__all__
+    assert "create_policy_deployment" in samsarix_ethics.__all__
+    assert "load_policy_deployment" in samsarix_ethics.__all__
+    assert "write_policy_deployment" in samsarix_ethics.__all__
+    assert "get_policy_deployment_schema" in samsarix_ethics.__all__
     assert "compare_policies" in samsarix_ethics.__all__
     assert "compose_policies" in samsarix_ethics.__all__
     assert "PolicyComposition" in samsarix_ethics.__all__
@@ -77,5 +83,7 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.CONTEXT_CONTRACT_VERSION == 1
     assert samsarix_ethics.CONTEXT_CONTRACT_FINGERPRINT_VERSION == 1
     assert samsarix_ethics.DEPLOYMENT_LOCK_VERSION == 1
+    assert samsarix_ethics.POLICY_DEPLOYMENT_VERSION == 1
     assert samsarix_ethics.MAX_DEPLOYMENT_LOCK_BYTES == 65_536
     assert samsarix_ethics.MAX_CONTEXT_CONTRACT_FIELDS == 1_000
+    assert samsarix_ethics.MAX_POLICY_DEPLOYMENT_BYTES == 4_194_304

@@ -31,6 +31,10 @@ class PolicyActivationError(SamsarixEthicsError):
     """Raised when an atomic policy activation cannot replace the live generation."""
 
 
+class PolicyDeploymentValidationError(SamsarixEthicsError):
+    """Raised when a single-file policy deployment is malformed or inconsistent."""
+
+
 class PolicyCompositionError(SamsarixEthicsError):
     """Raised when validated policy sources cannot be composed safely."""
 
