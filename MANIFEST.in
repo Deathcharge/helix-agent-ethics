@@ -2,6 +2,7 @@ include CHANGELOG.md
 include LICENSE
 include NOTICE
 include README.md
+include RELEASING.md
 include SECURITY.md
 include SUPPORT.md
 include TRADEMARKS.md

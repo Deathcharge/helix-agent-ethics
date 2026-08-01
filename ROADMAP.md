@@ -33,8 +33,9 @@ Current hardening backlog:
 - No published package/release, public third-party adopter, or production deployment evidence.
 - The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible,
   not a publicly reproducible external case study.
-- Installed-wheel smoke coverage exists locally and in CI, but publication provenance and signing
-  are not yet configured.
+- Installed-wheel smoke coverage, retained CI distributions, and GitHub build-provenance
+  attestations exist. PyPI project ownership, Trusted Publishing, protected release approval, and
+  durable registry publication evidence are not yet configured.
 - The “ethics” name may still overpromise relative to a deterministic authorization/policy gate.
 - Local audit logs are operational records, not tamper-evident compliance evidence.
 - Caller-owned sinks provide a delivery seam, not built-in HTTP, queues, retries, exactly-once

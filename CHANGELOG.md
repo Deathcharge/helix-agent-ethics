@@ -28,6 +28,8 @@ All notable product changes are recorded here.
 - Frozen, versioned metadata-only `AuditRecord`, synchronous caller-owned `AuditSink`, and
   `JsonlAuditSink`, with fail-closed pre-authorization delivery, no implicit retries, bounded public
   construction, and an exportable Draft 2020-12 audit-record schema.
+- Retained verified wheel/source artifacts for every successful CI build plus least-privilege GitHub
+  build-provenance attestations for distributions built from `main`.
 
 ### Changed
 
