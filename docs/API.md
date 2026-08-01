@@ -109,10 +109,11 @@ the bounded engine error while unavailable decision fields are null. Both snapsh
 the monotonic engine-only `evaluation_duration_ns`; candidate errors retain time spent before the
 failure.
 
-`to_dict()` returns the `POLICY_SHADOW_VERSION` (currently `1`) report with successful baseline
-and candidate snapshots. It excludes the complete input and all reason/warning text; those message
-values are compared only in memory. The synchronous second evaluation may add latency and resource
-use. Sampling, telemetry delivery, promotion, and rollback remain caller responsibilities. See
+`to_dict()` returns the `POLICY_SHADOW_VERSION` (currently `1`) report with a successful baseline
+snapshot and either a successful candidate snapshot or a candidate-error snapshot. It excludes the
+complete input and all reason/warning text; those message values are compared only in memory. The
+synchronous second evaluation may add latency and resource use. Sampling, telemetry delivery,
+promotion, and rollback remain caller responsibilities. See
 [POLICY_SHADOWING.md](POLICY_SHADOWING.md).
 
 ## Tool-call enforcement

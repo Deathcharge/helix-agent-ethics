@@ -293,8 +293,9 @@ certification or ethics truth.
   guardrails and four application rules, then validated by its fourteen-case 100%-coverage suite.
 - Added baseline-authoritative shadow evaluation with a strict versioned telemetry schema. A live
   candidate observes the same detached action after the baseline succeeds, candidate domain errors
-  remain non-authoritative, per-policy monotonic durations expose rollout cost, and serialized
-  reports omit input plus reason/warning text.
+  remain non-authoritative, and per-policy monotonic durations expose `PolicyEngine.evaluate` time
+  while excluding input loading/validation, telemetry delivery, and end-to-end action latency.
+  Serialized reports omit input plus reason/warning text.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit

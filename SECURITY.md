@@ -39,10 +39,11 @@ are bounded and type-checked. The embedding application remains responsible for:
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
 code, loads no plugins, and stores no raw evaluation input in its built-in audit record.
-Policy-test, comparison, coverage, and shadow reports also exclude case/action inputs. They still
-expose case names, policy and rule identifiers, fingerprints, and bounded evaluation errors; do
-not place secrets in those operator-authored labels, and protect reports as operational metadata. Coverage
-proves only that a supplied case matched a rule, not that every condition path or input is safe.
+Policy-test, comparison, and coverage reports exclude case inputs but expose case names. Shadow
+reports exclude action inputs and have no case-name field. These report types still expose policy
+and rule identifiers, fingerprints, and bounded evaluation errors; do not place secrets in those
+operator-authored labels, and protect reports as operational metadata. Coverage proves only that a
+supplied case matched a rule, not that every condition path or input is safe.
 Lint reports omit condition values, descriptions, and rule messages, but expose rule identifiers
 and zero-based condition locations. A clean lint report covers only documented deterministic
 findings and is not evidence that an allow rule reflects application intent or least privilege.

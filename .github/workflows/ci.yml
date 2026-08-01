@@ -136,6 +136,8 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
           /tmp/samsarix-wheel/bin/python - <<'PY'
+          import json
+
           from samsarix_ethics import (
               AUDIT_RECORD_VERSION,
               AuditRecord,
@@ -199,7 +201,7 @@ jobs:
           assert shadow.candidate_decision is not None
           assert shadow.candidate_decision.outcome.value == "deny"
           assert shadow.authorization_changed is True
-          assert "action" not in shadow.to_dict()
+          assert "action" not in json.dumps(shadow.to_dict())
           composition = compose_policies(
               [policy, candidate],
               policy_id="wheel-layered",
