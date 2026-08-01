@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,7 @@ def test_help_and_version() -> None:
 
     assert help_result.returncode == 0
     assert "check" in help_result.stdout
+    assert "compare" in help_result.stdout
     assert "schema" in help_result.stdout
     assert "test" in help_result.stdout
     assert version_result.returncode == 0
@@ -120,6 +122,7 @@ def test_text_output_and_audit_log(
 def test_schema_commands_emit_versioned_json() -> None:
     policy = _run_cli("schema")
     policy_tests = _run_cli("schema", "policy-test")
+    policy_comparison = _run_cli("schema", "policy-comparison")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     audit_record = _run_cli("schema", "audit-record")
@@ -128,12 +131,156 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy.stdout)["$id"].endswith("/policy/v1.json")
     assert policy_tests.returncode == 0
     assert json.loads(policy_tests.stdout)["$id"].endswith("/policy-test/v1.json")
+    assert policy_comparison.returncode == 0
+    assert json.loads(policy_comparison.stdout)["$id"].endswith("/policy-comparison/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
     assert json.loads(tool_approval.stdout)["$id"].endswith("/tool-approval/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
+
+
+def test_compare_command_reports_impact_and_uses_ci_exit_code(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    baseline_path = write_json("baseline.json", policy_document)
+    candidate_document = deepcopy(policy_document)
+    candidate_document["version"] = "2"
+    candidate_document["rules"].extend(
+        [
+            {
+                "id": "deny-read",
+                "effect": "deny",
+                "conditions": [{"field": "action.operation", "operator": "eq", "value": "read"}],
+            },
+            {
+                "id": "warn-write",
+                "effect": "warn",
+                "conditions": [{"field": "action.operation", "operator": "eq", "value": "write"}],
+            },
+        ]
+    )
+    candidate_path = write_json("candidate.json", candidate_document)
+    suite_path = write_json(
+        "impact.tests.json",
+        {
+            "schema_version": 1,
+            "name": "impact",
+            "cases": [
+                {
+                    "name": "read authorization",
+                    "input": {
+                        "action": {"operation": "read"},
+                        "secret": "never-print-this",
+                    },
+                    "expected_outcome": "allow",
+                },
+                {
+                    "name": "write metadata",
+                    "input": {"action": {"operation": "write"}},
+                    "expected_outcome": "review",
+                },
+            ],
+        },
+    )
+
+    identical = _run_cli(
+        "compare",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(baseline_path),
+        str(suite_path),
+        "--format",
+        "json",
+    )
+    changed = _run_cli(
+        "compare",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        str(suite_path),
+        "--format",
+        "json",
+    )
+    text_result = _run_cli(
+        "compare",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        str(suite_path),
+    )
+
+    assert identical.returncode == 0
+    assert json.loads(identical.stdout)["identical"] is True
+    assert changed.returncode == 1
+    changed_payload = json.loads(changed.stdout)
+    assert changed_payload["authorization_changes"] == 1
+    assert changed_payload["metadata_only_changes"] == 1
+    assert changed_payload["results"][0]["changes"] == [
+        "outcome",
+        "matched_rules",
+        "reason_messages",
+    ]
+    assert "never-print-this" not in changed.stdout
+    assert text_result.returncode == 1
+    assert "CHANGED read authorization: outcome allow -> deny" in text_result.stdout
+    assert "reason messages changed" in text_result.stdout
+    assert "CHANGED write metadata: matched rules changed; warnings 0 -> 1" in text_result.stdout
+    assert "warning messages changed" in text_result.stdout
+    assert "1 authorization" in text_result.stdout
+
+
+def test_compare_command_reports_evaluation_errors_without_inputs(
+    write_json: Any, policy_document: dict[str, Any]
+) -> None:
+    baseline_path = write_json(
+        "error-baseline.json",
+        {
+            "schema_version": 1,
+            "id": "error-policy",
+            "version": "1",
+            "default_effect": "deny",
+            "rules": [
+                {
+                    "id": "array-only",
+                    "effect": "allow",
+                    "conditions": [{"field": "roles", "operator": "contains", "value": "admin"}],
+                }
+            ],
+        },
+    )
+    candidate_path = write_json("safe-candidate.json", policy_document)
+    suite_path = write_json(
+        "error-impact.tests.json",
+        {
+            "schema_version": 1,
+            "cases": [
+                {
+                    "name": "bad shape",
+                    "input": {"roles": "do-not-report-this"},
+                    "expected_outcome": "deny",
+                }
+            ],
+        },
+    )
+
+    result = _run_cli(
+        "compare",
+        "--baseline",
+        str(baseline_path),
+        "--candidate",
+        str(candidate_path),
+        str(suite_path),
+    )
+
+    assert result.returncode == 1
+    assert "ERROR bad shape: baseline error:" in result.stdout
+    assert "requires the input field to be an array" in result.stdout
+    assert "do-not-report-this" not in result.stdout
 
 
 def test_policy_test_command_reports_pass_and_fail(

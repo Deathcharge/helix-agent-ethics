@@ -40,6 +40,8 @@ All notable product changes are recorded here.
   replacing the compatibility wrapper for new attestation implementations.
 - Canonical streamed `fingerprint_policy` provenance, propagated through engines, gates, decisions,
   policy-test reports, CLI validation, and privacy-minimized audit record v1.
+- Versioned, privacy-minimized baseline-versus-candidate policy impact comparison API, CLI, schema,
+  CI exit behavior, and a runnable sensitive-read rollout example.
 
 ### Changed
 

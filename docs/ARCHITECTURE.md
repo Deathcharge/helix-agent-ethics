@@ -28,6 +28,7 @@ the legacy `helix-unified` repository.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and the legacy audit helper.
 - `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
+- `comparison.py`: deterministic, input-free baseline/candidate impact reports.
 - `gate.py`: normalized tool-call contexts, immutable registration bindings, and fail-closed
   sync/async callback enforcement.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
@@ -52,6 +53,14 @@ The JSON Schemas support editors and generic CI validators; the Python validator
 authoritative for semantic and aggregate constraints. Policy-test suites evaluate real engine
 behavior and separate unmet expectations from evaluation errors. Reports omit raw inputs just as
 the audit helper does.
+
+The same bounded suite can evaluate an approved baseline and candidate side by side. Comparison
+records outcome changes separately from matched-rule, warning, and explanation metadata changes,
+carries both exact policy fingerprints, and treats either-side evaluation failures as errors.
+Reason/warning contents are compared but discarded; the report exposes only change labels. It
+excludes inputs, decision UUIDs, and timestamps so repeated runs are deterministic. Equality is
+scoped to supplied cases and observable decision metadata; it is not whole-language semantic
+equivalence.
 
 ### Deny and review override allow
 

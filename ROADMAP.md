@@ -23,6 +23,8 @@ adoption remain separate evidence-based decisions.
   the existing JSONL API and fail-closed behavior.
 - [x] Bind decisions and audit evidence to the exact canonical policy body, independent of
   operator-authored policy ID/version labels.
+- [x] Reuse bounded regression suites for deterministic, input-free baseline/candidate impact
+  reports before policy rollout.
 
 ## Release candidate
 

@@ -10,6 +10,15 @@ from .approval import (
     ToolCallApproval,
 )
 from .audit import AUDIT_RECORD_VERSION, AuditRecord, AuditSink, JsonlAuditSink
+from .comparison import (
+    POLICY_COMPARISON_VERSION,
+    PolicyComparisonChange,
+    PolicyComparisonReport,
+    PolicyComparisonResult,
+    PolicyComparisonSnapshot,
+    PolicyComparisonStatus,
+    compare_policies,
+)
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
     AuditLogError,
@@ -36,6 +45,7 @@ from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRu
 from .provenance import POLICY_FINGERPRINT_VERSION, fingerprint_policy
 from .schema import (
     get_audit_record_schema,
+    get_policy_comparison_schema,
     get_policy_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
@@ -61,6 +71,7 @@ __all__ = [
     "MAX_POLICY_TEST_BYTES",
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
     "MAX_TOOL_CAPABILITIES",
+    "POLICY_COMPARISON_VERSION",
     "POLICY_FINGERPRINT_VERSION",
     "TOOL_CALL_APPROVAL_VERSION",
     "TOOL_CALL_FINGERPRINT_VERSION",
@@ -76,6 +87,11 @@ __all__ = [
     "JsonlAuditSink",
     "Outcome",
     "Policy",
+    "PolicyComparisonChange",
+    "PolicyComparisonReport",
+    "PolicyComparisonResult",
+    "PolicyComparisonSnapshot",
+    "PolicyComparisonStatus",
     "PolicyCondition",
     "PolicyEngine",
     "PolicyRule",
@@ -95,9 +111,11 @@ __all__ = [
     "ToolGate",
     "append_audit_record",
     "build_tool_context",
+    "compare_policies",
     "fingerprint_policy",
     "fingerprint_tool_call",
     "get_audit_record_schema",
+    "get_policy_comparison_schema",
     "get_policy_schema",
     "get_policy_test_schema",
     "get_tool_approval_schema",

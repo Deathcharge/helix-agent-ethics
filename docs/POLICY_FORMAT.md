@@ -136,12 +136,14 @@ securely.
 
 ## JSON Schema
 
-The wheel contains Draft 2020-12 schemas for policies, policy-test suites, normalized tool-call
-contexts, bound approval records, and audit records. Print fresh copies without a network request:
+The wheel contains Draft 2020-12 schemas for policies, policy-test suites, policy-comparison
+reports, normalized tool-call contexts, bound approval records, and audit records. Print fresh
+copies without a network request:
 
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
+samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
@@ -171,3 +173,15 @@ Cases may also assert the exact ordered `expected_matched_rules` array and an
 `expected_warning_count`. The runner evaluates every case and reports `pass`, `fail`, or `error`;
 reports intentionally exclude raw inputs. Exit `0` means every case passed, while exit `1` means at
 least one expectation failed or evaluation errored. Malformed policies or suites exit `2`.
+
+Reuse the same suite to compare an approved baseline with a candidate. Comparison ignores the
+suite's expected fields and directly detects changes in actual outcome, ordered matched-rule IDs,
+warning count, reason messages, or warning messages without serializing the message text:
+
+```bash
+samsarix-ethics compare --baseline approved.json --candidate proposed.json policy.tests.json
+```
+
+Exit `0` means all supplied cases had identical observable behavior; changes or evaluation errors
+exit `1`. This is sampled impact evidence, not proof of equivalence for inputs absent from the
+suite. See [POLICY_COMPARISON.md](POLICY_COMPARISON.md).

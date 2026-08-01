@@ -1,7 +1,7 @@
 # Copyright 2024-2026 Samsarix LLC
 # SPDX-License-Identifier: Apache-2.0
 
-"""Command-line interface for policy validation and action checks."""
+"""Command-line interface for policy validation, comparison, testing, and action checks."""
 
 from __future__ import annotations
 
@@ -13,6 +13,12 @@ from pathlib import Path
 from typing import BinaryIO, TextIO
 
 from . import __version__
+from .comparison import (
+    PolicyComparisonChange,
+    PolicyComparisonReport,
+    PolicyComparisonStatus,
+    compare_policies,
+)
 from .engine import PolicyEngine
 from .errors import SamsarixEthicsError
 from .io import append_audit_record, load_context, load_policy, write_sample_policy
@@ -20,6 +26,7 @@ from .models import Decision, Outcome
 from .provenance import fingerprint_policy
 from .schema import (
     get_audit_record_schema,
+    get_policy_comparison_schema,
     get_policy_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
@@ -61,11 +68,26 @@ def _parser() -> argparse.ArgumentParser:
     test_suite.add_argument("suite", help="path to a JSON policy-test suite")
     test_suite.add_argument("--format", choices=("json", "text"), default="text")
 
+    compare = subparsers.add_parser(
+        "compare", help="compare baseline and candidate behavior over a regression suite"
+    )
+    compare.add_argument("--baseline", required=True, help="path to the baseline JSON policy")
+    compare.add_argument("--candidate", required=True, help="path to the candidate JSON policy")
+    compare.add_argument("suite", help="path to a JSON policy-test suite")
+    compare.add_argument("--format", choices=("json", "text"), default="text")
+
     schema = subparsers.add_parser("schema", help="print a bundled JSON Schema")
     schema.add_argument(
         "kind",
         nargs="?",
-        choices=("policy", "policy-test", "tool-context", "tool-approval", "audit-record"),
+        choices=(
+            "policy",
+            "policy-test",
+            "policy-comparison",
+            "tool-context",
+            "tool-approval",
+            "audit-record",
+        ),
         default="policy",
         help="schema to print; default: policy",
     )
@@ -119,6 +141,52 @@ def _render_test_report(report: PolicyTestReport, output_format: str) -> str:
     return "\n".join(lines)
 
 
+def _render_comparison_report(report: PolicyComparisonReport, output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(report.to_dict(), indent=2, sort_keys=True)
+    lines = [
+        f"Baseline: {report.baseline_policy_id}@{report.baseline_policy_version} "
+        f"({report.baseline_policy_fingerprint})",
+        f"Candidate: {report.candidate_policy_id}@{report.candidate_policy_version} "
+        f"({report.candidate_policy_fingerprint})",
+    ]
+    for result in report.results:
+        details: list[str] = []
+        if result.status is PolicyComparisonStatus.ERROR:
+            if result.baseline.error is not None:
+                details.append(f"baseline error: {result.baseline.error}")
+            if result.candidate.error is not None:
+                details.append(f"candidate error: {result.candidate.error}")
+        else:
+            if PolicyComparisonChange.OUTCOME in result.changes:
+                baseline_outcome = result.baseline.outcome
+                candidate_outcome = result.candidate.outcome
+                baseline_value = baseline_outcome.value if baseline_outcome is not None else "error"
+                candidate_value = (
+                    candidate_outcome.value if candidate_outcome is not None else "error"
+                )
+                details.append(f"outcome {baseline_value} -> {candidate_value}")
+            if PolicyComparisonChange.MATCHED_RULES in result.changes:
+                details.append("matched rules changed")
+            if PolicyComparisonChange.WARNING_COUNT in result.changes:
+                details.append(
+                    f"warnings {result.baseline.warning_count} -> {result.candidate.warning_count}"
+                )
+            if PolicyComparisonChange.REASON_MESSAGES in result.changes:
+                details.append("reason messages changed")
+            if PolicyComparisonChange.WARNING_MESSAGES in result.changes:
+                details.append("warning messages changed")
+        suffix = f": {'; '.join(details)}" if details else ""
+        lines.append(f"{result.status.value.upper()} {result.name}{suffix}")
+    lines.append(
+        f"Summary: {report.unchanged} unchanged, {report.changed} changed "
+        f"({report.authorization_changes} authorization, "
+        f"{report.metadata_only_changes} metadata-only), {report.errors} errors, "
+        f"{len(report.results)} total"
+    )
+    return "\n".join(lines)
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -143,6 +211,7 @@ def main(
             schema_loaders = {
                 "policy": get_policy_schema,
                 "policy-test": get_policy_test_schema,
+                "policy-comparison": get_policy_comparison_schema,
                 "tool-context": get_tool_context_schema,
                 "tool-approval": get_tool_approval_schema,
                 "audit-record": get_audit_record_schema,
@@ -150,6 +219,14 @@ def main(
             schema = schema_loaders[arguments.kind]()
             print(json.dumps(schema, indent=2, sort_keys=True), file=output)
             return EXIT_ALLOWED
+
+        if arguments.command == "compare":
+            baseline = load_policy(arguments.baseline)
+            candidate = load_policy(arguments.candidate)
+            suite = load_policy_test_suite(arguments.suite)
+            comparison_report = compare_policies(baseline, candidate, suite)
+            print(_render_comparison_report(comparison_report, arguments.format), file=output)
+            return EXIT_ALLOWED if comparison_report.identical else EXIT_TEST_FAILED
 
         policy = load_policy(arguments.policy)
         if arguments.command == "validate":
@@ -175,9 +252,9 @@ def main(
 
         if arguments.command == "test":
             suite = load_policy_test_suite(arguments.suite)
-            report = run_policy_tests(policy, suite)
-            print(_render_test_report(report, arguments.format), file=output)
-            return EXIT_ALLOWED if report.successful else EXIT_TEST_FAILED
+            test_report = run_policy_tests(policy, suite)
+            print(_render_test_report(test_report, arguments.format), file=output)
+            return EXIT_ALLOWED if test_report.successful else EXIT_TEST_FAILED
 
         context = load_context(arguments.input, stdin=binary_input)
         decision = PolicyEngine(policy).evaluate(context)
