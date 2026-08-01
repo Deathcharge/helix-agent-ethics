@@ -43,6 +43,13 @@ def _expect_mapping(value: Any, location: str) -> dict[str, Any]:
     return value
 
 
+def _validate_policy_json_shape(value: Any, location: str) -> None:
+    try:
+        validate_json_shape(value, label=location)
+    except InputValidationError as exc:
+        raise PolicyValidationError(str(exc)) from exc
+
+
 def _check_keys(
     data: dict[str, Any], *, required: set[str], optional: set[str], location: str
 ) -> None:
@@ -91,6 +98,7 @@ class PolicyCondition:
 
     @classmethod
     def from_dict(cls, value: Any, *, location: str) -> PolicyCondition:
+        _validate_policy_json_shape(value, location)
         data = _expect_mapping(value, location)
         _check_keys(
             data,
@@ -145,6 +153,7 @@ class PolicyRule:
     @classmethod
     def from_dict(cls, value: Any, *, index: int) -> PolicyRule:
         location = f"rules[{index}]"
+        _validate_policy_json_shape(value, location)
         data = _expect_mapping(value, location)
         _check_keys(
             data,
@@ -213,10 +222,7 @@ class Policy:
 
     @classmethod
     def from_dict(cls, value: Any) -> Policy:
-        try:
-            validate_json_shape(value, label="policy")
-        except InputValidationError as exc:
-            raise PolicyValidationError(str(exc)) from exc
+        _validate_policy_json_shape(value, "policy")
         data = _expect_mapping(value, "policy")
         _check_keys(
             data,

@@ -162,6 +162,22 @@ def test_reference_path_length_is_bounded() -> None:
         )
 
 
+def test_direct_condition_constructor_rejects_non_json_value() -> None:
+    with pytest.raises(PolicyValidationError, match="non-JSON value"):
+        PolicyCondition.from_dict(
+            {"field": "actor.id", "operator": "eq", "value": ("not", "json")},
+            location="condition",
+        )
+
+
+def test_direct_rule_constructor_rejects_non_string_key() -> None:
+    with pytest.raises(PolicyValidationError, match="non-string object key"):
+        PolicyRule.from_dict(
+            {"id": "rule", "effect": "deny", "conditions": [], 1: "bad"},
+            index=0,
+        )
+
+
 def test_membership_condition_accepts_array_reference() -> None:
     condition = PolicyCondition.from_dict(
         {"field": "action", "operator": "in", "value": {"$ref": "allowed.actions"}},

@@ -57,6 +57,10 @@ class PolicyTestCase:
     @classmethod
     def from_dict(cls, value: Any, *, index: int) -> PolicyTestCase:
         location = f"policy test cases[{index}]"
+        try:
+            validate_json_shape(value, label=location)
+        except InputValidationError as exc:
+            raise PolicyTestValidationError(str(exc)) from exc
         data = _mapping(value, location)
         _keys(
             data,
