@@ -141,6 +141,56 @@ def test_policy_schema_matches_strict_condition_contract() -> None:
         Draft202012Validator(schema).validate(scalar_membership)
 
 
+def test_policy_lint_schema_rejects_inconsistent_or_value_bearing_findings() -> None:
+    policy = Policy.from_dict(
+        {
+            "schema_version": 1,
+            "id": "schema-lint-policy",
+            "version": "1",
+            "default_effect": "allow",
+            "rules": [
+                {"id": "allow-all", "effect": "allow", "conditions": []},
+                {
+                    "id": "impossible",
+                    "effect": "deny",
+                    "conditions": [
+                        {"field": "action.name", "operator": "eq", "value": "private"},
+                        {"field": "action.name", "operator": "neq", "value": "private"},
+                    ],
+                },
+                {
+                    "id": "duplicate",
+                    "effect": "review",
+                    "message": "Review this action.",
+                    "conditions": [
+                        {"field": "action.risk", "operator": "eq", "value": "high"},
+                        {"field": "action.risk", "operator": "eq", "value": "high"},
+                    ],
+                },
+            ],
+        }
+    )
+    valid = lint_policy(policy).to_dict()
+    validator = Draft202012Validator(get_policy_lint_schema())
+    mismatched_severity = copy.deepcopy(valid)
+    mismatched_severity["findings"][0]["severity"] = "suggestion"
+    value_bearing_message = copy.deepcopy(valid)
+    value_bearing_message["findings"][0]["message"] += " Value was secret-policy-value."
+
+    validator.validate(valid)
+    assert {finding["code"] for finding in valid["findings"]} == {
+        "SAE001",
+        "SAE002",
+        "SAE101",
+        "SAE201",
+        "SAE202",
+    }
+    with pytest.raises(ValidationError):
+        validator.validate(mismatched_severity)
+    with pytest.raises(ValidationError):
+        validator.validate(value_bearing_message)
+
+
 def test_tool_context_schema_matches_builder_contract() -> None:
     schema = get_tool_context_schema()
     validator = Draft202012Validator(schema)

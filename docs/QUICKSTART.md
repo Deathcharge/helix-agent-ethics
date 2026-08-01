@@ -40,7 +40,8 @@ samsarix-ethics lint examples/policies/safe-agent-actions.json --fail-on suggest
 ```
 
 The included policy has no findings. The strict command exits `1` for any stable security warning,
-warning, or suggestion without printing condition values. See [policy authoring diagnostics](POLICY_LINTING.md).
+warning, or suggestion. Lint output excludes condition values, descriptions, and rule messages. See
+[policy authoring diagnostics](POLICY_LINTING.md).
 
 ## 4. Run the policy regression suite
 

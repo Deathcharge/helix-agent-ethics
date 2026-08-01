@@ -149,7 +149,7 @@ permissive defaults, unconditional allows, provably impossible same-field condit
 conditions, and missing authored explanations. CI can fail at security-warning, warning, or
 suggestion severity.
 
-The analyzer never copies condition values or rule messages into findings and does not infer a
-consumer domain schema. Dynamic references are skipped unless a contradiction is independently
-certain. This makes the report safe to adopt as an additional consumer gate, but it cannot replace
-consumer-owned authorization tests, review, or least-privilege analysis.
+The analyzer never copies condition values, descriptions, or rule messages into findings and does
+not infer a consumer domain schema. Dynamic references are skipped unless a contradiction is
+independently certain. This makes the report safe to adopt as an additional consumer gate, but it
+cannot replace consumer-owned authorization tests, review, or least-privilege analysis.
