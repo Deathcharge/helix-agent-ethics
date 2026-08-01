@@ -81,6 +81,24 @@ else:
 The executor receives a detached dictionary containing the exact arguments evaluated by policy.
 Use that dictionary for the tool call so the proposed and executed arguments cannot diverge.
 
+To route audit metadata into application-owned storage, supply one synchronous callable instead of
+`audit_log`:
+
+```python
+from samsarix_ethics import AuditRecord
+
+records: list[AuditRecord] = []
+gate = ToolGate(policy, audit_sink=records.append)
+```
+
+`audit_log` and `audit_sink` are mutually exclusive. The gate computes the decision, invokes the
+configured sink exactly once, and only then returns or enforces the outcome. A custom sink must
+return `None`; any exception or other return becomes `AuditLogError` and prevents a tool callback.
+The package never retries. If an application sink retries after an uncertain external commit, its
+destination may receive the same `decision_id` more than once and must own idempotency.
+Export the record's Draft 2020-12 contract with
+`samsarix-ethics schema audit-record > audit-record-v1.schema.json`.
+
 ## Asynchronous enforcement
 
 `execute_async` has identical decision behavior and awaits an async callback:
@@ -126,5 +144,5 @@ the audit record proves authorization, not successful completion.
 
 Tool arguments may contain secrets or personal data. Decisions, block exceptions, policy-test
 reports, and the built-in JSONL audit omit arguments. The embedding application owns redaction of
-its own logs and traces, durable pending-call storage, reviewer authentication, audit retention,
-and post-execution outcome records.
+its own logs and traces, custom-sink transport security and idempotency, durable pending-call
+storage, reviewer authentication, audit retention, and post-execution outcome records.

@@ -14,6 +14,9 @@ def test_public_api_is_importable() -> None:
     assert "ToolGate" in samsarix_ethics.__all__
     assert "ToolCallBlockedError" in samsarix_ethics.__all__
     assert "get_tool_context_schema" in samsarix_ethics.__all__
+    assert "get_audit_record_schema" in samsarix_ethics.__all__
+    assert "AuditRecord" in samsarix_ethics.__all__
     assert samsarix_ethics.MAX_BATCH_ITEMS == 1_000
     assert samsarix_ethics.MAX_TOOL_CAPABILITIES == 64
     assert samsarix_ethics.TOOL_CONTEXT_VERSION == 1
+    assert samsarix_ethics.AUDIT_RECORD_VERSION == 1

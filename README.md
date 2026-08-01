@@ -68,7 +68,7 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|tool-context]
+samsarix-ethics schema [policy|policy-test|tool-context|audit-record]
 samsarix-ethics test --policy POLICY.json TESTS.json [--format text|json]
 samsarix-ethics check --policy POLICY.json [--input INPUT.json|-]
                       [--audit-log decisions.jsonl] [--format json|text]
@@ -102,6 +102,7 @@ Print the versioned Draft 2020-12 schemas for editors, CI, or code generation:
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
+samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```
 
 The bundled regression suite proves allow, deny, review, missing-approval, and warning behavior
@@ -158,6 +159,21 @@ tool. See the [tool-call integration guide](docs/TOOL_CALLS.md), [API reference]
 
 Run the dependency-free demonstration with `python examples/tool_gate_demo.py`.
 
+Applications can route the same versioned metadata-only record to their own durable store or
+telemetry pipeline with a synchronous sink:
+
+```python
+from samsarix_ethics import AuditRecord, ToolGate
+
+records: list[AuditRecord] = []
+gate = ToolGate(policy, audit_sink=records.append)
+```
+
+The sink runs once after each decision is computed and before the decision can authorize a callback.
+It must return `None`; an exception or other return becomes `AuditLogError` and fails closed. Use
+either `audit_sink=` or the existing local `audit_log=` path, not both. Agent Ethics never retries
+delivery or includes evaluation input in `AuditRecord`.
+
 ## Downstream adoption
 
 Samsarix Agent Framework is the first verified downstream consumer. Its optional policy registry
@@ -193,6 +209,7 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
+- Caller-owned audit sinks receive the same versioned metadata-only record and no raw input.
 - `ToolGate` audits before execution when configured; an audit failure prevents the callback.
 - Audit retention, access controls, rotation, and tamper resistance belong to the embedding
   application. A successful append is flushed to disk but is not a cryptographic ledger.

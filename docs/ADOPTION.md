@@ -40,7 +40,7 @@ rollback path is to revert the consumer merge or restore its core `ToolRegistry`
 policy gate is a security behavior change and requires an equivalent application authorization
 boundary.
 
-## Next validated gap: application-owned audit sinks
+## Implemented gap: application-owned audit sinks
 
 Post-adoption research favors a small audit-delivery seam over owning approval workflows, OAuth, or
 policy distribution:
@@ -57,15 +57,14 @@ policy distribution:
   services and custom plugins because production consumers need to route decisions into their own
   operational systems.
 
-Agent Ethics should therefore keep making local deterministic decisions and expose one bounded,
-metadata-only record to a caller-supplied sink. The first increment should preserve the current
-JSONL path API and define an immutable public audit-record contract. After computing a decision,
-`ToolGate` should call exactly one configured sink exactly once, before returning that decision as
-authorization or invoking the tool callback. Only a normal `None` return should count as a
-successful write; a non-`None` return or raised exception should become `AuditLogError` and prevent
-execution.
+Agent Ethics therefore keeps making local deterministic decisions and exposes one bounded,
+metadata-only `AuditRecord` to a caller-supplied sink. The implementation preserves the current
+JSONL path API and defines an immutable, versioned public record contract. After computing a
+decision, `ToolGate` calls exactly one configured sink exactly once, before returning that decision
+as authorization or invoking the tool callback. Only a normal `None` return counts as a successful
+write; a non-`None` return or raised exception becomes `AuditLogError` and prevents execution.
 
-The library should not retry a sink. Re-evaluating a call creates another decision and audit record;
+The library does not retry a sink. Re-evaluating a call creates another decision and audit record;
 a sink that retries after an uncertain external commit may also deliver the same `decision_id`
 more than once. Idempotency, HTTP delivery, queues, retries, credentials, retention, and
 tamper-evident storage therefore stay with the embedding application until a concrete adopter

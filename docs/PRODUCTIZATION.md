@@ -144,11 +144,11 @@ certification or ethics truth.
 
 ### P2 — valuable post-candidate work
 
-- [ ] Publish a standalone JSON Schema and editor integration for policy authoring.
+- [x] Publish standalone versioned JSON Schemas for policy authoring, test suites, normalized tool
+  contexts, and audit-record consumers.
 - [ ] Add property-based precedence/parser tests if another dependency is justified.
-- [ ] Add an optional caller-supplied audit sink interface for centralized logging. This is the
-  next selected increment after downstream adoption; preserve JSONL compatibility and fail closed
-  on configured sink errors.
+- [x] Add an optional caller-supplied audit sink interface for centralized logging while preserving
+  JSONL compatibility and failing closed on configured sink errors.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [ ] Add policy-set composition/version migration after real adopter feedback.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
@@ -187,7 +187,7 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 136 real tests; latest local run: 136 passed, 93.86% branch coverage.
+- Added 166 real tests; latest local run: 166 passed, 94.88% total coverage with branch measurement.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
@@ -208,6 +208,8 @@ certification or ethics truth.
   security-aware pull request template; confirmed GitHub private vulnerability reporting is enabled.
 - Added versioned schemas, bounded batch evaluation, policy regression suites, a fail-closed sync
   and async `ToolGate`, a fourteen-case capability policy pack, and the `subset_of` operator.
+- Added immutable versioned audit records plus one synchronous caller-owned sink seam; sink delivery
+  runs before authorization, fails closed, does not retry, and preserves the JSONL path API.
 - Merged a consumer-owned Agent Framework contract at consumer commit
   `02fe13ae102359958b8a02d125a41abaa814d472`, pinned to Agent Ethics
   `eb69207b14ddd79bdfe774ec5b166c8ca8ce940e`; the private consumer's 106-test suite and installed

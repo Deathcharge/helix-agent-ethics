@@ -3,6 +3,7 @@
 
 """Public API for the Samsarix Agent Ethics policy gate."""
 
+from .audit import AUDIT_RECORD_VERSION, AuditRecord, AuditSink, JsonlAuditSink
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
     AuditLogError,
@@ -24,7 +25,12 @@ from .gate import (
 )
 from .io import append_audit_record, load_context, load_policy
 from .models import Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
-from .schema import get_policy_schema, get_policy_test_schema, get_tool_context_schema
+from .schema import (
+    get_audit_record_schema,
+    get_policy_schema,
+    get_policy_test_schema,
+    get_tool_context_schema,
+)
 from .testing import (
     MAX_POLICY_TEST_BYTES,
     PolicyTestCase,
@@ -40,15 +46,19 @@ from .validation import validate_context
 __version__ = "0.1.0"
 
 __all__ = [
+    "AUDIT_RECORD_VERSION",
     "MAX_BATCH_ITEMS",
     "MAX_POLICY_TEST_BYTES",
     "MAX_TOOL_CAPABILITIES",
     "TOOL_CONTEXT_VERSION",
     "AuditLogError",
+    "AuditRecord",
+    "AuditSink",
     "Decision",
     "Effect",
     "EvaluationError",
     "InputValidationError",
+    "JsonlAuditSink",
     "Outcome",
     "Policy",
     "PolicyCondition",
@@ -69,6 +79,7 @@ __all__ = [
     "ToolGate",
     "append_audit_record",
     "build_tool_context",
+    "get_audit_record_schema",
     "get_policy_schema",
     "get_policy_test_schema",
     "get_tool_context_schema",

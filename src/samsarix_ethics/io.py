@@ -12,7 +12,8 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any, BinaryIO
 
-from .errors import AuditLogError, InputValidationError, PolicyValidationError
+from .audit import AuditRecord, JsonlAuditSink
+from .errors import InputValidationError, PolicyValidationError
 from .models import Decision, Policy
 from .validation import validate_json_shape
 
@@ -221,31 +222,4 @@ def append_audit_record(path: str | Path, decision: Decision) -> None:
     filesystem permissions for the selected path.
     """
 
-    target = Path(path)
-    if not target.parent.exists():
-        raise AuditLogError(f"audit-log parent directory does not exist: {target.parent}")
-    record = {
-        "decision_id": decision.decision_id,
-        "evaluated_at": decision.evaluated_at,
-        "policy_id": decision.policy_id,
-        "policy_version": decision.policy_version,
-        "outcome": decision.outcome.value,
-        "matched_rules": list(decision.matched_rules),
-        "warning_count": len(decision.warnings),
-    }
-    payload = (json.dumps(record, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
-    flags = os.O_APPEND | os.O_CREAT | os.O_WRONLY
-    if hasattr(os, "O_BINARY"):
-        flags |= os.O_BINARY
-    descriptor: int | None = None
-    try:
-        descriptor = os.open(target, flags, 0o600)
-        written = os.write(descriptor, payload)
-        if written != len(payload):
-            raise OSError(f"short audit-log write: {written} of {len(payload)} bytes")
-        os.fsync(descriptor)
-    except OSError as exc:
-        raise AuditLogError(f"cannot append audit record to {target}: {exc}") from exc
-    finally:
-        if descriptor is not None:
-            os.close(descriptor)
+    JsonlAuditSink(path)(AuditRecord.from_decision(decision))

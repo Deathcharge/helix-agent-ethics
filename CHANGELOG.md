@@ -25,6 +25,9 @@ All notable product changes are recorded here.
   a detached versioned context builder and schema, and a fourteen-case baseline tool policy pack.
 - Version-pinned Samsarix Agent Framework adoption evidence, compatibility fixtures, rollback path,
   and an evidence-backed next milestone for application-owned audit sinks.
+- Frozen, versioned metadata-only `AuditRecord`, synchronous caller-owned `AuditSink`, and
+  `JsonlAuditSink`, with fail-closed pre-authorization delivery, no implicit retries, bounded public
+  construction, and an exportable Draft 2020-12 audit-record schema.
 
 ### Changed
 

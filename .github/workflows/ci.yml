@@ -77,8 +77,9 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-test >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
           /tmp/samsarix-wheel/bin/python - <<'PY'
-          from samsarix_ethics import Policy, ToolGate
+          from samsarix_ethics import AUDIT_RECORD_VERSION, AuditRecord, Policy, ToolGate
 
           policy = Policy.from_dict({
               "schema_version": 1,
@@ -95,7 +96,8 @@ jobs:
                   }],
               }],
           })
-          gate = ToolGate(policy)
+          records: list[AuditRecord] = []
+          gate = ToolGate(policy, audit_sink=records.append)
           result = gate.execute(
               "read_ticket",
               {"ticket_id": "T-100"},
@@ -104,4 +106,6 @@ jobs:
           )
           assert result.value == "executed T-100"
           assert result.decision.allowed
+          assert len(records) == 1
+          assert records[0].audit_record_version == AUDIT_RECORD_VERSION == 1
           PY

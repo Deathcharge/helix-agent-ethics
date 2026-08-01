@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import io
 import json
+from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+import samsarix_ethics.audit as audit_module
 from samsarix_ethics import (
+    AUDIT_RECORD_VERSION,
     AuditLogError,
+    AuditRecord,
     InputValidationError,
+    JsonlAuditSink,
     Outcome,
     Policy,
     PolicyEngine,
@@ -157,9 +162,125 @@ def test_audit_record_excludes_raw_input(tmp_path: Path, policy_document: dict[s
     record = json.loads(audit_path.read_text(encoding="utf-8"))
 
     assert record["outcome"] == "allow"
+    assert record["audit_record_version"] == AUDIT_RECORD_VERSION
     assert record["decision_id"] == decision.decision_id
     assert "secret" not in record
     assert "do-not-log" not in audit_path.read_text(encoding="utf-8")
+
+
+def test_audit_record_is_frozen_versioned_and_detached(
+    policy_document: dict[str, Any],
+) -> None:
+    decision = PolicyEngine(Policy.from_dict(policy_document)).evaluate(
+        {"action": {"operation": "read"}, "secret": "do-not-log"}
+    )
+    record = AuditRecord.from_decision(decision)
+
+    assert record.audit_record_version == 1
+    assert record.outcome == "allow"
+    assert record.matched_rules == decision.matched_rules
+    assert record.warning_count == len(decision.warnings)
+    with pytest.raises(FrozenInstanceError):
+        record.outcome = "deny"  # type: ignore[misc]
+
+    exported = record.to_dict()
+    exported["matched_rules"].append("changed")
+    assert "changed" not in record.matched_rules
+    assert "secret" not in exported
+    assert "do-not-log" not in json.dumps(exported)
+
+
+def test_audit_record_and_jsonl_sink_reject_invalid_objects(tmp_path: Path) -> None:
+    with pytest.raises(TypeError, match="Decision"):
+        AuditRecord.from_decision(object())  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="audit_record_version"):
+        AuditRecord("id", "time", "policy", "1", "allow", (), 0, 2)
+    with pytest.raises(TypeError, match="AuditRecord"):
+        JsonlAuditSink(tmp_path / "audit.jsonl")(object())  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("audit_record_version", True, "audit_record_version"),
+        ("decision_id", "not-a-uuid", "decision_id"),
+        ("evaluated_at", "not-a-time", "evaluated_at"),
+        ("evaluated_at", "20260801T120000+00:00", "RFC 3339"),
+        ("evaluated_at", "2026-08-01T12:00:00", "RFC 3339"),
+        ("evaluated_at", "2026-08-01T12:00:00+99:99", "valid RFC 3339"),
+        ("policy_id", "bad policy", "policy_id"),
+        ("policy_version", "", "policy_version"),
+        ("outcome", "warn", "outcome"),
+        ("matched_rules", ["allow-read"], "tuple"),
+        ("matched_rules", ("allow-read", "allow-read"), "duplicates"),
+        ("matched_rules", ("bad rule",), "identifiers"),
+        ("matched_rules", tuple(f"rule-{index}" for index in range(1_001)), "limit"),
+        ("warning_count", True, "warning_count"),
+        ("warning_count", 1_001, "warning_count"),
+    ],
+)
+def test_audit_record_rejects_invalid_public_fields(
+    policy_document: dict[str, Any], field: str, value: Any, message: str
+) -> None:
+    decision = PolicyEngine(Policy.from_dict(policy_document)).evaluate(
+        {"action": {"operation": "read"}}
+    )
+    record = AuditRecord.from_decision(decision)
+
+    with pytest.raises((TypeError, ValueError), match=message):
+        replace(record, **{field: value})
+
+
+def test_jsonl_audit_sink_exposes_path_and_writes_record(
+    tmp_path: Path, policy_document: dict[str, Any]
+) -> None:
+    path = tmp_path / "audit.jsonl"
+    sink = JsonlAuditSink(path)
+    decision = PolicyEngine(Policy.from_dict(policy_document)).evaluate(
+        {"action": {"operation": "read"}}
+    )
+
+    sink(AuditRecord.from_decision(decision))
+
+    assert sink.path == path
+    assert json.loads(path.read_text(encoding="utf-8"))["decision_id"] == decision.decision_id
+
+
+@pytest.mark.parametrize("failure", ["open", "short-write", "close"])
+def test_jsonl_audit_sink_wraps_write_failures(
+    tmp_path: Path,
+    policy_document: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+    failure: str,
+) -> None:
+    decision = PolicyEngine(Policy.from_dict(policy_document)).evaluate(
+        {"action": {"operation": "read"}}
+    )
+    sink = JsonlAuditSink(tmp_path / "audit.jsonl")
+
+    if failure == "open":
+
+        def fail_open(*_args: Any, **_kwargs: Any) -> int:
+            raise OSError("private filesystem details")
+
+        monkeypatch.setattr(audit_module.os, "open", fail_open)  # type: ignore[attr-defined]
+    elif failure == "short-write":
+        monkeypatch.setattr(
+            audit_module.os,  # type: ignore[attr-defined]
+            "write",
+            lambda *_: 0,
+        )
+    else:
+        real_close = audit_module.os.close  # type: ignore[attr-defined]
+
+        def fail_close(descriptor: int) -> None:
+            real_close(descriptor)
+            raise OSError("private close details")
+
+        monkeypatch.setattr(audit_module.os, "close", fail_close)  # type: ignore[attr-defined]
+
+    with pytest.raises(AuditLogError, match="cannot append audit record"):
+        sink(AuditRecord.from_decision(decision))
 
 
 def test_audit_log_requires_existing_parent(

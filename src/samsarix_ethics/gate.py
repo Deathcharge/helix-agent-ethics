@@ -12,9 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar, cast
 
+from .audit import AuditSink, JsonlAuditSink, _emit_audit_record, _validated_sink
 from .engine import PolicyEngine
 from .errors import InputValidationError, ToolCallDeniedError, ToolCallReviewRequiredError
-from .io import append_audit_record
 from .models import Decision, Outcome, Policy
 from .validation import thaw_json_value, validate_context
 
@@ -94,11 +94,24 @@ class ToolExecutionResult(Generic[_ResultT]):
 class ToolGate:
     """Evaluate and enforce policy immediately before an in-process tool call."""
 
-    def __init__(self, policy: Policy, *, audit_log: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        policy: Policy,
+        *,
+        audit_log: str | Path | None = None,
+        audit_sink: AuditSink | None = None,
+    ) -> None:
         if not isinstance(policy, Policy):
             raise TypeError("policy must be a Policy")
+        if audit_log is not None and audit_sink is not None:
+            raise ValueError("audit_log and audit_sink are mutually exclusive")
         self._engine = PolicyEngine(policy)
-        self._audit_log = audit_log
+        selected_sink: AuditSink | None = None
+        if audit_log is not None:
+            selected_sink = JsonlAuditSink(audit_log)
+        elif audit_sink is not None:
+            selected_sink = _validated_sink(audit_sink)
+        self._audit_sink = selected_sink
 
     @property
     def policy(self) -> Policy:
@@ -108,8 +121,8 @@ class ToolGate:
 
     def _evaluate_context(self, value: Mapping[str, Any]) -> Decision:
         decision = self._engine.evaluate(value)
-        if self._audit_log is not None:
-            append_audit_record(self._audit_log, decision)
+        if self._audit_sink is not None:
+            _emit_audit_record(self._audit_sink, decision)
         return decision
 
     @staticmethod
