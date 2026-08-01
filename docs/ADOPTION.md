@@ -59,7 +59,15 @@ policy distribution:
 
 Agent Ethics should therefore keep making local deterministic decisions and expose one bounded,
 metadata-only record to a caller-supplied sink. The first increment should preserve the current
-JSONL path API, define an immutable public audit-record contract, call at most one configured sink
-per decision, treat sink failure as non-authorization in `ToolGate`, and add no network or runtime
-dependency. HTTP delivery, queues, retries, credentials, retention, and tamper-evident storage stay
-with the embedding application until a concrete adopter validates a narrower requirement.
+JSONL path API and define an immutable public audit-record contract. After computing a decision,
+`ToolGate` should call exactly one configured sink exactly once, before returning that decision as
+authorization or invoking the tool callback. Only a normal `None` return should count as a
+successful write; a non-`None` return or raised exception should become `AuditLogError` and prevent
+execution.
+
+The library should not retry a sink. Re-evaluating a call creates another decision and audit record;
+a sink that retries after an uncertain external commit may also deliver the same `decision_id`
+more than once. Idempotency, HTTP delivery, queues, retries, credentials, retention, and
+tamper-evident storage therefore stay with the embedding application until a concrete adopter
+validates a narrower requirement. The built-in JSONL path remains the local sink and retains its
+current fail-closed behavior.
