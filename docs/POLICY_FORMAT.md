@@ -77,10 +77,10 @@ All conditions in a rule must be true.
 | --- | --- |
 | `eq`, `neq` | equality or inequality |
 | `exists`, `not_exists` | dotted field presence |
-| `in`, `not_in` | input field is/is not a member of the policy array |
+| `in`, `not_in` | input field is/is not a member of the policy array; literal values must be arrays |
 | `contains`, `not_contains` | input array contains/does not contain the policy value |
 | `starts_with`, `ends_with` | string prefix or suffix |
-| `gt`, `gte`, `lt`, `lte` | same-type number or string comparison; booleans rejected |
+| `gt`, `gte`, `lt`, `lte` | numeric comparison across integers/floats, or string comparison; booleans rejected |
 
 Missing ordinary input fields make a condition false. A missing `$ref` is an evaluation error,
 because silently ignoring a cross-field comparison could weaken the policy.

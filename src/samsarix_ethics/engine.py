@@ -96,10 +96,10 @@ def _evaluate_condition(context: Mapping[str, Any], condition: PolicyCondition) 
     if operator in {"gt", "gte", "lt", "lte"}:
         if isinstance(actual, bool) or isinstance(expected, bool):
             raise EvaluationError(f"operator {operator!r} does not accept booleans")
-        if not isinstance(actual, (int, float, str)) or not isinstance(expected, type(actual)):
-            raise EvaluationError(
-                f"operator {operator!r} requires comparable values of the same type"
-            )
+        numeric_pair = isinstance(actual, (int, float)) and isinstance(expected, (int, float))
+        string_pair = isinstance(actual, str) and isinstance(expected, str)
+        if not (numeric_pair or string_pair):
+            raise EvaluationError(f"operator {operator!r} requires two numbers or two strings")
         if operator == "gt":
             return bool(actual > expected)
         if operator == "gte":

@@ -6,16 +6,17 @@ This roadmap separates four gates: merge, release, publication, and flagship ado
 
 Portfolio role: **reusable library or sdk**. Keep this as a small, independently versioned package. Samsarix Unified should consume it only through a public API adapter; private monorepo imports and copied implementations are out of scope.
 
-Current disposition: Merge the productization branch after exact-head verification and rollback-ref creation; release and adoption remain separate decisions.
+Current disposition: The productized baseline is merged. Release, publication, and flagship
+adoption remain separate evidence-based decisions.
 
 ## Stabilize the productized default
 
 - Keep the default branch buildable from a clean checkout and preserve exact-head CI evidence.
 - Keep Samsarix LLC branding, package identity, license metadata, and compatibility aliases internally consistent.
 - Preserve the pre-productization default under a rollback ref before merging; do not delete legacy history.
-- Review priority: Approve license/name.
-- Review priority: run CI and installed-wheel CLI.
 - Review priority: publish policy schema and one fail-closed integration.
+- Review priority: add policy test fixtures and batch evaluation for CI and pre-deployment use.
+- Review priority: publish focused policy packs for high-value agent tool boundaries.
 
 ## Release candidate
 
@@ -25,8 +26,9 @@ Current disposition: Merge the productization branch after exact-head verificati
 
 Current hardening backlog:
 
-- Material BSL-to-Apache relicensing decision is embedded in the agent diff.
-- No published package/release, installed-wheel smoke test, policy JSON Schema, or downstream integration evidence.
+- No published package/release, policy JSON Schema, or downstream integration evidence.
+- Installed-wheel smoke coverage exists locally and in CI, but publication provenance and signing
+  are not yet configured.
 - The “ethics” name may still overpromise relative to a deterministic authorization/policy gate.
 - Local audit logs are operational records, not tamper-evident compliance evidence.
 - Migration from any surviving `helix_ethics` callers is destructive; old compatibility imports are not retained.
