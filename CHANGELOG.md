@@ -50,8 +50,8 @@ All notable product changes are recorded here.
   atomic output writes, and a support-agent example that centrally combines organization
   guardrails with application permissions while retaining the ordinary policy toolchain.
 - Baseline-authoritative shadow policy evaluation API/CLI, strict versioned input-free telemetry,
-  exact baseline/candidate provenance, candidate error observation, shared comparison semantics,
-  and a runnable restricted-data rollout example.
+  exact baseline/candidate provenance and engine durations, candidate error observation, shared
+  comparison semantics, and a runnable restricted-data rollout example.
 
 ### Changed
 

@@ -87,16 +87,18 @@ and authorization flags.
 
 Both snapshots include policy ID, version, exact fingerprint, and—on successful evaluation—the
 decision ID, UTC evaluation time, outcome, matched-rule IDs, warning count, and evaluated-rule
-count. A candidate error snapshot retains policy provenance while making every unavailable
-decision field null.
+count. Each snapshot also records its engine evaluation time as monotonic
+`evaluation_duration_ns`; candidate-error snapshots retain the time spent before failure while
+making every unavailable decision field null. This measures policy evaluation, not input loading,
+telemetry delivery, or end-to-end action latency.
 
 ## Privacy and trust boundary
 
 `to_dict()` excludes the complete action input, reason text, and warning text. It still exposes
 operator-authored policy/rule identifiers, decision IDs, timestamps, fingerprints, outcomes,
-counts, and candidate error messages. Treat these as operational metadata. Keep secrets and
-personal data out of identifiers; route telemetry through an application-owned sink with suitable
-access, masking, retention, and integrity controls.
+counts, engine durations, and candidate error messages. Treat these as operational metadata. Keep
+secrets and personal data out of identifiers; route telemetry through an application-owned sink
+with suitable access, masking, retention, and integrity controls.
 
 The exact fingerprint proves which policy content ran. It does not prove who approved or deployed
 that content. The application owns authenticated policy distribution, baseline pinning, rollout
@@ -108,8 +110,9 @@ assignment, durable telemetry, and promotion/rollback decisions.
 2. Compare baseline and candidate over the maintained suite and review every authorization change.
 3. Pin the approved baseline and candidate by exact fingerprint in deployment configuration.
 4. Shadow a caller-selected sample while continuing to enforce only `authoritative_decision`.
-5. Monitor candidate errors, authorization-change rates, and operation-specific impact outside
-   this library. Do not place raw action input in the telemetry envelope.
+5. Monitor candidate errors, authorization-change rates, per-policy evaluation duration, and
+   operation-specific impact outside this library. Do not place raw action input in the telemetry
+   envelope.
 6. Expand sampling only after latency and error budgets are healthy.
 7. Promote through the application's normal reviewed deployment mechanism, retaining the prior
    policy for rollback.

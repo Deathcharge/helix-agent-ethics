@@ -77,6 +77,8 @@ def test_shadow_candidate_changes_never_replace_authoritative_decision() -> None
     assert serialized["authoritative"]["outcome"] == "allow"
     assert serialized["candidate"]["outcome"] == "review"
     assert serialized["candidate"]["error"] is None
+    assert serialized["authoritative"]["evaluation_duration_ns"] >= 0
+    assert serialized["candidate"]["evaluation_duration_ns"] >= 0
     payload = json.dumps(serialized)
     assert "top-secret-input" not in payload
     assert "Baseline permits reads." not in payload
@@ -136,6 +138,7 @@ def test_candidate_domain_error_is_observational_after_successful_baseline() -> 
         "to be an array"
     )
     assert result.candidate.decision_id is None
+    assert result.candidate.evaluation_duration_ns >= 0
     assert "private-scalar" not in json.dumps(result.to_dict())
 
 
@@ -167,6 +170,18 @@ def test_unexpected_candidate_failure_is_not_silently_downgraded(
     monkeypatch.setattr(evaluator._candidate_engine, "evaluate", fail_unexpectedly)
     with pytest.raises(RuntimeError, match="programmer failure"):
         evaluator.evaluate({})
+
+
+def test_shadow_records_separate_monotonic_evaluation_durations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ticks = iter((100, 175, 200, 260))
+    monkeypatch.setattr("samsarix_ethics.shadow.perf_counter_ns", lambda: next(ticks))
+
+    result = PolicyShadowEvaluator(_policy("baseline"), _policy("candidate")).evaluate({})
+
+    assert result.authoritative.evaluation_duration_ns == 75
+    assert result.candidate.evaluation_duration_ns == 60
 
 
 def test_shadow_and_offline_comparison_use_identical_change_semantics() -> None:
@@ -216,4 +231,9 @@ def test_shadow_public_type_contracts() -> None:
     with pytest.raises(InputValidationError, match="must be a JSON object"):
         PolicyShadowEvaluator(policy, policy).evaluate([])  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="decision must be a Decision"):
-        PolicyShadowSnapshot.from_decision(object())  # type: ignore[arg-type]
+        PolicyShadowSnapshot.from_decision(  # type: ignore[arg-type]
+            object(), evaluation_duration_ns=0
+        )
+    decision = PolicyShadowEvaluator(policy, policy).evaluate({}).authoritative_decision
+    with pytest.raises(ValueError, match="must be a non-negative integer"):
+        PolicyShadowSnapshot.from_decision(decision, evaluation_duration_ns=True)

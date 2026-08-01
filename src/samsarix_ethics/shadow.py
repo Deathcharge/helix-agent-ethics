@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from time import perf_counter_ns
 from typing import Any, cast
 
 from ._decision_observation import decision_change_names
@@ -50,14 +51,26 @@ class PolicyShadowSnapshot:
     matched_rules: tuple[str, ...]
     warning_count: int | None
     evaluated_rules: int | None
+    evaluation_duration_ns: int
     error: str | None
 
     @classmethod
-    def from_decision(cls, decision: Decision) -> PolicyShadowSnapshot:
+    def from_decision(
+        cls,
+        decision: Decision,
+        *,
+        evaluation_duration_ns: int,
+    ) -> PolicyShadowSnapshot:
         """Build a minimized snapshot from a successful decision."""
 
         if not isinstance(decision, Decision):
             raise TypeError("decision must be a Decision")
+        if (
+            isinstance(evaluation_duration_ns, bool)
+            or not isinstance(evaluation_duration_ns, int)
+            or evaluation_duration_ns < 0
+        ):
+            raise ValueError("evaluation_duration_ns must be a non-negative integer")
         return cls(
             policy_id=decision.policy_id,
             policy_version=decision.policy_version,
@@ -68,6 +81,7 @@ class PolicyShadowSnapshot:
             matched_rules=decision.matched_rules,
             warning_count=len(decision.warnings),
             evaluated_rules=decision.evaluated_rules,
+            evaluation_duration_ns=evaluation_duration_ns,
             error=None,
         )
 
@@ -84,6 +98,7 @@ class PolicyShadowSnapshot:
             "matched_rules": list(self.matched_rules),
             "warning_count": self.warning_count,
             "evaluated_rules": self.evaluated_rules,
+            "evaluation_duration_ns": self.evaluation_duration_ns,
             "error": self.error,
         }
 
@@ -93,6 +108,7 @@ class PolicyShadowEvaluation:
     """One baseline decision paired with observational candidate telemetry."""
 
     authoritative_decision: Decision
+    authoritative: PolicyShadowSnapshot
     candidate_decision: Decision | None
     candidate: PolicyShadowSnapshot
     status: PolicyShadowStatus
@@ -113,9 +129,7 @@ class PolicyShadowEvaluation:
             "status": self.status.value,
             "changes": [change.value for change in self.changes],
             "authorization_changed": self.authorization_changed,
-            "authoritative": PolicyShadowSnapshot.from_decision(
-                self.authoritative_decision
-            ).to_dict(),
+            "authoritative": self.authoritative.to_dict(),
             "candidate": self.candidate.to_dict(),
         }
 
@@ -155,10 +169,18 @@ class PolicyShadowEvaluator:
 
         validated = validate_context(context)
         detached = cast(Mapping[str, Any], thaw_json_value(validated))
+        baseline_started_ns = perf_counter_ns()
         authoritative_decision = self._baseline_engine.evaluate(detached)
+        baseline_duration_ns = perf_counter_ns() - baseline_started_ns
+        authoritative_snapshot = PolicyShadowSnapshot.from_decision(
+            authoritative_decision,
+            evaluation_duration_ns=baseline_duration_ns,
+        )
+        candidate_started_ns = perf_counter_ns()
         try:
             candidate_decision = self._candidate_engine.evaluate(detached)
         except SamsarixEthicsError as exc:
+            candidate_duration_ns = perf_counter_ns() - candidate_started_ns
             candidate_snapshot = PolicyShadowSnapshot(
                 policy_id=self.candidate_policy.id,
                 policy_version=self.candidate_policy.version,
@@ -169,24 +191,31 @@ class PolicyShadowEvaluator:
                 matched_rules=(),
                 warning_count=None,
                 evaluated_rules=None,
+                evaluation_duration_ns=candidate_duration_ns,
                 error=str(exc),
             )
             return PolicyShadowEvaluation(
                 authoritative_decision=authoritative_decision,
+                authoritative=authoritative_snapshot,
                 candidate_decision=None,
                 candidate=candidate_snapshot,
                 status=PolicyShadowStatus.ERROR,
                 changes=(),
             )
 
+        candidate_duration_ns = perf_counter_ns() - candidate_started_ns
         changes = tuple(
             PolicyShadowChange(change)
             for change in decision_change_names(authoritative_decision, candidate_decision)
         )
         return PolicyShadowEvaluation(
             authoritative_decision=authoritative_decision,
+            authoritative=authoritative_snapshot,
             candidate_decision=candidate_decision,
-            candidate=PolicyShadowSnapshot.from_decision(candidate_decision),
+            candidate=PolicyShadowSnapshot.from_decision(
+                candidate_decision,
+                evaluation_duration_ns=candidate_duration_ns,
+            ),
             status=PolicyShadowStatus.CHANGED if changes else PolicyShadowStatus.UNCHANGED,
             changes=changes,
         )

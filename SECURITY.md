@@ -51,8 +51,9 @@ values, but expose source and target IDs, versions, rule counts, and exact finge
 those fingerprints as operational metadata and equality oracles, not author signatures or
 freshness evidence. Composition does not fetch, authenticate, sign, distribute, or activate policy.
 Shadow reports also omit reason and warning text, but expose decision IDs/timestamps and candidate
-errors. A successful baseline remains authoritative when the candidate changes or raises a domain
-error; candidate health must therefore be monitored independently of the authorization result.
+errors plus per-policy evaluation durations. A successful baseline remains authoritative when the
+candidate changes or raises a domain error; candidate health must therefore be monitored
+independently of the authorization result.
 Shadow evaluation is synchronous and may add latency or resource use. The package does not sample,
 queue, persist telemetry, promote candidates, or roll back policies.
 Caller-supplied audit sinks are trusted application code invoked synchronously before authorization;

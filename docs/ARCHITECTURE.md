@@ -95,8 +95,9 @@ Candidate domain errors become explicit observational telemetry; unexpected exce
 visible. Offline comparison and live shadowing share one definition of observable change so their
 outcome, matched-rule, warning-count, and message-change semantics cannot drift. Shadow reports add
 decision IDs and timestamps for live correlation while excluding input and message text. They bind
-both policies to exact fingerprints. The synchronous candidate work can add latency and resource
-use; sampling, queues, monitoring, activation, and rollback are caller-owned control-plane work.
+both policies to exact fingerprints and measure each engine call with a monotonic nanosecond
+duration. The synchronous candidate work can add latency and resource use; sampling, queues,
+monitoring, activation, and rollback are caller-owned control-plane work.
 
 ### Deny and review override allow
 

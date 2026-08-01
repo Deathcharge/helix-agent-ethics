@@ -271,20 +271,24 @@ def _render_shadow_evaluation(
     if output_format == "json":
         return json.dumps(evaluation.to_dict(), indent=2, sort_keys=True)
     authoritative = evaluation.authoritative_decision
+    authoritative_snapshot = evaluation.authoritative
     candidate = evaluation.candidate
     lines = [
         f"Authoritative: {authoritative.policy_id}@{authoritative.policy_version} "
         f"({authoritative.policy_fingerprint}) -> {authoritative.outcome.value.upper()} "
-        f"(decision {authoritative.decision_id})",
+        f"(decision {authoritative.decision_id}; "
+        f"evaluation {authoritative_snapshot.evaluation_duration_ns} ns)",
         f"Candidate: {candidate.policy_id}@{candidate.policy_version} "
         f"({candidate.policy_fingerprint})",
     ]
     if candidate.error is not None:
-        lines.append(f"Candidate error: {candidate.error}")
+        lines.append(
+            f"Candidate error after {candidate.evaluation_duration_ns} ns: {candidate.error}"
+        )
     elif candidate.outcome is not None:
         lines.append(
             f"Candidate observation: {candidate.outcome.value.upper()} "
-            f"(decision {candidate.decision_id})"
+            f"(decision {candidate.decision_id}; evaluation {candidate.evaluation_duration_ns} ns)"
         )
     changes = ", ".join(change.value for change in evaluation.changes) or "none"
     lines.append(f"Shadow status: {evaluation.status.value.upper()}; changes: {changes}")

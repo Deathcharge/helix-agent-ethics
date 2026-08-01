@@ -105,7 +105,9 @@ and warning messages. `authorization_changed` is true exactly when the outcome c
 `candidate` is the frozen input-free `PolicyShadowSnapshot`. It always retains candidate policy
 ID, version, and exact fingerprint. A successful snapshot also carries decision ID, evaluation
 time, outcome, matched-rule IDs, warning count, and evaluated-rule count. An error snapshot carries
-the bounded engine error while unavailable decision fields are null.
+the bounded engine error while unavailable decision fields are null. Both snapshot forms include
+the monotonic engine-only `evaluation_duration_ns`; candidate errors retain time spent before the
+failure.
 
 `to_dict()` returns the `POLICY_SHADOW_VERSION` (currently `1`) report with successful baseline
 and candidate snapshots. It excludes the complete input and all reason/warning text; those message

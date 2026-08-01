@@ -596,6 +596,8 @@ def test_shadow_command_keeps_baseline_exit_authoritative_and_omits_input(
     assert payload["authorization_changed"] is True
     assert payload["authoritative"]["outcome"] == "allow"
     assert payload["candidate"]["outcome"] == "review"
+    assert payload["authoritative"]["evaluation_duration_ns"] >= 0
+    assert payload["candidate"]["evaluation_duration_ns"] >= 0
     assert "never-print-shadow-input" not in changed.stdout
     assert "Candidate review text" not in changed.stdout
     assert denied.returncode == 3
@@ -659,7 +661,7 @@ def test_shadow_command_candidate_error_does_not_override_baseline_allow(
     assert "requires the input field to be an array" in payload["candidate"]["error"]
     assert "candidate-error-secret" not in result.stdout
     assert text_result.returncode == 0
-    assert "Candidate error:" in text_result.stdout
+    assert "Candidate error after" in text_result.stdout
     assert "Shadow status: ERROR; changes: none" in text_result.stdout
 
 

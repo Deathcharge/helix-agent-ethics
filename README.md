@@ -195,8 +195,9 @@ samsarix-ethics shadow \
 
 The report observes baseline `allow` versus candidate `review`, but exits `0` because the baseline
 alone controls authorization. Candidate changes and errors are telemetry, not exit-code overrides;
-monitor the JSON `status` separately. The versioned report excludes the action input and all
-reason/warning text. See the [shadow rollout guide](docs/POLICY_SHADOWING.md).
+monitor the JSON `status` separately. Each snapshot includes engine-only nanosecond duration for
+latency comparison. The versioned report excludes the action input and all reason/warning text.
+See the [shadow rollout guide](docs/POLICY_SHADOWING.md).
 
 ## Python API
 

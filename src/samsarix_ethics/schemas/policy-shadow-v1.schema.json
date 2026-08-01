@@ -107,6 +107,7 @@
         "matched_rules",
         "warning_count",
         "evaluated_rules",
+        "evaluation_duration_ns",
         "error"
       ],
       "properties": {
@@ -119,6 +120,7 @@
         "matched_rules": {"$ref": "#/$defs/matched_rules"},
         "warning_count": {"type": ["integer", "null"], "minimum": 0, "maximum": 1000},
         "evaluated_rules": {"type": ["integer", "null"], "minimum": 0, "maximum": 1000},
+        "evaluation_duration_ns": {"type": "integer", "minimum": 0},
         "error": {"type": ["string", "null"], "minLength": 1, "maxLength": 1000}
       }
     },
