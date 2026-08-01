@@ -25,6 +25,7 @@ from .errors import (
 from .gate import (
     MAX_TOOL_CAPABILITIES,
     TOOL_CONTEXT_VERSION,
+    BoundToolGate,
     ToolExecutionResult,
     ToolGate,
     build_tool_context,
@@ -65,6 +66,7 @@ __all__ = [
     "AuditLogError",
     "AuditRecord",
     "AuditSink",
+    "BoundToolGate",
     "Decision",
     "Effect",
     "EvaluationError",

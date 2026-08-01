@@ -27,7 +27,8 @@ the legacy `helix-unified` repository.
 - `io.py`: bounded UTF-8 JSON parsing, safe sample generation, and the legacy audit helper.
 - `schema.py` and `schemas/`: offline access to versioned Draft 2020-12 contracts.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
-- `gate.py`: normalized tool-call contexts and fail-closed sync/async callback enforcement.
+- `gate.py`: normalized tool-call contexts, immutable registration bindings, and fail-closed
+  sync/async callback enforcement.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
 - `__init__.py`: deliberate public Python API.
 
@@ -93,6 +94,8 @@ authorization and risk facts can be re-read.
 - **Bound approval records** prove only that application-supplied approval evidence matches the
   exact proposed call. The application authenticates the reviewer and protects durable approval
   state against forgery and replay.
+- **Bound tool metadata** is application-owned registration state. A `BoundToolGate` freezes the
+  name and capabilities used at enforcement; remote protocol annotations remain untrusted hints.
 - **Filesystem/audit operator** owns access control, transport, idempotency, rotation, retention,
   backups, and tamper detection for audit destinations.
 

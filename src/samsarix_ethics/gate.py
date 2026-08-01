@@ -188,6 +188,16 @@ class ToolGate:
 
         return self._engine.policy
 
+    def bind(
+        self,
+        tool_name: str,
+        *,
+        capabilities: Iterable[str] = (),
+    ) -> BoundToolGate:
+        """Bind trusted tool identity and capabilities once at registration time."""
+
+        return BoundToolGate(self, tool_name, capabilities)
+
     def _evaluate_context(self, value: Mapping[str, Any]) -> Decision:
         decision = self._engine.evaluate(value)
         if self._audit_sink is not None:
@@ -339,4 +349,156 @@ class ToolGate:
         return ToolExecutionResult(
             decision=decision,
             value=await executor(prepared_arguments),
+        )
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class BoundToolGate:
+    """A gate with immutable application-owned tool identity and capabilities."""
+
+    _gate: ToolGate
+    _tool_name: str
+    _capabilities: tuple[str, ...]
+
+    def __init__(
+        self,
+        gate: ToolGate,
+        tool_name: str,
+        capabilities: Iterable[str] = (),
+    ) -> None:
+        if not isinstance(gate, ToolGate):
+            raise TypeError("gate must be a ToolGate")
+        if not isinstance(tool_name, str) or not _TOOL_IDENTIFIER.fullmatch(tool_name):
+            raise InputValidationError("tool name must be a 1-128 character identifier")
+        object.__setattr__(self, "_gate", gate)
+        object.__setattr__(self, "_tool_name", tool_name)
+        object.__setattr__(self, "_capabilities", tuple(_capability_list(capabilities)))
+
+    @property
+    def gate(self) -> ToolGate:
+        """Return the parent policy gate."""
+
+        return self._gate
+
+    @property
+    def policy(self) -> Policy:
+        """Return the immutable policy used by the parent gate."""
+
+        return self._gate.policy
+
+    @property
+    def tool_name(self) -> str:
+        """Return the registered tool name."""
+
+        return self._tool_name
+
+    @property
+    def capabilities(self) -> tuple[str, ...]:
+        """Return the canonical immutable capability labels."""
+
+        return self._capabilities
+
+    def fingerprint(
+        self,
+        tool_call_id: str,
+        arguments: Mapping[str, Any],
+        *,
+        actor: Mapping[str, Any] | None = None,
+    ) -> str:
+        """Fingerprint one call using this binding's trusted metadata."""
+
+        return fingerprint_tool_call(
+            tool_call_id,
+            self._tool_name,
+            arguments,
+            capabilities=self._capabilities,
+            actor=actor,
+        )
+
+    def evaluate(
+        self,
+        arguments: Mapping[str, Any],
+        *,
+        actor: Mapping[str, Any] | None = None,
+        context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
+    ) -> Decision:
+        """Evaluate one call using this binding's trusted metadata."""
+
+        return self._gate.evaluate(
+            self._tool_name,
+            arguments,
+            capabilities=self._capabilities,
+            actor=actor,
+            context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
+        )
+
+    def enforce(
+        self,
+        arguments: Mapping[str, Any],
+        *,
+        actor: Mapping[str, Any] | None = None,
+        context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
+    ) -> Decision:
+        """Require an allow decision using this binding's trusted metadata."""
+
+        return self._gate.enforce(
+            self._tool_name,
+            arguments,
+            capabilities=self._capabilities,
+            actor=actor,
+            context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
+        )
+
+    def execute(
+        self,
+        arguments: Mapping[str, Any],
+        executor: Callable[[dict[str, Any]], _ResultT],
+        *,
+        actor: Mapping[str, Any] | None = None,
+        context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
+    ) -> ToolExecutionResult[_ResultT]:
+        """Authorize and execute with immutable registered tool metadata."""
+
+        return self._gate.execute(
+            self._tool_name,
+            arguments,
+            executor,
+            capabilities=self._capabilities,
+            actor=actor,
+            context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
+        )
+
+    async def execute_async(
+        self,
+        arguments: Mapping[str, Any],
+        executor: Callable[[dict[str, Any]], Awaitable[_ResultT]],
+        *,
+        actor: Mapping[str, Any] | None = None,
+        context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
+    ) -> ToolExecutionResult[_ResultT]:
+        """Authorize and await execution with immutable registered tool metadata."""
+
+        return await self._gate.execute_async(
+            self._tool_name,
+            arguments,
+            executor,
+            capabilities=self._capabilities,
+            actor=actor,
+            context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
         )

@@ -82,6 +82,8 @@ The `context.approval` field is reserved and cannot be injected through ordinary
 
 Provides a fail-closed boundary immediately before an in-process side effect:
 
+- `bind(tool_name, *, capabilities=()) -> BoundToolGate` validates and freezes trusted
+  registration metadata once;
 - `evaluate(...) -> Decision` evaluates the normalized call and optionally appends audit metadata;
 - `enforce(...) -> Decision` returns only an allow decision, otherwise raising a typed block;
 - `execute(..., executor, ...) -> ToolExecutionResult[T]` invokes a callback with the detached,
@@ -102,6 +104,17 @@ messages. If configured audit persistence fails, `AuditLogError` propagates befo
 `audit_log` and `audit_sink` are mutually exclusive. A custom sink must be a synchronous callable
 that accepts one `AuditRecord` and returns `None`; any other return or raised exception prevents the
 decision from authorizing a callback. The package invokes the sink exactly once and never retries.
+
+### `BoundToolGate`
+
+The frozen object returned by `ToolGate.bind(...)`. Its `tool_name` and canonical immutable
+`capabilities` tuple cannot be supplied or changed per invocation. It exposes `gate` and `policy`
+properties plus `fingerprint(tool_call_id, arguments, *, actor=None)`, `evaluate`, `enforce`,
+`execute`, and `execute_async`. The latter four accept the same actor, context, call-ID, and approval
+keywords as `ToolGate`, but take only arguments (and an executor where applicable).
+
+Use a trusted application registry to select a binding. This prevents model or protocol payloads
+from downgrading capability labels, but it does not establish that remote tool metadata is honest.
 
 ## Models
 

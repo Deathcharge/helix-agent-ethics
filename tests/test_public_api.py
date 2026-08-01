@@ -12,6 +12,7 @@ def test_public_api_is_importable() -> None:
     assert "SamsarixEthicsError" in samsarix_ethics.__all__
     assert "validate_context" in samsarix_ethics.__all__
     assert "ToolGate" in samsarix_ethics.__all__
+    assert "BoundToolGate" in samsarix_ethics.__all__
     assert "ToolCallBlockedError" in samsarix_ethics.__all__
     assert "get_tool_context_schema" in samsarix_ethics.__all__
     assert "get_tool_approval_schema" in samsarix_ethics.__all__

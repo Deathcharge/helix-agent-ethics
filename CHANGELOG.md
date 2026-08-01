@@ -32,6 +32,8 @@ All notable product changes are recorded here.
   build-provenance attestations for distributions built from `main`.
 - Immutable structured `ToolCallApproval` records, bounded deterministic exact-call fingerprints,
   fail-closed binding in every `ToolGate` path, and an exportable Draft 2020-12 approval schema.
+- Frozen `BoundToolGate` registration profiles that keep application-owned tool names and canonical
+  capability labels out of untrusted per-call payloads across sync, async, and approval flows.
 
 ### Changed
 

@@ -47,6 +47,26 @@ uses `review`. Its allow rules also require the complete capability array to be 
 recognized baseline labels, so adding an unknown label to an otherwise allowed call cannot inherit
 that allow.
 
+## Registration-time binding
+
+Prefer binding the application-owned tool name and capabilities once when a tool is registered:
+
+```python
+gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
+send_email = gate.bind("send_email", capabilities=["external:write"])
+```
+
+The returned frozen `BoundToolGate` exposes `fingerprint`, `evaluate`, `enforce`, `execute`, and
+`execute_async` without per-call tool-name or capability parameters. Its canonical capability tuple
+is detached from the input iterable. This makes the secure integration shape easier: untrusted
+model or protocol call data supplies the arguments and framework call ID, while the application
+selects the pre-registered binding by tool name.
+
+Keep the binding registry on the trusted side of the application. MCP annotations such as
+`readOnlyHint` and `destructiveHint` are explicitly hints; do not translate annotations from an
+untrusted server directly into authorization capabilities. Direct `ToolGate` methods remain
+available for framework adapters whose own trusted registry already owns this metadata.
+
 ## Synchronous enforcement
 
 ```python
@@ -55,7 +75,6 @@ from samsarix_ethics import (
     ToolCallDeniedError,
     ToolCallReviewRequiredError,
     ToolGate,
-    fingerprint_tool_call,
     load_policy,
 )
 
@@ -63,30 +82,22 @@ gate = ToolGate(
     load_policy("examples/policies/tool-call-baseline.json"),
     audit_log="decisions.jsonl",
 )
+send_email = gate.bind("send_email", capabilities=["external:write"])
 
 call_id = "call_01JXYZ"
 arguments = {"to": "customer@example.com", "subject": "Case update"}
-capabilities = ["external:write"]
 actor = {"id": "support-agent"}
 
 # Create and persist this fingerprint with the pending call before review.
-pending_fingerprint = fingerprint_tool_call(
-    call_id,
-    "send_email",
-    arguments,
-    capabilities=capabilities,
-    actor=actor,
-)
+pending_fingerprint = send_email.fingerprint(call_id, arguments, actor=actor)
 
 # Construct this only after an authenticated reviewer approves the stored pending call.
 approval = ToolCallApproval(call_id, True, pending_fingerprint)
 
 try:
-    result = gate.execute(
-        "send_email",
+    result = send_email.execute(
         arguments,
         lambda arguments: mailer.send(**arguments),
-        capabilities=capabilities,
         actor=actor,
         tool_call_id=call_id,
         approval=approval,
@@ -125,24 +136,26 @@ Export the record's Draft 2020-12 contract with
 `execute_async` has identical decision behavior and awaits an async callback:
 
 ```python
-result = await gate.execute_async(
-    "read_ticket",
+read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
+result = await read_ticket.execute_async(
     {"ticket_id": "T-100"},
     lambda arguments: ticket_client.read(arguments["ticket_id"]),
-    capabilities=["resource:read"],
 )
 ```
 
 ## Existing tool registries
 
-Keep the registry as the canonical executor and put the gate directly in front of its public call:
+Keep the registry as the canonical executor and create bindings from its trusted registration
+metadata:
 
 ```python
-result = gate.execute(
-    "read_ticket",
+bindings = {
+    "read_ticket": gate.bind("read_ticket", capabilities=["resource:read"]),
+}
+binding = bindings[requested_tool_name]
+result = binding.execute(
     {"ticket_id": "T-100"},
-    lambda arguments: registry.call("read_ticket", **arguments),
-    capabilities=["resource:read"],
+    lambda arguments: registry.call(binding.tool_name, **arguments),
     actor={"id": current_agent_id},
 )
 ```
