@@ -1,6 +1,6 @@
 # Productization record
 
-Last updated: 2026-07-28
+Last updated: 2026-08-01
 
 ## Current repository assessment
 
@@ -146,7 +146,9 @@ certification or ethics truth.
 
 - [ ] Publish a standalone JSON Schema and editor integration for policy authoring.
 - [ ] Add property-based precedence/parser tests if another dependency is justified.
-- [ ] Add an optional caller-supplied audit sink interface for centralized logging.
+- [ ] Add an optional caller-supplied audit sink interface for centralized logging. This is the
+  next selected increment after downstream adoption; preserve JSONL compatibility and fail closed
+  on configured sink errors.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [ ] Add policy-set composition/version migration after real adopter feedback.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
@@ -166,6 +168,7 @@ certification or ethics truth.
 - [x] Add CI for Python 3.11-3.14 and package build checks.
 - [x] Replace stale documentation and add examples, security guidance, and changelog.
 - [x] Complete final build, wheel install, command walkthrough, security scan, and adversarial review.
+- [x] Prove the tool gate in a consumer-owned Agent Framework contract at an exact source commit.
 
 ## Release acceptance criteria
 
@@ -184,7 +187,7 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 67 real tests; latest local run: 67 passed, 93.39% branch coverage.
+- Added 136 real tests; latest local run: 136 passed, 93.86% branch coverage.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
@@ -203,6 +206,12 @@ certification or ethics truth.
   and productization documentation.
 - Added monitored support/conduct/security paths, GitHub issue forms, code ownership, and a
   security-aware pull request template; confirmed GitHub private vulnerability reporting is enabled.
+- Added versioned schemas, bounded batch evaluation, policy regression suites, a fail-closed sync
+  and async `ToolGate`, a fourteen-case capability policy pack, and the `subset_of` operator.
+- Merged a consumer-owned Agent Framework contract at consumer commit
+  `02fe13ae102359958b8a02d125a41abaa814d472`, pinned to Agent Ethics
+  `eb69207b14ddd79bdfe774ec5b166c8ca8ce940e`; the private consumer's 106-test suite and installed
+  wheel checks passed on its supported integration matrix.
 
 ## Deferred and blocked work
 
@@ -212,7 +221,6 @@ Owner controlled:
 
 External validation gates:
 
-- Observe the first GitHub Actions matrix on Python 3.11-3.14.
 - Gather feedback from at least one real embedding application before declaring a stable `1.0` API.
 
 ## Known risks
@@ -223,7 +231,9 @@ External validation gates:
 - File permissions and retention vary by operating system and are caller responsibilities.
 - Python dependency tooling resolves transitive development dependencies; exact direct pins reduce
   drift but do not constitute a fully hashed supply-chain lock.
-- License ambiguity blocks an honest public release disposition.
+- Package-index ownership, release provenance/signing, and historical ownership authority remain
+  owner checks before publication; the current tree consistently uses Apache-2.0 with NOTICE and
+  separate trademark guidance.
 
 ## Distribution and sustainability
 

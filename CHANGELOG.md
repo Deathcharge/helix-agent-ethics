@@ -23,6 +23,8 @@ All notable product changes are recorded here.
   privacy-minimized test reports, and a five-case real policy example.
 - Dependency-free `ToolGate` enforcement for sync and async callbacks, typed deny/review errors,
   a detached versioned context builder and schema, and a fourteen-case baseline tool policy pack.
+- Version-pinned Samsarix Agent Framework adoption evidence, compatibility fixtures, rollback path,
+  and an evidence-backed next milestone for application-owned audit sinks.
 
 ### Changed
 

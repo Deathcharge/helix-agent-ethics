@@ -158,6 +158,19 @@ tool. See the [tool-call integration guide](docs/TOOL_CALLS.md), [API reference]
 
 Run the dependency-free demonstration with `python examples/tool_gate_demo.py`.
 
+## Downstream adoption
+
+Samsarix Agent Framework is the first verified downstream consumer. Its optional policy registry
+pins Agent Ethics `0.1.0` at source commit `eb69207b14ddd79bdfe774ec5b166c8ca8ce940e`, binds trusted
+capabilities outside model arguments, re-reads authentication/approval facts for every call, and
+blocks execution on every non-allow outcome or gate failure. The consumer contract runs on Python
+3.11-3.14 while the framework's dependency-free core retains Python 3.10 support.
+
+The consumer repository is private as of 2026-08-01, so this is Samsarix-owned integration
+evidence rather than a public third-party case study or production deployment. Exact commits,
+compatibility, rollback, support level, and evidence limits are recorded in
+[adoption and compatibility evidence](docs/ADOPTION.md).
+
 ## Decision semantics
 
 - Every rule is evaluated; all conditions in a rule must match.
