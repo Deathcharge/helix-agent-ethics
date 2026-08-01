@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/policy-lint/v1.json",
+  "title": "Samsarix Agent Ethics policy lint report v1",
+  "description": "Value-minimized deterministic authoring diagnostics for one validated policy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "lint_version",
+    "policy_id",
+    "policy_version",
+    "policy_fingerprint",
+    "fail_on",
+    "total_findings",
+    "security_warnings",
+    "warnings",
+    "suggestions",
+    "blocking_findings",
+    "passed",
+    "findings"
+  ],
+  "properties": {
+    "lint_version": {"const": 1},
+    "policy_id": {"$ref": "#/$defs/identifier"},
+    "policy_version": {"$ref": "#/$defs/identifier"},
+    "policy_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "fail_on": {"enum": ["none", "security-warning", "warning", "suggestion"]},
+    "total_findings": {"$ref": "#/$defs/count"},
+    "security_warnings": {"$ref": "#/$defs/count"},
+    "warnings": {"$ref": "#/$defs/count"},
+    "suggestions": {"$ref": "#/$defs/count"},
+    "blocking_findings": {"$ref": "#/$defs/count"},
+    "passed": {"type": "boolean"},
+    "findings": {
+      "type": "array",
+      "maxItems": 20000,
+      "items": {"$ref": "#/$defs/finding"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20000
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message", "rule_id", "condition_indices"],
+      "properties": {
+        "code": {"enum": ["SAE001", "SAE002", "SAE101", "SAE201", "SAE202"]},
+        "severity": {"enum": ["security-warning", "warning", "suggestion"]},
+        "message": {"type": "string", "minLength": 1, "maxLength": 200},
+        "rule_id": {
+          "anyOf": [
+            {"$ref": "#/$defs/identifier"},
+            {"type": "null"}
+          ]
+        },
+        "condition_indices": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 0, "maximum": 31}
+        }
+      }
+    }
+  }
+}

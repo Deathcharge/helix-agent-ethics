@@ -144,12 +144,12 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_policy_coverage_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
+### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_policy_coverage_schema()`, `get_policy_lint_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
-suites, comparison and coverage reports, the normalized tool-call context, bound approval records, and
-metadata-only audit records. These calls perform no network access and callers may mutate the
-returned value without changing future calls.
+suites, comparison, coverage, and lint reports, the normalized tool-call context, bound approval
+records, and metadata-only audit records. These calls perform no network access and callers may
+mutate the returned value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`
 
@@ -165,6 +165,24 @@ every raw case input. `successful` is true only when all cases pass.
 
 `PolicyTestCase`, `PolicyTestSuite`, `PolicyTestResult`, and `PolicyTestReport` are frozen public
 models with JSON-serializable `to_dict()` methods.
+
+## Policy authoring diagnostics
+
+### `lint_policy(policy, *, fail_on=PolicyLintSeverity.SECURITY_WARNING) -> PolicyLintReport`
+
+Returns stable, value-minimized findings for a validated policy. `fail_on` accepts a
+`PolicyLintSeverity` or `None`; `passed` is false when a finding at or above the selected severity
+exists. `None` reports without blocking. The report includes `POLICY_LINT_VERSION` (currently `1`),
+policy identity/fingerprint, severity counts, blocking count, and frozen `PolicyLintFinding`
+objects with a `PolicyLintCode`, rule ID, and zero-based condition indices.
+
+The analyzer reports default/unconditional allow, provably contradictory same-field conditions,
+semantically duplicate conditions, and missing authored messages. It does not serialize condition
+values or rule messages, infer an application schema, or guess about dynamic `$ref` equality.
+
+The CLI equivalent is `samsarix-ethics lint POLICY --fail-on SEVERITY`. It exits `0` when the
+selected gate passes, `1` for blocking findings, and `2` for invalid input or invocation. See
+[POLICY_LINTING.md](POLICY_LINTING.md) for stable code definitions and limitations.
 
 ## Policy rule coverage
 

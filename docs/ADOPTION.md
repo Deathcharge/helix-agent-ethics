@@ -139,3 +139,17 @@ This is deliberately rule-match coverage rather than a stronger safety claim. On
 an entire rule without testing each condition boundary, and overridden rules count as covered when
 they match. The consumer must retain its compatibility assertions and negative/boundary cases; any
 consumer adoption of this new contract remains a separately scoped source-pin update.
+
+## Implemented gap: deterministic authoring diagnostics
+
+Coverage cannot explain why a rule is unexercised, and schema validation intentionally accepts
+semantically unusual but well-formed policies. Following OPA strict/lint guidance and IAM Access
+Analyzer's severity categories, Agent Ethics now reports five stable policy-authoring findings:
+permissive defaults, unconditional allows, provably impossible same-field conditions, duplicate
+conditions, and missing authored explanations. CI can fail at security-warning, warning, or
+suggestion severity.
+
+The analyzer never copies condition values or rule messages into findings and does not infer a
+consumer domain schema. Dynamic references are skipped unless a contradiction is independently
+certain. This makes the report safe to adopt as an additional consumer gate, but it cannot replace
+consumer-owned authorization tests, review, or least-privilege analysis.

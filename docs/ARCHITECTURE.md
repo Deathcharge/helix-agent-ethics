@@ -30,6 +30,7 @@ the legacy `helix-unified` repository.
 - `testing.py`: bounded regression suites and input-free aggregate reports.
 - `comparison.py`: deterministic, input-free baseline/candidate impact reports.
 - `coverage.py`: deterministic, input-free rule and outcome coverage with CI thresholds.
+- `diagnostics.py`: stable, value-minimized policy authoring findings and severity gates.
 - `gate.py`: normalized tool-call contexts, immutable registration bindings, and fail-closed
   sync/async callback enforcement.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
@@ -68,6 +69,11 @@ matched-rule IDs, and preserves policy declaration order in covered/uncovered li
 warning rules still count when matched; errored cases get no partial credit and fail the threshold.
 Outcome counts make default-only behavior visible, but rule coverage is not path, condition, or
 input-space coverage.
+
+Diagnostics operate only on the validated immutable policy. They recognize fixed permissive,
+contradictory, duplicate, and missing-explanation shapes; no condition value is copied into a
+finding. Same-field literal equality/membership reasoning matches engine JSON equality, including
+the distinction between booleans and numbers, while dynamic references are not guessed.
 
 ### Deny and review override allow
 

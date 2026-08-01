@@ -44,6 +44,8 @@ All notable product changes are recorded here.
   CI exit behavior, and a runnable sensitive-read rollout example.
 - Versioned, privacy-minimized policy rule-coverage API, CLI, schema, exact CI threshold behavior,
   and a 100%-covered twelve-rule tool-policy example.
+- Versioned, value-minimized policy authoring diagnostics with five stable finding codes, explicit
+  severity gates, a bundled report schema, and strict checks over every example policy.
 
 ### Changed
 
