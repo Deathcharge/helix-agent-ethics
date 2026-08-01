@@ -149,21 +149,25 @@ local and CI toolchain:
 ```bash
 python -m venv .venv
 python -m pip install --require-hashes -r requirements-dev.lock
-python -m pip install --no-deps -e .
+python -m pip install --no-build-isolation --no-deps -e .
 python -m ruff format --check .
 python -m ruff check .
 python -m mypy
 python -m pytest
-python -m build
+python -m build --no-isolation
 python -m twine check dist/*
 ```
+
+The lock includes the build backend. Development installs and release checks disable build
+isolation so no unverified build dependency is fetched outside that lock.
 
 CI runs formatting, linting, strict type checking, tests with a 90% coverage gate, and package
 build checks. Compatibility tests cover Python 3.11 through 3.14.
 
 ## Packaging and release
 
-Build artifacts locally with `python -m build`. Publication is intentionally not automated and has
+Build artifacts locally with `python -m build --no-isolation` after installing the locked
+toolchain. Publication is intentionally not automated and has
 not been performed. The `samsarix-agent-ethics` distribution name was unclaimed on PyPI when this
 release candidate was prepared, but availability is not a reservation. Test the wheel in a clean
 environment as described in [docs/PRODUCTIZATION.md](docs/PRODUCTIZATION.md) before publishing.

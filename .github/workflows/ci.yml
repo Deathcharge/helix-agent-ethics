@@ -37,7 +37,7 @@ jobs:
       - name: Install locked development dependencies
         run: |
           python -m pip install --require-hashes -r requirements-dev.lock
-          python -m pip install --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps -e .
       - name: Test
         run: python -m pytest
       - name: Check formatting
@@ -51,7 +51,7 @@ jobs:
         run: python -m mypy
       - name: Build distributions
         if: matrix.python-version == '3.11'
-        run: python -m build
+        run: python -m build --no-isolation
       - name: Validate distributions
         if: matrix.python-version == '3.11'
         run: python -m twine check dist/*

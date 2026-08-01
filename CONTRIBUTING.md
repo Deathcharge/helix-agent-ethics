@@ -16,12 +16,14 @@ Activate the environment, then install the pinned toolchain:
 
 ```bash
 python -m pip install --require-hashes -r requirements-dev.lock
-python -m pip install --no-deps -e .
+python -m pip install --no-build-isolation --no-deps -e .
 ```
 
 `requirements-dev.txt` is the human-maintained source list. Regenerate the cross-platform lock with
 `uv pip compile --universal --python-version 3.11 --generate-hashes requirements-dev.txt -o requirements-dev.lock`
-and review the resulting dependency changes before committing them.
+and review the resulting dependency changes before committing them. The lock includes the build
+backend, so development installs and release checks disable build isolation to keep every installed
+tool inside the hash-verified dependency boundary.
 
 ## Required checks
 
@@ -30,7 +32,7 @@ python -m ruff format --check .
 python -m ruff check .
 python -m mypy
 python -m pytest
-python -m build
+python -m build --no-isolation
 python -m twine check dist/*
 ```
 
