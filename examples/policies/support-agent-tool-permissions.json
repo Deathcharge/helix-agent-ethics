@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "support-agent-tool-permissions",
+  "version": "1.0.0",
+  "description": "Application permissions and sensitive-data warning for a support agent.",
+  "default_effect": "review",
+  "rules": [
+    {
+      "id": "allow-approved-destructive",
+      "effect": "allow",
+      "priority": 100,
+      "message": "The destructive tool call has explicit approval.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "destructive"},
+        {
+          "field": "action.capabilities",
+          "operator": "subset_of",
+          "value": ["resource:read", "destructive", "external:write", "data:sensitive"]
+        },
+        {"field": "context.approval.approved", "operator": "eq", "value": true}
+      ]
+    },
+    {
+      "id": "allow-approved-external",
+      "effect": "allow",
+      "priority": 100,
+      "message": "The external side effect has explicit approval.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "external:write"},
+        {
+          "field": "action.capabilities",
+          "operator": "subset_of",
+          "value": ["resource:read", "destructive", "external:write", "data:sensitive"]
+        },
+        {"field": "context.approval.approved", "operator": "eq", "value": true}
+      ]
+    },
+    {
+      "id": "allow-read",
+      "effect": "allow",
+      "priority": 100,
+      "message": "Read-only tool calls are allowed.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "resource:read"},
+        {
+          "field": "action.capabilities",
+          "operator": "subset_of",
+          "value": ["resource:read", "destructive", "external:write", "data:sensitive"]
+        }
+      ]
+    },
+    {
+      "id": "warn-sensitive-data",
+      "effect": "warn",
+      "priority": 200,
+      "message": "The tool call may access sensitive data.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "data:sensitive"}
+      ]
+    }
+  ]
+}

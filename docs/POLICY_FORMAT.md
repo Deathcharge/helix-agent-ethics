@@ -137,13 +137,14 @@ securely.
 ## JSON Schema
 
 The wheel contains Draft 2020-12 schemas for policies, policy-test suites, policy-comparison,
-policy-coverage, and policy-lint reports, normalized tool-call contexts, bound approval records,
-and audit records. Print fresh copies without a network request:
+policy-composition, policy-coverage, and policy-lint reports, normalized tool-call contexts, bound
+approval records, and audit records. Print fresh copies without a network request:
 
 ```bash
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
+samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
@@ -153,6 +154,23 @@ samsarix-ethics schema audit-record > audit-record-v1.schema.json
 
 The runtime model remains authoritative for constraints JSON Schema cannot express conveniently,
 including unique rule IDs, bounded aggregate container size, and unique case names.
+
+## Composing policy ownership layers
+
+Compose ordered organization and application sources into a normal policy before deployment:
+
+```bash
+samsarix-ethics compose --id deployed --version 1 \
+  --policy organization-guardrails.json \
+  --policy application-permissions.json \
+  --output deployed.json
+```
+
+Sources must use distinct policy IDs, globally distinct rule IDs, and one shared default effect.
+Rules are concatenated without rewriting, then the complete output is validated against the same
+policy and 1 MiB serialized-file contract. The versioned report contains only identity,
+fingerprint, and rule-count metadata.
+See [POLICY_COMPOSITION.md](POLICY_COMPOSITION.md).
 
 ## Testing a policy
 

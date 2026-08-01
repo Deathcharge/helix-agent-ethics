@@ -153,3 +153,23 @@ The analyzer never copies condition values, descriptions, or rule messages into 
 not infer a consumer domain schema. Dynamic references are skipped unless a contradiction is
 independently certain. This makes the report safe to adopt as an additional consumer gate, but it
 cannot replace consumer-owned authorization tests, review, or least-privilege analysis.
+
+## Implemented gap: layered policy ownership
+
+One application policy is sufficient for a prototype but forces organization guardrails and
+application permissions into the same ownership unit. Cedar authorization combines matching
+policies with forbid-overrides behavior, Verified Permissions groups validated policies in an
+application or tenant policy store, and OPA recommends central aggregation when policy comes from
+multiple sources.
+
+Agent Ethics now provides a bounded central composition step rather than a runtime policy store.
+It concatenates 1-32 ordered validated sources only when source IDs and all rule IDs are unique and
+every source shares one default effect. The output is an ordinary `Policy`, so existing gates,
+regression suites, coverage, lint, comparison, fingerprints, and audit records need no alternate
+runtime path. A versioned report records each source fingerprint and rule count without copying
+paths, descriptions, messages, rules, conditions, or values.
+
+The bundled support-agent case composes organization tool guardrails with application permissions
+into the existing twelve-rule baseline; its fourteen-case suite reaches 100% rule coverage across
+allow, deny, and review. This proves deterministic build-time layering, not remote distribution,
+policy signing, tenant selection, author authentication, hot reload, or source migration.

@@ -68,7 +68,9 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-coverage|policy-lint|tool-context|tool-approval|audit-record]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-lint|tool-context|tool-approval|audit-record]
+samsarix-ethics compose --id ID --version VERSION --policy SOURCE.json [--policy SOURCE.json ...] \
+                        --output POLICY.json [--description TEXT] [--force] [--format text|json]
 samsarix-ethics lint POLICY.json [--fail-on none|security-warning|warning|suggestion]
                               [--format text|json]
 samsarix-ethics test --policy POLICY.json TESTS.json [--format text|json]
@@ -108,12 +110,31 @@ Print the versioned Draft 2020-12 schemas for editors, CI, or code generation:
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
+samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```
+
+Compose organization-owned guardrails with application-owned permissions into one ordinary policy:
+
+```bash
+samsarix-ethics compose \
+  --id tool-call-baseline \
+  --version 1.0.0 \
+  --description "Fail-closed baseline for read, destructive, external, and sensitive tool capabilities." \
+  --policy examples/policies/organization-tool-guardrails.json \
+  --policy examples/policies/support-agent-tool-permissions.json \
+  --output composed-policy.json
+```
+
+Sources must share a default effect and have globally unique rule IDs. The command writes the
+deployable policy atomically and reports exact source/output fingerprints without copying paths,
+descriptions, rules, conditions, messages, or values. The result works with every existing command;
+the bundled fourteen-case support-agent suite reaches 100% of its twelve composed rules. See the
+[layered policy composition guide](docs/POLICY_COMPOSITION.md).
 
 Lint a valid policy for a deliberately small set of deterministic authoring risks:
 
@@ -165,6 +186,7 @@ See the [policy impact comparison guide](docs/POLICY_COMPARISON.md).
 from samsarix_ethics import (
     PolicyEngine,
     compare_policies,
+    compose_policies,
     load_policy,
     load_policy_test_suite,
     lint_policy,
@@ -197,6 +219,17 @@ impact = compare_policies(policy, candidate, suite)
 print(coverage.coverage_percent, coverage.threshold_met)
 print(lint_report.passed, len(lint_report.findings))
 print(impact.authorization_changes, impact.metadata_only_changes)
+
+composition = compose_policies(
+    [
+        load_policy("examples/policies/organization-tool-guardrails.json"),
+        load_policy("examples/policies/support-agent-tool-permissions.json"),
+    ],
+    policy_id="tool-call-baseline",
+    policy_version="1.0.0",
+    description="Fail-closed baseline for support-agent tools.",
+)
+print(composition.policy_fingerprint, composition.to_dict()["sources"])
 ```
 
 For an in-process tool boundary, `ToolGate` turns non-allow outcomes into typed exceptions and
@@ -309,6 +342,8 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
   every condition boundary or possible input was tested.
 - Policy lint reports only certain authoring patterns and omits condition values; a clean report is
   not proof that permissions match business intent.
+- Policy composition rejects ambiguous defaults and identifiers and reports only source/target
+  metadata; it does not authenticate, distribute, sign, or activate policy.
 - There is no expression evaluation, regex engine, template expansion, dynamic import, shell
   execution, network request, database, or secret requirement.
 - Optional audit JSONL includes decision metadata and matched rule IDs, never the raw input.
@@ -362,7 +397,7 @@ before any registry upload.
 The product is a library plus CLI; it has no server or cloud component. The package separates
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
 versioned schemas, bounded I/O, authoring diagnostics, regression testing, rule coverage, policy
-impact comparison, and presentation/exit codes.
+impact comparison, layered composition, and presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
 Deliberate limitations:

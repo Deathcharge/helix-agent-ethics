@@ -29,6 +29,8 @@ adoption remain separate evidence-based decisions.
   expectations cannot silently leave policy branches unexercised.
 - [x] Add stable severity-coded authoring diagnostics without condition-value disclosure or
   heuristic claims about application intent.
+- [x] Add deterministic central composition for organization guardrails plus application
+  permissions, with exact source provenance and one ordinary deployable policy artifact.
 
 ## Release candidate
 

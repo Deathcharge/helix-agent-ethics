@@ -54,6 +54,12 @@ def get_policy_lint_schema() -> dict[str, Any]:
     return _load_schema("policy-lint-v1.schema.json")
 
 
+def get_policy_composition_schema() -> dict[str, Any]:
+    """Return a fresh copy of the policy-composition version 1 JSON Schema."""
+
+    return _load_schema("policy-composition-v1.schema.json")
+
+
 def get_tool_context_schema() -> dict[str, Any]:
     """Return a fresh copy of the tool-call context version 1 JSON Schema."""
 

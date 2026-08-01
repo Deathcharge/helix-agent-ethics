@@ -52,7 +52,17 @@ samsarix-ethics test --policy examples/policies/safe-agent-actions.json examples
 The five cases cover allow, deny, review, missing approval, and warning behavior. All pass and the
 command exits `0`; an unmet expectation or evaluation error exits `1`.
 
-## 5. Measure policy rule coverage
+## 5. Compose organization and application layers
+
+```bash
+samsarix-ethics compose --id tool-call-baseline --version 1.0.0 --description "Fail-closed baseline for read, destructive, external, and sensitive tool capabilities." --policy examples/policies/organization-tool-guardrails.json --policy examples/policies/support-agent-tool-permissions.json --output composed-policy.json
+```
+
+This build-time step combines eight organization-owned guardrails with four support-agent rules.
+It emits one ordinary policy plus a value-minimized source-provenance report. Existing output is
+never replaced without `--force`. See [layered policy composition](POLICY_COMPOSITION.md).
+
+## 6. Measure policy rule coverage
 
 ```bash
 samsarix-ethics coverage --policy examples/policies/tool-call-baseline.json examples/tests/tool-call-baseline.tests.json --threshold 100
@@ -62,7 +72,7 @@ The tool-call suite matches all twelve rules and observes allow, deny, and revie
 threshold or encountering an evaluation error exits `1`; the report never includes fixture inputs.
 See [policy rule coverage](POLICY_COVERAGE.md).
 
-## 6. Compare a candidate before rollout
+## 7. Compare a candidate before rollout
 
 ```bash
 samsarix-ethics compare --baseline examples/policies/safe-agent-actions.json --candidate examples/policies/safe-agent-actions-candidate.json examples/tests/safe-agent-actions.tests.json
@@ -72,7 +82,7 @@ The candidate keeps four cases unchanged and moves one sensitive read from `allo
 The report excludes inputs and exits `1` because observable behavior changed. Review that impact
 before adopting the candidate. See [policy impact comparison](POLICY_COMPARISON.md).
 
-## 7. Evaluate an allowed action
+## 8. Evaluate an allowed action
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json
@@ -81,7 +91,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 The JSON result has `outcome: allow`, `allowed: true`, a new `decision_id`, the policy version, and
 the matching rule explanation. The command exits `0`.
 
-## 8. Observe safe denial
+## 9. Observe safe denial
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/delete-resource.json
@@ -90,7 +100,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 The example lacks human approval, so the deny rule wins and the command exits `3`. This nonzero
 exit is intentional and suitable for shell or CI gates.
 
-## 9. Add a privacy-minimized audit record
+## 10. Add a privacy-minimized audit record
 
 ```bash
 samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input examples/actions/read-resource.json --audit-log decisions.jsonl
@@ -101,7 +111,7 @@ samsarix-ethics check --policy examples/policies/safe-agent-actions.json --input
 reuses a policy version label. Decide access, rotation, retention, and deletion policy before
 enabling this in a real application.
 
-## 10. Enforce a real tool callback
+## 11. Enforce a real tool callback
 
 The bundled tool policy treats read-only work as allowed, destructive work without approval as
 denied, external writes as reviewable, and unknown capabilities as reviewable:
@@ -127,7 +137,7 @@ samsarix-ethics test --policy examples/policies/tool-call-baseline.json examples
 
 See [tool-call integrations](TOOL_CALLS.md) before connecting an agent runtime.
 
-## 11. Start a policy of your own
+## 12. Start a policy of your own
 
 ```bash
 samsarix-ethics init my-policy.json
@@ -143,6 +153,7 @@ To configure an editor or external validator, export the versioned schemas:
 samsarix-ethics schema policy > policy-v1.schema.json
 samsarix-ethics schema policy-test > policy-test-v1.schema.json
 samsarix-ethics schema policy-comparison > policy-comparison-v1.schema.json
+samsarix-ethics schema policy-composition > policy-composition-v1.schema.json
 samsarix-ethics schema policy-coverage > policy-coverage-v1.schema.json
 samsarix-ethics schema policy-lint > policy-lint-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json

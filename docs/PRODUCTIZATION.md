@@ -116,6 +116,13 @@ Bounded review used current primary sources:
   [IAM Access Analyzer validation](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-validation.html)
   separates security warnings, warnings, and suggestions. A small certain-finding set is safer for
   this schema-free language than inferred business-intent diagnostics.
+- [Cedar authorization](https://docs.cedarpolicy.com/auth/authorization.html) evaluates every
+  supplied policy, lets a satisfied forbid override permits, and defaults to deny when no permit
+  matches. [Verified Permissions policy stores](https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/policy-stores.html)
+  group validated policies per application or tenant, while
+  [OPA bundles](https://www.openpolicyagent.org/docs/management-bundles) recommend central
+  aggregation when policy comes from multiple sources. A bounded build-time composer can support
+  separate guardrail/application ownership without adding a runtime control plane.
 - Official `actions/upload-artifact` v6+ and `actions/download-artifact` v7+ releases use the
   Node 24 action runtime required by current GitHub-hosted runners.
 - Official [`actions/attest-build-provenance` v4 release guidance](https://github.com/actions/attest-build-provenance/releases/tag/v4.1.1)
@@ -207,7 +214,9 @@ certification or ethics truth.
 - [x] Add stable, value-minimized authoring diagnostics for permissive defaults, unconditional
   allows, provably impossible/duplicate conditions, and missing explanations.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
-- [ ] Add policy-set composition/version migration after real adopter feedback.
+- [x] Add deterministic central policy-set composition with common-default and global-ID checks,
+  value-minimized source provenance, and an ordinary deployable policy result.
+- [ ] Add policy-format version migration only after a second format and adopter need exist.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
 
 ## Implementation checklist
@@ -244,7 +253,7 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 235 real tests; latest local run: 235 passed, 96.23% total coverage with branch measurement.
+- Added 247 real tests; latest local run: 247 passed, 96.43% total coverage with branch measurement.
 - Rebuilt the final wheel and source distribution, passed `twine check`, and verified the wheel in
   an isolated environment: install/import/version/validate/allow exited `0`, deny exited `3`,
   review exited `4`, and the audit record excluded raw input.
@@ -279,6 +288,9 @@ certification or ethics truth.
   included twelve-rule tool policy demonstrates 100% rule coverage across all three outcomes.
 - Added a versioned policy-lint report/API/CLI/schema with five stable finding codes and explicit
   severity gates; every bundled policy passes the strict suggestion-level CI gate.
+- Added bounded layered policy composition with atomic CLI output and exact source provenance. The
+  existing twelve-rule support-agent policy is reproducibly assembled from eight organization
+  guardrails and four application rules, then validated by its fourteen-case 100%-coverage suite.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -307,6 +319,8 @@ External validation gates:
   condition boundary, precedence interaction, type, or possible input was tested.
 - A clean lint report covers a deliberately small set of certain authoring patterns, not application
   intent, least privilege, domain-schema correctness, or exhaustive reachability.
+- Composition proves deterministic aggregation of trusted source artifacts, not source authorship,
+  safe distribution, freshness, tenant isolation, or correctness of the combined business policy.
 - The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own

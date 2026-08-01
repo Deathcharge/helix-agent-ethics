@@ -60,6 +60,32 @@ provenance. Serialization streams through the hash without building a second enc
 `PolicyEngine`, `ToolGate`, and `BoundToolGate` expose the same precomputed value as
 `policy_fingerprint`; callers should use this helper instead of implementing their own serializer.
 
+### `write_policy(path, policy, *, force=False) -> Path`
+
+Atomically writes a validated `Policy` as UTF-8 JSON and returns the resolved output path. It
+refuses to overwrite an existing path unless `force=True` and requires the parent directory to
+exist. Raises `PolicyValidationError` for caller-correctable filesystem failures.
+
+## Layered policy composition
+
+### `compose_policies(policies, *, policy_id, policy_version, description="") -> PolicyComposition`
+
+Combines 1-`MAX_COMPOSED_POLICIES` (32) validated policies in supplied order. Source IDs and all
+rule IDs must be unique, all sources must share one `default_effect`, and the result must remain
+within the normal 1,000-rule, 1 MiB serialized, and structural policy limits. Violations raise
+`PolicyCompositionError`; incorrect Python argument types raise `TypeError`.
+
+`PolicyComposition.policy` is an ordinary immutable `Policy`, so it can immediately enter
+`PolicyEngine`, `ToolGate`, lint, regression, coverage, and comparison workflows.
+`PolicyComposition.sources` is an ordered tuple of frozen `PolicyCompositionSource` records.
+`policy_fingerprint` exposes the target's canonical fingerprint. `to_dict()` returns a versioned
+report with target/source IDs, versions, fingerprints and rule counts, but no paths, descriptions,
+rules, conditions, messages, or values.
+
+The CLI equivalent is `samsarix-ethics compose --id ... --version ... --policy SOURCE ...
+--output TARGET`. Output replacement requires `--force`. See
+[POLICY_COMPOSITION.md](POLICY_COMPOSITION.md) for the complete contract and support-agent example.
+
 ## Tool-call enforcement
 
 ### `fingerprint_tool_call(tool_call_id, tool_name, arguments, *, capabilities=(), actor=None)`
@@ -144,12 +170,12 @@ runs.
 
 ## Schemas and policy regression tests
 
-### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_policy_coverage_schema()`, `get_policy_lint_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
+### `get_policy_schema()`, `get_policy_test_schema()`, `get_policy_comparison_schema()`, `get_policy_composition_schema()`, `get_policy_coverage_schema()`, `get_policy_lint_schema()`, `get_tool_context_schema()`, `get_tool_approval_schema()`, and `get_audit_record_schema()`
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, regression
-suites, comparison, coverage, and lint reports, the normalized tool-call context, bound approval
-records, and metadata-only audit records. These calls perform no network access and callers may
-mutate the returned value without changing future calls.
+suites, comparison, composition, coverage, and lint reports, the normalized tool-call context,
+bound approval records, and metadata-only audit records. These calls perform no network access and
+callers may mutate the returned value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`
 
@@ -267,10 +293,10 @@ Raises `AuditLogError` on failure.
 
 ## Error hierarchy
 
-`PolicyValidationError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
-`AuditLogError`, and the tool-call enforcement errors derive from `SamsarixEthicsError`. The base
-class and specialized errors are exported from `samsarix_ethics` and defined in
-`samsarix_ethics.errors`.
+`PolicyValidationError`, `PolicyCompositionError`, `PolicyTestValidationError`,
+`InputValidationError`, `EvaluationError`, `AuditLogError`, and the tool-call enforcement errors
+derive from `SamsarixEthicsError`. The base class and specialized errors are exported from
+`samsarix_ethics` and defined in `samsarix_ethics.errors`.
 
 ## Compatibility
 
