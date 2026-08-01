@@ -99,20 +99,20 @@ jobs:
           })
           records: list[AuditRecord] = []
           gate = ToolGate(policy, audit_sink=records.append)
-          result = gate.execute(
-              "read_ticket",
+          read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
+          result = read_ticket.execute(
               {"ticket_id": "T-100"},
               lambda arguments: f"executed {arguments['ticket_id']}",
-              capabilities=["resource:read"],
           )
           assert result.value == "executed T-100"
           assert result.decision.allowed
+          assert read_ticket.capabilities == ("resource:read",)
           assert len(records) == 1
           assert records[0].audit_record_version == AUDIT_RECORD_VERSION == 1
           PY
       - name: Upload verified distributions
         if: matrix.python-version == '3.11'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: python-distributions-${{ github.sha }}
           path: dist/*
@@ -132,7 +132,7 @@ jobs:
 
     steps:
       - name: Download verified distributions
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: python-distributions-${{ github.sha }}
           path: dist

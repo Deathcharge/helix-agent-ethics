@@ -91,6 +91,8 @@ Bounded review used current primary sources:
   execution interception to registered tool objects rather than trusting model-supplied metadata.
 - The [MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema) explicitly says
   tool annotations are hints and must not drive decisions when their server is untrusted.
+- Official `actions/upload-artifact` v6+ and `actions/download-artifact` v7+ releases use the
+  Node 24 action runtime required by current GitHub-hosted runners.
 
 Consequent decisions: validate before use; deny/review override allow; expose reasons and a decision
 ID; omit raw input from audit records; preserve a first-class human-review outcome; do not claim
@@ -164,6 +166,8 @@ certification or ethics truth.
   capabilities, and actor before allowing a resumed call.
 - [x] Add immutable registration-time tool bindings so per-call payloads cannot downgrade trusted
   tool identity or capability labels.
+- [x] Migrate artifact retention/provenance jobs off the deprecated Node 20 action runtime and add
+  automated GitHub Actions update proposals.
 - [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
 - [ ] Add policy-set composition/version migration after real adopter feedback.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
