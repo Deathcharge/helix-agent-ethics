@@ -345,6 +345,7 @@ def test_policy_deployment_create_verify_and_explicit_overwrite(
     assert document["deployment_lock"]["policy"]["fingerprint"].startswith("v1:sha256:")
 
     verified = _run_cli("deployment", "verify", str(output_path))
+    verified_json = _run_cli("deployment", "verify", str(output_path), "--format", "json")
     checked = _run_cli(
         "check",
         "--deployment",
@@ -381,10 +382,22 @@ def test_policy_deployment_create_verify_and_explicit_overwrite(
         "--output",
         str(output_path),
         "--force",
+        "--format",
+        "json",
     )
 
     assert verified.returncode == 0
     assert "Verified policy deployment" in verified.stdout
+    assert verified_json.returncode == 0
+    verified_summary = json.loads(verified_json.stdout)
+    assert verified_summary == {
+        "context_contract": document["deployment_lock"]["context_contract"],
+        "lock_verified": True,
+        "output": None,
+        "policy": document["deployment_lock"]["policy"],
+    }
+    assert "Private deployment contract" not in verified_json.stdout
+    assert '"rules"' not in verified_json.stdout
     assert checked.returncode == 0
     assert json.loads(checked.stdout)["outcome"] == "allow"
     assert explained.returncode == 0
@@ -397,6 +410,11 @@ def test_policy_deployment_create_verify_and_explicit_overwrite(
     assert refused.returncode == 2
     assert "refusing to overwrite" in refused.stderr
     assert replaced.returncode == 0
+    replaced_summary = json.loads(replaced.stdout)
+    assert replaced_summary["policy"] == document["deployment_lock"]["policy"]
+    assert replaced_summary["context_contract"] is None
+    assert replaced_summary["lock_verified"] is True
+    assert replaced_summary["output"] == str(output_path.resolve())
     assert json.loads(output_path.read_text(encoding="utf-8"))["context_contract"] is None
 
     broken = deepcopy(document)

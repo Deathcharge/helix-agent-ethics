@@ -55,6 +55,10 @@ Verification strictly parses every nested model, rejects unknown top-level field
 the policy/contract lock. It exits `2` on malformed JSON, bounds violations, invalid nested
 artifacts, contract incompatibility, or any lock mismatch.
 
+Both deployment subcommands accept `--format json` for automation. Structured output contains
+only policy and optional contract identity/fingerprint metadata, `lock_verified`, and the created
+output path when applicable; it never copies rules, values, descriptions, or messages.
+
 Export the self-contained Draft 2020-12 schema without network access:
 
 ```bash
@@ -97,10 +101,13 @@ contract can compute a matching lock and deployment. Protect the one file with r
 least-privilege storage, immutable digests, signed release identity, and deployment authorization.
 
 For OCI distribution, assign an organization-controlled artifact type, push the JSON file as one
-layer, deploy by immutable digest rather than mutable tag, and verify the expected repository plus
-digest before loading. If signatures are required, verify them before calling
-`load_policy_deployment`; this package does not execute ORAS/Cosign, manage keys, accept trust roots,
-or interpret identity claims.
+layer, and deploy by immutable digest rather than mutable tag. Download to a temporary path and
+verify the expected repository, digest, and any required signature over those exact bytes. Keep
+the verified path immutable or atomically publish that same verified file to its final protected
+path before calling `load_policy_deployment`; do not verify a writable path and then reopen it
+after another process could replace it. This package does not execute ORAS/Cosign, manage keys,
+accept trust roots, or interpret identity claims. See the TOCTOU responsibility in
+[`SECURITY.md`](../SECURITY.md).
 
 The atomic writer protects one local pathname operation. It does not make network transfer,
 object-store replication, multi-host rollout, or process restart atomic. The embedding system owns

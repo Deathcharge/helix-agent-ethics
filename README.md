@@ -73,8 +73,8 @@ samsarix-ethics explain (--policy POLICY.json [--context-contract CONTRACT.json]
 samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
 samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
 samsarix-ethics deployment create --policy POLICY.json [--context-contract CONTRACT.json] \
-                                  --output DEPLOYMENT.json [--force]
-samsarix-ethics deployment verify DEPLOYMENT.json
+                                  --output DEPLOYMENT.json [--force] [--format text|json]
+samsarix-ethics deployment verify DEPLOYMENT.json [--format text|json]
 samsarix-ethics compose --id ID --version VERSION --policy SOURCE.json [--policy SOURCE.json ...] \
                         --output POLICY.json [--description TEXT] [--force] [--format text|json]
 samsarix-ethics lint POLICY.json [--fail-on none|security-warning|warning|suggestion]

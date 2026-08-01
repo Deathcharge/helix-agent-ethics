@@ -276,25 +276,15 @@ def write_policy_deployment(
 
     if not isinstance(deployment, PolicyDeployment):
         raise TypeError("deployment must be a PolicyDeployment")
-    encoder = json.JSONEncoder(allow_nan=False, ensure_ascii=True, indent=2, sort_keys=False)
-    payload = bytearray()
-    try:
-        for part in encoder.iterencode(deployment.to_dict()):
-            chunk = part.encode("ascii")
-            if len(payload) + len(chunk) + 1 > MAX_POLICY_DEPLOYMENT_BYTES:
-                raise PolicyDeploymentValidationError(
-                    "policy deployment exceeds the byte limit of "
-                    f"{MAX_POLICY_DEPLOYMENT_BYTES} when serialized"
-                )
-            payload.extend(chunk)
-    except (TypeError, ValueError, UnicodeError) as exc:
-        raise PolicyDeploymentValidationError(
-            f"policy deployment cannot be serialized: {type(exc).__name__}"
-        ) from exc
-    payload.extend(b"\n")
+    payload = serialize_policy_document(
+        deployment.to_dict(),
+        label="policy deployment",
+        max_bytes=MAX_POLICY_DEPLOYMENT_BYTES,
+        error_type=PolicyDeploymentValidationError,
+    )
     return _write_atomic_payload(
         path,
-        bytes(payload),
+        payload,
         force=force,
         label="policy deployment",
         error_type=PolicyDeploymentValidationError,

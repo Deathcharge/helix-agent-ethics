@@ -153,11 +153,12 @@ Serializes the complete deployment deterministically, flushes a temporary file, 
 installs it. It refuses an existing or concurrently won target unless `force=True`; forced output
 uses atomic replacement. The parent directory must already exist.
 
-`samsarix-ethics deployment create/verify` exposes the same workflow, while `check` and `explain`
-can consume the deployment directly with `--deployment`. Those evaluation commands reject
-separate contract or lock arguments in deployment mode. The CLI reports only exact artifact
-metadata and lock status, not policy content. The deployment proves internal equality, not
-authorship, freshness, transport security, or approval. See
+`samsarix-ethics deployment create/verify` exposes the same workflow with value-minimized text or
+JSON metadata, while `check` and `explain` can consume the deployment directly with
+`--deployment`. Those evaluation commands reject separate contract or lock arguments in
+deployment mode. The CLI reports only exact artifact metadata and lock status, not policy content.
+The deployment proves internal equality, not authorship, freshness, transport security, or
+approval. See
 [POLICY_DEPLOYMENTS.md](POLICY_DEPLOYMENTS.md).
 
 ## Atomic live policy runtime

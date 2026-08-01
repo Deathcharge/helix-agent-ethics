@@ -257,7 +257,8 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 379 real tests; latest local run: 379 passed, 96.93% total coverage with branch measurement.
+- Added 379 real tests; latest local `python -m pytest` pytest-cov terminal report: 379 passed and
+  97.04% total branch-aware coverage under the configured `--cov-branch` gate.
 - Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an
   isolated no-dependency environment: install/import/version/schema/deployment verification and a
   deployed allow decision all succeeded, and runtime construction used the packaged API.
