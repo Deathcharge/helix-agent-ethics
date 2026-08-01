@@ -41,6 +41,8 @@ adoption remain separate evidence-based decisions.
   fail closed on drift at CLI, engine, and tool-gate activation boundaries.
 - [x] Add operator-facing evaluation explanations that share production semantics while omitting
   action input, policy values, and authored messages.
+- [x] Add last-known-good atomic in-process activation with coherent generation status,
+  compare-and-swap conflict detection, whole-batch consistency, and live `ToolGate` integration.
 
 ## Release candidate
 
@@ -60,6 +62,8 @@ Current hardening backlog:
 - Local audit logs are operational records, not tamper-evident compliance evidence.
 - Caller-owned sinks provide a delivery seam, not built-in HTTP, queues, retries, exactly-once
   storage, retention, or a hosted audit service.
+- Atomic runtime generations are process-local; durable desired state, artifact distribution,
+  authenticated deployment, restart recovery, and multi-host convergence remain caller-owned.
 - Migration from any surviving `helix_ethics` callers is destructive; old compatibility imports are not retained.
 
 ## Samsarix adoption

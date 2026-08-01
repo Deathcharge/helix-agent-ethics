@@ -130,6 +130,36 @@ Loads a strict UTF-8 JSON lock with the 64 KiB `MAX_DEPLOYMENT_LOCK_BYTES` limit
 structural limits. File and model errors are reported as `DeploymentLockValidationError`. See
 [DEPLOYMENT_LOCKS.md](DEPLOYMENT_LOCKS.md) for the rollout and trust model.
 
+## Atomic live policy runtime
+
+### `PolicyRuntime(policy, *, context_contract=None, deployment_lock=None)`
+
+Constructs generation `1` from one complete enforcement configuration. Construction has the same
+policy/contract compatibility and exact deployment-lock checks as `PolicyEngine`. `evaluate`,
+`explain`, and the `policy`, fingerprint, contract, and lock properties mirror the engine API.
+`evaluate_many` captures one generation for the whole bounded batch.
+
+Every call captures one immutable engine under a short lock and evaluates after releasing it. An
+in-flight call therefore finishes on its original generation while later calls can use a newly
+activated generation.
+
+### `PolicyRuntime.activate(policy, *, context_contract=None, deployment_lock=None, expected_generation=None) -> PolicyRuntimeStatus`
+
+Builds and validates the complete candidate before acquiring the live-state lock, then swaps the
+policy, contract, lock, and fingerprints together. Candidate validation/lock errors leave the last
+successful generation untouched. A supplied positive `expected_generation` is compared under the
+same lock; a stale value raises `PolicyActivationError` without activation. Every successful
+activation increments the process-local generation, including rollback to retained prior
+artifacts.
+
+### `PolicyRuntime.status -> PolicyRuntimeStatus`
+
+Returns one coherent frozen snapshot with `POLICY_RUNTIME_STATUS_VERSION` (currently `1`),
+generation, UTC activation time, exact policy identity/fingerprint, optional exact contract
+identity/fingerprint, and `deployment_lock_verified`. `to_dict()` returns the bundled schema shape
+without policy content, action input, decisions, or errors. See
+[POLICY_RUNTIME.md](POLICY_RUNTIME.md) for concurrency, rollback, and control-plane boundaries.
+
 ### `write_policy(path, policy, *, force=False) -> Path`
 
 Atomically writes a validated `Policy` as UTF-8 JSON and returns the resolved output path. It
@@ -218,7 +248,7 @@ fingerprint with constant-time comparisons of both ID and digest before adding t
 approval to `context`. A `tool_call_id` without approval is rejected rather than silently ignored.
 The `context.approval` field is reserved and cannot be injected through ordinary context metadata.
 
-### `ToolGate(policy, *, context_contract=None, deployment_lock=None, audit_log=None, audit_sink=None)`
+### `ToolGate(policy_or_runtime, *, context_contract=None, deployment_lock=None, audit_log=None, audit_sink=None)`
 
 Provides a fail-closed boundary immediately before an in-process side effect:
 
@@ -226,6 +256,11 @@ When `context_contract` is supplied, gate construction validates the policy and 
 tool-call context is checked before evaluation. When `deployment_lock` is supplied, exact artifact
 verification occurs during construction. `ToolGate` and `BoundToolGate` expose
 `context_contract`, `context_contract_fingerprint`, and `deployment_lock`.
+
+Passing a `PolicyRuntime` makes the gate and all existing bindings follow successful atomic
+activations. Contract and lock arguments must then be configured on the runtime rather than passed
+again. `runtime_status` returns coherent live-generation metadata for a runtime-backed gate and
+`None` for a static gate.
 
 `ToolGate.explain(...)` normalizes the same call fields and returns a `PolicyExplanation` without
 authorizing, executing, or emitting an authorization audit record. `BoundToolGate.explain(...)`
@@ -259,6 +294,7 @@ decision from authorizing a callback. The package invokes the sink exactly once 
 The frozen object returned by `ToolGate.bind(...)`. Its `tool_name` and canonical immutable
 `capabilities` tuple cannot be supplied or changed per invocation. It exposes `gate` and `policy`
 properties, the gate's `policy_fingerprint`, plus
+`runtime_status`,
 `fingerprint(tool_call_id, arguments, *, actor=None)`, `evaluate`, `enforce`, `explain`, `execute`,
 and `execute_async`. The latter five accept the same actor, context, call-ID, and approval keywords as
 `ToolGate`, but take only arguments (and an executor where applicable).
@@ -286,10 +322,11 @@ runs.
 
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, application
 context contracts, deployment locks, regression suites, comparison, composition, coverage,
-explanation, lint and shadow reports,
+explanation, lint, runtime-status, and shadow reports,
 the normalized tool-call context, bound approval records, and metadata-only audit records. The
 other accessors are `get_policy_test_schema`, `get_policy_comparison_schema`,
 `get_policy_composition_schema`, `get_policy_coverage_schema`, `get_policy_explanation_schema`, `get_policy_lint_schema`,
+`get_policy_runtime_status_schema`,
 `get_policy_shadow_schema`, `get_deployment_lock_schema`, `get_tool_context_schema`, `get_tool_approval_schema`, and
 `get_audit_record_schema`. These calls perform no network access and callers may mutate a returned
 value without changing future calls.
@@ -418,7 +455,7 @@ Raises `AuditLogError` on failure.
 
 ## Error hierarchy
 
-`PolicyValidationError`, `PolicyCompositionError`, `PolicyTestValidationError`,
+`PolicyValidationError`, `PolicyActivationError`, `PolicyCompositionError`, `PolicyTestValidationError`,
 `InputValidationError`, `EvaluationError`, `AuditLogError`, and the tool-call enforcement errors
 derive from `SamsarixEthicsError`. The base class and specialized errors are exported from
 `samsarix_ethics` and defined in `samsarix_ethics.errors`.

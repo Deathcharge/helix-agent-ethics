@@ -196,6 +196,32 @@ This is exact-content selection, not a control plane. Locks do not sign, distrib
 refresh, or roll back artifacts and do not identify an approver. Repository review, build
 provenance, deployment credentials, and any required signing system remain caller-owned.
 
+## Implemented gap: atomic in-process activation
+
+Exact selection still left long-running agents to rebuild or manually swap gates when an approved
+policy changed. That creates a risk of separately updating a policy and contract, replacing a
+working policy with a failed candidate, or losing concurrent deployment updates.
+
+- [OPA bundles](https://www.openpolicyagent.org/docs/management-bundles) load policy without a
+  process restart and retain the existing bundle when verification fails.
+- [OPA status](https://www.openpolicyagent.org/docs/management-status) exposes the last successful
+  active revision and activation time separately from activation errors.
+- [AWS Verified Permissions strict validation](https://docs.aws.amazon.com/cli/latest/reference/verifiedpermissions/update-policy-store.html)
+  rejects new or updated policies that fail schema-backed validation.
+
+Agent Ethics now provides `PolicyRuntime`: it constructs the entire candidate engine before
+touching live state, atomically swaps the policy/contract/lock set, retains the last successful
+generation on failure, and optionally rejects stale compare-and-swap attempts. Each evaluation
+captures one generation, while a bounded batch pins one generation for the entire batch.
+Runtime-backed tool gates and existing bound tools follow successful activation without losing
+their trusted registration metadata or audit sink.
+
+The versioned status exposes process-local generation, activation time, exact artifact identity,
+and lock-verification state without policy content or action input. This is not remote bundle
+fetching or a distributed control plane: applications still own approval, authentication,
+artifact transport, durable desired state, restart recovery, health monitoring, and multi-host
+convergence.
+
 ## Implemented gap: privacy-aware evaluation explanations
 
 Matched rule IDs and authored reasons explain successful branches but do not show why other rules

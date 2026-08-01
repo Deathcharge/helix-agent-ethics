@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/policy-runtime-status/v1.json",
+  "title": "Samsarix Agent Ethics policy runtime status v1",
+  "description": "Input-free metadata for one atomically activated in-process policy generation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runtime_status_version",
+    "generation",
+    "activated_at",
+    "policy",
+    "context_contract",
+    "deployment_lock_verified"
+  ],
+  "properties": {
+    "runtime_status_version": {"const": 1},
+    "generation": {"type": "integer", "minimum": 1},
+    "activated_at": {"type": "string", "format": "date-time"},
+    "policy": {"$ref": "#/$defs/artifact"},
+    "context_contract": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/artifact"}
+      ]
+    },
+    "deployment_lock_verified": {"type": "boolean"}
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^v1:sha256:[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "fingerprint"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "version": {"$ref": "#/$defs/identifier"},
+        "fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    }
+  }
+}

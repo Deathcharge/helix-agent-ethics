@@ -63,6 +63,9 @@ All notable product changes are recorded here.
 - Deterministic value-minimized policy explanations with rule/condition match, miss, and
   short-circuit status; decisive/default provenance; optional contract fingerprint; CLI/API/schema;
   and no serialized input, condition values, `$ref` targets, or authored messages.
+- Atomic last-known-good `PolicyRuntime` activation with optional compare-and-swap generations,
+  whole-batch generation pinning, coherent privacy-minimized status/schema, verified
+  policy/contract/lock swaps, and live `ToolGate`/`BoundToolGate` integration.
 
 ### Changed
 
