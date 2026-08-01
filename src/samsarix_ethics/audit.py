@@ -144,6 +144,7 @@ class JsonlAuditSink:
         if hasattr(os, "O_BINARY"):
             flags |= os.O_BINARY
         descriptor: int | None = None
+        failure: OSError | None = None
         try:
             descriptor = os.open(self._path, flags, 0o600)
             written = os.write(descriptor, payload)
@@ -151,10 +152,18 @@ class JsonlAuditSink:
                 raise OSError(f"short audit-log write: {written} of {len(payload)} bytes")
             os.fsync(descriptor)
         except OSError as exc:
-            raise AuditLogError(f"cannot append audit record to {self._path}: {exc}") from exc
+            failure = exc
         finally:
             if descriptor is not None:
-                os.close(descriptor)
+                try:
+                    os.close(descriptor)
+                except OSError as exc:
+                    if failure is None:
+                        failure = exc
+        if failure is not None:
+            raise AuditLogError(
+                f"cannot append audit record to {self._path}: {failure}"
+            ) from failure
 
 
 def _validated_sink(sink: AuditSink) -> AuditSink:

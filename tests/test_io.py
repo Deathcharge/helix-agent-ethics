@@ -246,7 +246,7 @@ def test_jsonl_audit_sink_exposes_path_and_writes_record(
     assert json.loads(path.read_text(encoding="utf-8"))["decision_id"] == decision.decision_id
 
 
-@pytest.mark.parametrize("failure", ["open", "short-write"])
+@pytest.mark.parametrize("failure", ["open", "short-write", "close"])
 def test_jsonl_audit_sink_wraps_write_failures(
     tmp_path: Path,
     policy_document: dict[str, Any],
@@ -264,12 +264,20 @@ def test_jsonl_audit_sink_wraps_write_failures(
             raise OSError("private filesystem details")
 
         monkeypatch.setattr(audit_module.os, "open", fail_open)  # type: ignore[attr-defined]
-    else:
+    elif failure == "short-write":
         monkeypatch.setattr(
             audit_module.os,  # type: ignore[attr-defined]
             "write",
             lambda *_: 0,
         )
+    else:
+        real_close = audit_module.os.close  # type: ignore[attr-defined]
+
+        def fail_close(descriptor: int) -> None:
+            real_close(descriptor)
+            raise OSError("private close details")
+
+        monkeypatch.setattr(audit_module.os, "close", fail_close)  # type: ignore[attr-defined]
 
     with pytest.raises(AuditLogError, match="cannot append audit record"):
         sink(AuditRecord.from_decision(decision))
