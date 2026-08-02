@@ -24,6 +24,9 @@ def test_public_api_is_importable() -> None:
     assert "ToolCatalogValidationError" in samsarix_ethics.__all__
     assert "ToolCallback" in samsarix_ethics.__all__
     assert "ToolDispatcher" in samsarix_ethics.__all__
+    assert "LangChainIntegrationError" in samsarix_ethics.__all__
+    assert "LangChainToolPolicy" in samsarix_ethics.__all__
+    assert "create_langchain_tool_policy" in samsarix_ethics.__all__
     assert "OpenAIAgentsApprovalStore" in samsarix_ethics.__all__
     assert "OpenAIAgentsIntegrationError" in samsarix_ethics.__all__
     assert "OpenAIAgentsToolPolicy" in samsarix_ethics.__all__
@@ -112,6 +115,8 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.MAX_TOOL_BATCH_ITEMS == 1_000
     assert samsarix_ethics.MAX_TOOL_CALL_FINGERPRINT_BYTES == 1_048_576
     assert samsarix_ethics.MAX_PENDING_OPENAI_APPROVALS == 4_096
+    assert samsarix_ethics.LANGCHAIN_ADAPTER_VERSION == 1
+    assert samsarix_ethics.LANGCHAIN_REVIEW_INTERRUPT_TYPE == "samsarix.tool_call.review"
     assert samsarix_ethics.OPENAI_AGENTS_ADAPTER_VERSION == 1
     assert samsarix_ethics.OPENTELEMETRY_DECISION_EVENT_NAME == "samsarix.policy.decision"
     assert samsarix_ethics.OPENTELEMETRY_DECISION_EVENT_VERSION == 1

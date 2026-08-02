@@ -8,9 +8,10 @@ It is for Python developers who need a small policy-as-code boundary in front of
 workflows, or other consequential operations. Policies and inputs are JSON, decisions are
 explainable, and the optional audit log excludes raw input by design. The package makes no
 network calls and its core has no runtime dependencies. An optional OpenAI Agents SDK adapter is
-isolated behind one install extra, and an optional OpenTelemetry API extra emits metadata-only
-decision events into caller-owned traces. Other Samsarix repositories can embed the core, but none
-is required; the package and its release lifecycle stand on their own.
+isolated behind one install extra, an optional LangChain middleware protects exact tool registries
+with fingerprint-bound review interrupts, and an optional OpenTelemetry API extra emits
+metadata-only decision events into caller-owned traces. Other Samsarix repositories can embed the
+core, but none is required; the package and its release lifecycle stand on their own.
 
 Within the Samsarix portfolio, this repository owns agent-action safety policy, human-review
 outcomes, exact-call enforcement, privacy-minimized decision evidence, and the policy lifecycle.
@@ -580,6 +581,29 @@ remains dependency-free. Hosted/built-in tools, MCP-hosted tools, handoffs, name
 [OpenAI Agents SDK integration guide](docs/OPENAI_AGENTS.md) for the supported boundary, approval
 semantics, Pydantic-coercion caveat, and production checklist.
 
+## LangChain integration
+
+Install the optional adapter and run its deterministic no-network agent:
+
+```bash
+python -m pip install -e '.[langchain]'
+python examples/langchain_policy_middleware_demo.py
+```
+
+`create_langchain_tool_policy(bound_catalog)` returns a policy object whose `validate_tools`
+method requires an exact real `BaseTool` registry and whose middleware enforces both sync and async
+tool calls. Put `tool_policy.middleware` last in LangChain's middleware list so it sees the final
+raw arguments after other middleware transformations. Unknown tools, mismatched resolved tools,
+denies, malformed inputs, and framework-shape errors never call the handler.
+
+A policy `review` outcome uses LangGraph's native interrupt/checkpoint flow. The interrupt carries
+the exact call fingerprint; the strict resume response must echo it and add `approved: true` before
+the current policy, actor, context, name, capabilities, and arguments are re-enforced. Mutation or
+replay against another call fails closed. The interrupt intentionally contains tool arguments for
+the reviewer, so production checkpointers need sensitive-data controls and an authenticated review
+surface. See the [LangChain middleware guide](docs/LANGCHAIN.md) for ordering, rejection, audit,
+parallel-call, persistence, and unsupported-path boundaries.
+
 ## Downstream adoption
 
 Samsarix Agent Framework is the first verified downstream consumer. Its optional policy registry
@@ -588,11 +612,11 @@ capabilities outside model arguments, re-reads authentication/approval facts for
 blocks execution on every non-allow outcome or gate failure. The consumer contract runs on Python
 3.11-3.14 while the framework's dependency-free core retains Python 3.10 support.
 
-The repository also carries a public, reproducible OpenAI Agents SDK adapter and exact-version
-contract test. The consumer repository remains private as of 2026-08-01, so neither item is a
-public third-party case study or production deployment. Exact commits, compatibility, rollback,
-support level, and evidence limits are recorded in [adoption and compatibility
-evidence](docs/ADOPTION.md).
+The repository also carries public, reproducible OpenAI Agents SDK and LangChain adapters with
+exact-version contract tests. The consumer repository remains private as of 2026-08-01, so none of
+these items is a public third-party case study or production deployment. Exact commits,
+compatibility, rollback, support level, and evidence limits are recorded in
+[adoption and compatibility evidence](docs/ADOPTION.md).
 
 ## Decision semantics
 

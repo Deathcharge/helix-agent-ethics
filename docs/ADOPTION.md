@@ -5,13 +5,35 @@ deployment. It is intentionally specific enough for maintainers to reproduce and
 
 ## Public runtime contract
 
-The repository now includes an optional adapter for strict top-level OpenAI Agents SDK
-`FunctionTool` objects. Its dedicated CI job installs the hashed dependency graph for
-`openai-agents==0.18.3` and verifies real SDK types, guardrail execution, callback compatibility,
-and fail-closed handling of a value that Pydantic would otherwise coerce after the guardrail. The
-no-network example and [integration guide](OPENAI_AGENTS.md) make this evidence reproducible from a
-public checkout. It is a maintained compatibility contract, not evidence of a third-party adopter,
-live model call, production traffic, or hosted deployment.
+The repository includes optional exact-version adapters for strict top-level OpenAI Agents SDK
+`FunctionTool` objects and exact LangChain `BaseTool` registries. Dedicated CI jobs install hashed
+dependency graphs for `openai-agents==0.18.3` and `langchain==1.3.14`, exercise real framework
+types, and run no-network examples. The OpenAI contract verifies guardrail execution, callback
+compatibility, and fail-closed handling before schema coercion. The LangChain contract verifies a
+real checkpointed interrupt/resume and proves that a final Samsarix middleware sees an earlier
+middleware's argument transformation before allowing execution. The [OpenAI guide](OPENAI_AGENTS.md)
+and [LangChain guide](LANGCHAIN.md) make this evidence reproducible from a public checkout. These
+are maintained compatibility contracts, not evidence of a third-party adopter, live model call,
+production traffic, or hosted deployment.
+
+## Implemented gap: exact-registry LangChain enforcement
+
+LangChain documents `wrap_tool_call` as the middleware hook surrounding every tool call, with the
+first middleware outermost, and LangGraph interrupts as checkpointed pause/resume primitives.
+Samsarix therefore accepts only a complete set of real `BaseTool` objects whose names exactly
+match a trusted `BoundToolCatalog`, and its middleware must be listed last so it authorizes the
+final raw argument mapping after outer transformations. Allow and deny paths re-use the ordinary
+gate; review emits one native interrupt whose response is bound to the exact tool-call ID,
+normalized arguments, trusted catalog metadata, and actor. Resume re-evaluates the current policy
+and trusted facts before invoking the framework handler once.
+
+The interrupt payload necessarily persists proposed tool arguments in the application's LangGraph
+checkpointer. The application therefore owns checkpointer encryption/access/retention, reviewer
+authentication, CSRF protection, expiry, atomic one-time resume, and thread-ID authorization.
+Direct `BaseTool.invoke`, server-side tools, middleware that executes before calling its handler,
+and calls made outside the protected agent bypass this boundary. Parallel tool calls are not a
+transaction and may still produce partial side effects. This is exact public runtime evidence, not
+an adopter or production claim.
 
 ## Samsarix Agent Framework
 

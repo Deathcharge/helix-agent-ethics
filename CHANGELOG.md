@@ -102,6 +102,9 @@ All notable product changes are recorded here.
 - An optional OpenTelemetry decision-event sink with a stable privacy-minimized `samsarix.*`
   attribute contract, exact `opentelemetry-api/sdk==1.44.0` integration lane, no-network example,
   and bounded ordered `CompositeAuditSink` fan-out for durable storage plus trace correlation.
+- Optional exact-registry LangChain `1.3.14` sync/async tool middleware with final raw-argument
+  enforcement, native LangGraph interrupts, strict fingerprint-bound approval resume, generic
+  rejection results, a no-network real-agent example, and a dedicated hashed CI contract.
 
 ### Changed
 

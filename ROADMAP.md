@@ -22,6 +22,9 @@ adoption remain separate evidence-based decisions.
 - [x] Add one public, reproducible OpenAI Agents SDK `FunctionTool` adapter with native approval
   routing, exact-version dependency locking, a real SDK contract test, and explicit unsupported
   execution paths.
+- [x] Add exact-registry LangChain sync/async middleware with final-argument enforcement, native
+  LangGraph review interrupts, fingerprint-bound resume, exact-version locking, and a real
+  no-network agent contract.
 - [x] Expose one immutable metadata-only audit record to a caller-supplied sink while preserving
   the existing JSONL API and fail-closed behavior.
 - [x] Correlate metadata-only decisions with a caller-owned OpenTelemetry trace through an optional
@@ -76,8 +79,11 @@ Current hardening backlog:
 
 - No published package/release, public third-party adopter, or production deployment evidence.
 - The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible.
-  The public OpenAI and OpenTelemetry adapters are reproducible integration evidence, not external
-  adopter case studies.
+  The public OpenAI, LangChain, and OpenTelemetry adapters are reproducible integration evidence,
+  not external adopter case studies.
+- LangChain review checkpoints intentionally contain proposed tool arguments. Reviewer identity,
+  checkpoint confidentiality, expiry, one-time resume, and multi-call transactionality remain
+  application-owned.
 - Installed-wheel smoke coverage, retained CI distributions, and GitHub build-provenance
   attestations exist. PyPI project ownership, Trusted Publishing, protected release approval, and
   durable registry publication evidence are not yet configured.

@@ -56,6 +56,14 @@ rather than per-call reviewer evidence. Durable runs must persist the adapter's 
 fingerprint alongside protected SDK state; the bounded in-memory default fails closed after
 reconstruction.
 
+When using the optional LangChain adapter, put Samsarix last in the middleware list so no inner
+middleware can change arguments after authorization. Protect LangGraph thread IDs, checkpointer
+state, and reviewer endpoints; review interrupts intentionally persist proposed tool arguments.
+Authenticate and authorize reviewers, preserve the exact approval binding, enforce expiry and
+one-time resume, and treat direct `BaseTool` calls or side effects performed by middleware itself as
+outside this adapter. Parallel tool nodes are not a transaction and may produce partial side
+effects. A rejected interrupt returns a generic tool error but is not an authorization audit record.
+
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
 code, loads no plugins, and stores no raw evaluation input in its built-in audit record.

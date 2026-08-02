@@ -18,6 +18,7 @@ untrusted action JSON ─> bounded parser ─> context object ──────
 trusted tool catalog + complete local registry names ─> exact match ─> immutable gate bindings
 locked policy deployment + fingerprinted catalog ─> ToolGateDeployment ─> verified bindings
 verified bindings + final callback objects ─> ToolDispatcher ─> authorized sequential dispatch
+verified bindings + exact LangChain BaseTools ─> final middleware ─> allow / interrupt / block
 
 validated policy + optional contract/lock ─> PolicyRuntime generation N ─> live gates
 validated complete candidate ─> compare-and-swap atomic activation ──────┘
@@ -65,6 +66,8 @@ the legacy `helix-unified` repository.
   sync/async callback enforcement.
 - `openai_agents.py`: optional strict `FunctionTool` protection and native approval-flow routing
   without importing the SDK at core package import time.
+- `langchain.py`: optional exact-registry sync/async middleware, final-argument enforcement, and
+  fingerprint-bound LangGraph interrupt resume without importing LangChain at core package import.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
 - `__init__.py`: deliberate public Python API.
 
