@@ -71,6 +71,11 @@ Bounded review used current primary sources:
   validation from request evaluation to catch authoring errors early.
 - [OPA decision logs](https://www.openpolicyagent.org/docs/management-decision-logs) emphasize
   decision identity and masking/removing sensitive input in logs.
+- [NIST SP 800-92](https://csrc.nist.gov/pubs/sp/800/92/final) treats log management as a practical
+  enterprise security control, while the
+  [NIST AI RMF Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)
+  calls for recording and analyzing generative-AI incidents. A bounded local integrity chain is a
+  defensible library feature; a generic log service or duplicate approval database is not.
 - [NIST AI RMF Core](https://airc.nist.gov/airmf-resources/airmf/5-sec-core/) emphasizes documented
   governance roles and human-AI oversight rather than treating an automated score as certification.
 - [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) requires redistribution of the
@@ -232,7 +237,9 @@ certification or ethics truth.
   over bounded suites, with an explicit CI threshold.
 - [x] Add stable, value-minimized authoring diagnostics for permissive defaults, unconditional
   allows, provably impossible/duplicate conditions, and missing explanations.
-- [ ] Add cross-process ordering or tamper-evident audit chaining only for a validated use case.
+- [x] Add a keyed metadata-only audit chain for the validated single-writer local-file use case,
+  with strict verification and external-head rollback detection; keep cross-process coordination
+  and log services out of scope.
 - [x] Add deterministic central policy-set composition with common-default and global-ID checks,
   value-minimized source provenance, and an ordinary deployable policy result.
 - [x] Add atomic last-known-good in-process policy activation with compare-and-swap generations,
@@ -276,8 +283,8 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 379 real tests; latest local `python -m pytest` pytest-cov terminal report: 379 passed and
-  97.04% total branch-aware coverage under the configured `--cov-branch` gate.
+- Added 464 real tests; latest pinned local `python -m pytest` pytest-cov terminal report: 464
+  passed and 96.22% total branch-aware coverage under the configured `--cov-branch` gate.
 - Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an
   isolated no-dependency environment: install/import/version/schema/deployment verification and a
   deployed allow decision all succeeded, and runtime construction used the packaged API.
@@ -352,6 +359,10 @@ certification or ethics truth.
   final callback references, keeps authorization and dispatch on one object, supports sync/async
   calls, and preflights full batches before sequential execution. It deliberately does not claim
   code identity, immutable callback internals, or transactional side effects.
+- Added a bounded HMAC-SHA-256 `AuditSink`, strict verifier/CLI, external-head rollback check,
+  versioned entry/report schemas, adversarial mutation/reordering/truncation tests, and a runnable
+  gate example. The design stays metadata-only and explicitly leaves key custody, external
+  checkpoints, cross-process exclusion, recovery, and callback outcomes to the application.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -392,7 +403,9 @@ External validation gates:
   or rollback-prevention evidence.
 - A policy deployment contains full trusted policy content and proves only internal consistency;
   its storage and transport need stronger controls than metadata-minimized reports.
-- The local JSONL audit is not tamper-evident and has no cross-process ordering guarantee.
+- Plain JSONL remains unauthenticated. The optional keyed chain authenticates mutation and order in
+  one single-writer stream, but shared-key compromise permits rewriting, a valid-prefix rollback
+  needs an external head, and cross-process ordering/locking remains caller-owned.
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Prepared batches authorize no transaction: audit delivery may be partial on sink failure, and
   framework scheduling or callback failure may still produce partial side effects.

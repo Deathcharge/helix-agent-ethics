@@ -9,14 +9,16 @@ import inspect
 import json
 import os
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol, cast
 
-from .errors import AuditLogError
+from .errors import AuditLogError, InputValidationError
 from .models import Decision
 from .provenance import _is_policy_fingerprint
+from .validation import validate_json_shape
 
 AUDIT_RECORD_VERSION = 1
 _AUDIT_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
@@ -102,6 +104,51 @@ class AuditRecord:
             matched_rules=decision.matched_rules,
             warning_count=len(decision.warnings),
         )
+
+    @classmethod
+    def from_dict(cls, value: Any) -> AuditRecord:
+        """Parse one strict persisted metadata-only audit record."""
+
+        try:
+            validate_json_shape(value, label="audit record")
+        except InputValidationError as exc:
+            raise AuditLogError(str(exc)) from exc
+        if not isinstance(value, Mapping):
+            raise AuditLogError("audit record must be a JSON object")
+        required = {
+            "audit_record_version",
+            "decision_id",
+            "evaluated_at",
+            "policy_id",
+            "policy_version",
+            "policy_fingerprint",
+            "outcome",
+            "matched_rules",
+            "warning_count",
+        }
+        missing = required - value.keys()
+        extra = value.keys() - required
+        if missing:
+            raise AuditLogError(f"audit record is missing: {', '.join(sorted(missing))}")
+        if extra:
+            raise AuditLogError(f"audit record has unknown fields: {', '.join(sorted(extra))}")
+        matched_rules = value["matched_rules"]
+        if not isinstance(matched_rules, list):
+            raise AuditLogError("audit record matched_rules must be a JSON array")
+        try:
+            return cls(
+                audit_record_version=value["audit_record_version"],
+                decision_id=value["decision_id"],
+                evaluated_at=value["evaluated_at"],
+                policy_id=value["policy_id"],
+                policy_version=value["policy_version"],
+                policy_fingerprint=value["policy_fingerprint"],
+                outcome=value["outcome"],
+                matched_rules=tuple(matched_rules),
+                warning_count=value["warning_count"],
+            )
+        except (TypeError, ValueError) as exc:
+            raise AuditLogError(f"invalid audit record: {exc}") from exc
 
     def to_dict(self) -> dict[str, Any]:
         """Return a detached JSON-compatible record."""

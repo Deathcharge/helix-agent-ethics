@@ -455,8 +455,9 @@ coherent tool-gate deployments. The other accessors are
 `get_policy_coverage_schema`, `get_policy_explanation_schema`, `get_policy_lint_schema`,
 `get_policy_runtime_status_schema`, `get_policy_shadow_schema`, `get_deployment_lock_schema`,
 `get_policy_deployment_schema`, `get_tool_context_schema`, `get_tool_approval_schema`,
-`get_tool_catalog_schema`, `get_tool_gate_deployment_schema`, and `get_audit_record_schema`. These
-calls perform no network access and callers may mutate a returned
+`get_tool_catalog_schema`, `get_tool_gate_deployment_schema`, `get_audit_record_schema`,
+`get_audit_chain_entry_schema`, and `get_audit_chain_verification_schema`. These calls perform no
+network access and callers may mutate a returned
 value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`
@@ -562,6 +563,9 @@ decision/policy identity, the exact policy fingerprint, evaluation time, outcome
 and warning count. Raw input, reasons, and warning text are absent. `to_dict()` returns a detached
 JSON-compatible dictionary.
 
+`AuditRecord.from_dict(value)` strictly parses the persisted version 1 shape, rejects missing and
+unknown fields, and returns the same frozen model.
+
 ### `AuditSink`
 
 A structural typing protocol for a synchronous callable with the signature
@@ -581,11 +585,36 @@ Appends one compact JSONL record and calls `fsync`. The destination's parent mus
 This compatibility helper converts the decision to `AuditRecord` and invokes `JsonlAuditSink`.
 Raises `AuditLogError` on failure.
 
+### `HmacAuditChainSink(path, key, *, stream_id, expected_head=None)`
+
+Implements `AuditSink` for one local single-writer JSONL stream. `key` is copied from a 32-4096 byte
+bytes-like value. A new stream begins at sequence 1; a non-empty existing stream is completely
+verified before resuming. `expected_head` optionally binds that restart to an externally retained
+checkpoint. The sink serializes calls from its own threads, flushes each append, and refuses an
+observed out-of-instance file change. It exposes `path`, `stream_id`, `entry_count`, and the
+nullable `head_mac`; its representation excludes the key.
+
+### `verify_audit_chain(path, key, *, expected_head=None, expected_stream_id=None)`
+
+Authenticates every bounded `AuditChainEntry` and returns a frozen `AuditChainVerification` with
+the stream ID, entry count, sequence range, and head MAC. Duplicate fields, unknown fields, blank or
+incomplete lines, sequence/link discontinuity, stream changes, malformed records, and incorrect
+MACs fail with `AuditChainError`. An expected head detects valid-prefix rollback; without that
+external anchor, the verifier cannot distinguish a legitimate shorter stream from rollback.
+The verifier accepts only a regular file and rejects state changes observed during its read. Quiesce
+the writer or provide an immutable snapshot when the report must represent a complete stream.
+
+`generate_audit_chain_key()` returns a fresh 32-byte key. The application owns secret storage,
+rotation, external checkpoint retention, cross-process writer exclusion, and post-execution outcome
+records. See [AUDIT_CHAINS.md](AUDIT_CHAINS.md) for the format and complete threat boundary.
+
 ## Error hierarchy
 
 `PolicyValidationError`, `PolicyDeploymentValidationError`, `PolicyActivationError`,
 `PolicyCompositionError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
-`AuditLogError`, and the tool-call enforcement errors derive from `SamsarixEthicsError`. The base
+`AuditLogError`, `AuditChainError`, and the tool-call enforcement errors derive from
+`SamsarixEthicsError`. `AuditChainError` also derives from `AuditLogError`, preserving fail-closed
+gate handling. The base
 class and specialized errors are exported from `samsarix_ethics` and defined in
 `samsarix_ethics.errors`.
 

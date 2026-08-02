@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, TextIO
 
 from . import __version__
+from .audit_chain import MAX_AUDIT_CHAIN_KEY_BYTES, verify_audit_chain
 from .comparison import (
     PolicyComparisonChange,
     PolicyComparisonReport,
@@ -25,7 +26,12 @@ from .coverage import PolicyCoverageReport, measure_policy_coverage
 from .deployment import DeploymentLock, create_deployment_lock, verify_deployment_lock
 from .diagnostics import PolicyLintReport, PolicyLintSeverity, lint_policy
 from .engine import PolicyEngine
-from .errors import InputValidationError, PolicyCompositionError, SamsarixEthicsError
+from .errors import (
+    AuditChainError,
+    InputValidationError,
+    PolicyCompositionError,
+    SamsarixEthicsError,
+)
 from .explanation import PolicyExplanation
 from .io import (
     append_audit_record,
@@ -45,6 +51,8 @@ from .models import Decision, Outcome
 from .policy_deployment import PolicyDeployment, create_policy_deployment
 from .provenance import fingerprint_policy, fingerprint_tool_catalog
 from .schema import (
+    get_audit_chain_entry_schema,
+    get_audit_chain_verification_schema,
     get_audit_record_schema,
     get_context_contract_schema,
     get_deployment_lock_schema,
@@ -82,6 +90,20 @@ def _coverage_threshold(value: str) -> int:
     if not 0 <= threshold <= 100:
         raise argparse.ArgumentTypeError("must be an integer from 0 to 100")
     return threshold
+
+
+def _load_audit_chain_key(path: str | Path) -> bytes:
+    target = Path(path)
+    try:
+        with target.open("rb") as source:
+            key = source.read(MAX_AUDIT_CHAIN_KEY_BYTES + 1)
+    except OSError as exc:
+        raise AuditChainError(f"cannot read audit-chain key file {target}: {exc}") from exc
+    if len(key) > MAX_AUDIT_CHAIN_KEY_BYTES:
+        raise AuditChainError(
+            f"audit-chain key file exceeds the limit of {MAX_AUDIT_CHAIN_KEY_BYTES} bytes"
+        )
+    return key
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -285,6 +307,25 @@ def _parser() -> argparse.ArgumentParser:
     lock_verify.add_argument("--context-contract", help="optional application contract path")
     lock_verify.add_argument("--format", choices=("json", "text"), default="text")
 
+    audit_chain = subparsers.add_parser(
+        "audit-chain", help="verify a keyed metadata-only audit chain"
+    )
+    audit_chain_subparsers = audit_chain.add_subparsers(dest="audit_chain_command", required=True)
+    audit_chain_verify = audit_chain_subparsers.add_parser(
+        "verify", help="authenticate every entry and chain link"
+    )
+    audit_chain_verify.add_argument("chain", help="path to an audit-chain JSONL file")
+    audit_chain_verify.add_argument(
+        "--key-file", required=True, help="path to the raw 32-4096 byte HMAC key"
+    )
+    audit_chain_verify.add_argument(
+        "--expected-head", help="externally retained head MAC used to detect rollback"
+    )
+    audit_chain_verify.add_argument(
+        "--stream-id", help="require this exact authenticated stream identifier"
+    )
+    audit_chain_verify.add_argument("--format", choices=("json", "text"), default="text")
+
     schema = subparsers.add_parser("schema", help="print a bundled JSON Schema")
     schema.add_argument(
         "kind",
@@ -307,6 +348,8 @@ def _parser() -> argparse.ArgumentParser:
             "tool-catalog",
             "tool-gate-deployment",
             "audit-record",
+            "audit-chain-entry",
+            "audit-chain-verification",
         ),
         default="policy",
         help="schema to print; default: policy",
@@ -695,9 +738,29 @@ def main(
                 "tool-catalog": get_tool_catalog_schema,
                 "tool-gate-deployment": get_tool_gate_deployment_schema,
                 "audit-record": get_audit_record_schema,
+                "audit-chain-entry": get_audit_chain_entry_schema,
+                "audit-chain-verification": get_audit_chain_verification_schema,
             }
             schema = schema_loaders[arguments.kind]()
             print(json.dumps(schema, indent=2, sort_keys=True), file=output)
+            return EXIT_ALLOWED
+
+        if arguments.command == "audit-chain":
+            verification = verify_audit_chain(
+                arguments.chain,
+                _load_audit_chain_key(arguments.key_file),
+                expected_head=arguments.expected_head,
+                expected_stream_id=arguments.stream_id,
+            )
+            rendered = (
+                json.dumps(verification.to_dict(), indent=2, sort_keys=True)
+                if arguments.format == "json"
+                else (
+                    f"Verified audit chain {verification.stream_id}: "
+                    f"{verification.entry_count} entries, head={verification.head_mac}"
+                )
+            )
+            print(rendered, file=output)
             return EXIT_ALLOWED
 
         if arguments.command == "catalog":

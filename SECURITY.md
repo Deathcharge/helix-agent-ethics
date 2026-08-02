@@ -75,6 +75,20 @@ Caller-supplied audit sinks are trusted application code invoked synchronously b
 their failures prevent tool execution, but their transport and downstream storage are outside this
 package's boundary.
 
+`HmacAuditChainSink` adds shared-secret integrity and ordering evidence to the metadata-only local
+stream. It does not encrypt records or authenticate an individual author. Anyone with the key can
+rewrite the chain. A separately protected `head_mac` is required to detect rollback to a valid
+earlier prefix or replacement with an older copy; deletion and availability require backups and
+monitoring. Use one writer process per file. The sink serializes its own threads and rejects an
+observed external change, but does not acquire a cross-process lock and another writer can race
+between its file check and append. A crash or short write can leave an incomplete final entry,
+which fails verification. A complete entry written before an uncertain `fsync` may later pass HMAC
+verification while its durability remains unknown; recovery must not treat it as durably committed.
+Verification never repairs either state.
+Operators own key generation/storage/rotation, filesystem permissions, writer exclusion, external
+checkpoints, retention, backup, and recovery. An audit entry records authorization, not callback
+execution or success.
+
 `ToolGate` rejects a `ToolCallApproval` when its fingerprint does not match the normalized call ID,
 tool, arguments, capabilities, and actor. This is mutation detection, not authentication: approval
 objects are ordinary application values, and parsing one with `from_dict` proves only that its JSON

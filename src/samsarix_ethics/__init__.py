@@ -10,6 +10,20 @@ from .approval import (
     ToolCallApproval,
 )
 from .audit import AUDIT_RECORD_VERSION, AuditRecord, AuditSink, JsonlAuditSink
+from .audit_chain import (
+    AUDIT_CHAIN_VERIFICATION_VERSION,
+    AUDIT_CHAIN_VERSION,
+    MAX_AUDIT_CHAIN_BYTES,
+    MAX_AUDIT_CHAIN_ENTRIES,
+    MAX_AUDIT_CHAIN_ENTRY_BYTES,
+    MAX_AUDIT_CHAIN_KEY_BYTES,
+    MIN_AUDIT_CHAIN_KEY_BYTES,
+    AuditChainEntry,
+    AuditChainVerification,
+    HmacAuditChainSink,
+    generate_audit_chain_key,
+    verify_audit_chain,
+)
 from .catalog import (
     MAX_TOOL_CATALOG_CAPABILITIES,
     MAX_TOOL_CATALOG_TOOLS,
@@ -67,6 +81,7 @@ from .diagnostics import (
 from .dispatch import ToolCallback, ToolDispatcher
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
+    AuditChainError,
     AuditLogError,
     ContextContractValidationError,
     DeploymentLockValidationError,
@@ -137,6 +152,8 @@ from .provenance import (
 )
 from .runtime import POLICY_RUNTIME_STATUS_VERSION, PolicyRuntime, PolicyRuntimeStatus
 from .schema import (
+    get_audit_chain_entry_schema,
+    get_audit_chain_verification_schema,
     get_audit_record_schema,
     get_context_contract_schema,
     get_deployment_lock_schema,
@@ -183,10 +200,16 @@ from .validation import validate_context
 __version__ = "0.1.0"
 
 __all__ = [
+    "AUDIT_CHAIN_VERIFICATION_VERSION",
+    "AUDIT_CHAIN_VERSION",
     "AUDIT_RECORD_VERSION",
     "CONTEXT_CONTRACT_FINGERPRINT_VERSION",
     "CONTEXT_CONTRACT_VERSION",
     "DEPLOYMENT_LOCK_VERSION",
+    "MAX_AUDIT_CHAIN_BYTES",
+    "MAX_AUDIT_CHAIN_ENTRIES",
+    "MAX_AUDIT_CHAIN_ENTRY_BYTES",
+    "MAX_AUDIT_CHAIN_KEY_BYTES",
     "MAX_BATCH_ITEMS",
     "MAX_COMPOSED_POLICIES",
     "MAX_CONTEXT_CONTRACT_BYTES",
@@ -202,6 +225,7 @@ __all__ = [
     "MAX_TOOL_CATALOG_CAPABILITIES",
     "MAX_TOOL_CATALOG_TOOLS",
     "MAX_TOOL_GATE_DEPLOYMENT_BYTES",
+    "MIN_AUDIT_CHAIN_KEY_BYTES",
     "POLICY_COMPARISON_VERSION",
     "POLICY_COMPOSITION_VERSION",
     "POLICY_COVERAGE_VERSION",
@@ -217,6 +241,9 @@ __all__ = [
     "TOOL_CATALOG_VERSION",
     "TOOL_CONTEXT_VERSION",
     "TOOL_GATE_DEPLOYMENT_VERSION",
+    "AuditChainEntry",
+    "AuditChainError",
+    "AuditChainVerification",
     "AuditLogError",
     "AuditRecord",
     "AuditSink",
@@ -234,6 +261,7 @@ __all__ = [
     "DeploymentLockValidationError",
     "Effect",
     "EvaluationError",
+    "HmacAuditChainSink",
     "InputValidationError",
     "JsonlAuditSink",
     "Outcome",
@@ -300,6 +328,9 @@ __all__ = [
     "fingerprint_policy",
     "fingerprint_tool_call",
     "fingerprint_tool_catalog",
+    "generate_audit_chain_key",
+    "get_audit_chain_entry_schema",
+    "get_audit_chain_verification_schema",
     "get_audit_record_schema",
     "get_context_contract_schema",
     "get_deployment_lock_schema",
@@ -332,6 +363,7 @@ __all__ = [
     "validate_context_against_contract",
     "validate_policy_context_contract",
     "validate_tool_catalog_registration",
+    "verify_audit_chain",
     "verify_deployment_lock",
     "write_policy",
     "write_policy_deployment",

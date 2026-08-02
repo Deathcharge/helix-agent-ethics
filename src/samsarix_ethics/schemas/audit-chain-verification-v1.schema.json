@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/audit-chain-verification/v1.json",
+  "title": "Samsarix Agent Ethics audit chain verification v1",
+  "description": "Successful verification summary and externally retainable chain checkpoint.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "audit_chain_verification_version",
+    "verified",
+    "stream_id",
+    "entry_count",
+    "first_sequence",
+    "last_sequence",
+    "head_mac"
+  ],
+  "properties": {
+    "audit_chain_verification_version": { "type": "integer", "const": 1 },
+    "verified": { "const": true },
+    "stream_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "entry_count": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+    "first_sequence": { "type": "integer", "const": 1 },
+    "last_sequence": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+    "head_mac": {
+      "type": "string",
+      "pattern": "^v1:hmac-sha256:[0-9a-f]{64}$"
+    }
+  }
+}

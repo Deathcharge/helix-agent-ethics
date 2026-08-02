@@ -77,7 +77,8 @@ samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--deplo
 samsarix-ethics catalog TOOL_CATALOG.json [--format text|json]
 samsarix-ethics gate-deployment create --policy-deployment DEPLOYMENT.json --tool-catalog CATALOG.json --output OUTPUT.json
 samsarix-ethics gate-deployment verify TOOL_GATE_DEPLOYMENT.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|tool-catalog|tool-gate-deployment|audit-record]
+samsarix-ethics audit-chain verify CHAIN.jsonl --key-file KEY [--expected-head MAC] [--stream-id ID] [--format text|json]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|tool-catalog|tool-gate-deployment|audit-record|audit-chain-entry|audit-chain-verification]
 samsarix-ethics explain (--policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] | --deployment DEPLOYMENT.json) [--input INPUT.json|-] [--format json|text]
 samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
 samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
@@ -143,6 +144,8 @@ samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema tool-catalog > tool-catalog-v1.schema.json
 samsarix-ethics schema tool-gate-deployment > tool-gate-deployment-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
+samsarix-ethics schema audit-chain-entry > audit-chain-entry-v1.schema.json
+samsarix-ethics schema audit-chain-verification > audit-chain-verification-v1.schema.json
 ```
 
 Catch misspelled policy facts and incompatible operator types before deployment, then enforce
@@ -513,6 +516,14 @@ delivery or includes evaluation input in `AuditRecord`. Every decision and audit
 the exact canonical policy fingerprint, so reused human-readable policy versions cannot make two
 different policy bodies look identical in operational evidence.
 
+For a single-writer local stream that needs mutation and ordering evidence, use the same sink seam
+with `HmacAuditChainSink`. It authenticates the metadata-only record, sequence, stream ID, and prior
+entry using HMAC-SHA-256. `verify_audit_chain` and `samsarix-ethics audit-chain verify` validate the
+complete stream; an externally retained expected head detects rollback to an earlier valid prefix.
+Key custody, external checkpoints, cross-process locking, retention, and callback outcome records
+remain application responsibilities. See the [keyed audit-chain guide](docs/AUDIT_CHAINS.md) and
+run `python examples/audit_chain_demo.py` for the complete temporary journey.
+
 ## Downstream adoption
 
 Samsarix Agent Framework is the first verified downstream consumer. Its optional policy registry
@@ -572,8 +583,9 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
   messages, but remain an authorization oracle that requires operator-only access.
 - Caller-owned audit sinks receive the same versioned metadata-only record and no raw input.
 - `ToolGate` audits before execution when configured; an audit failure prevents the callback.
-- Audit retention, access controls, rotation, and tamper resistance belong to the embedding
-  application. A successful append is flushed to disk but is not a cryptographic ledger.
+- The optional keyed audit-chain sink detects mutation, reordering, and broken links. Valid-prefix
+  rollback requires an externally protected head; key custody, cross-process locking, retention,
+  and availability remain embedding-application responsibilities.
 
 See [SECURITY.md](SECURITY.md) for the threat boundary and reporting process and
 [SUPPORT.md](SUPPORT.md) for safe support requests.
@@ -621,8 +633,8 @@ versioned trusted tool catalogs, versioned schemas, bounded I/O, authoring diagn
 testing, rule coverage, policy impact comparison, layered composition, application context
 contracts, exact deployment locks, single-file policy deployments, value-minimized policy
 explanations, baseline-authoritative shadow rollout, atomic live policy activation, immutable
-framework-neutral dispatch bindings, and
-presentation/exit codes.
+framework-neutral dispatch bindings, keyed metadata-only audit integrity, and presentation/exit
+codes.
 See [architecture](docs/ARCHITECTURE.md).
 
 Deliberate limitations:
@@ -633,7 +645,9 @@ Deliberate limitations:
   rollback automation.
 - Runtime generations are process-local and non-persistent; the application owns desired state,
   artifact transport, deployment authorization, monitoring, and restart recovery.
-- JSONL audit append is local and metadata-only, with no cross-process ordering guarantee.
+- JSONL audit is local and metadata-only. The keyed chain authenticates order within one
+  single-writer stream but does not coordinate processes; valid-prefix rollback detection requires
+  a separately protected expected head.
 - The engine evaluates explicit caller-supplied facts; it does not infer intent or truth.
 - Context contracts validate declared paths and types, not fact authenticity or every undeclared
   request field.

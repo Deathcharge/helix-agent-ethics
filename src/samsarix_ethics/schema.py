@@ -117,6 +117,18 @@ def get_audit_record_schema() -> dict[str, Any]:
     return _load_schema("audit-record-v1.schema.json")
 
 
+def get_audit_chain_entry_schema() -> dict[str, Any]:
+    """Return a fresh copy of the audit-chain entry version 1 JSON Schema."""
+
+    return _load_schema("audit-chain-entry-v1.schema.json")
+
+
+def get_audit_chain_verification_schema() -> dict[str, Any]:
+    """Return a fresh copy of the audit-chain verification version 1 JSON Schema."""
+
+    return _load_schema("audit-chain-verification-v1.schema.json")
+
+
 def get_policy_test_schema() -> dict[str, Any]:
     """Return a fresh copy of the policy-test suite version 1 JSON Schema."""
 
