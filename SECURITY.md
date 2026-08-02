@@ -83,6 +83,17 @@ cannot downgrade those labels per call. The application still owns the registry 
 binding. Treat MCP and other remote tool annotations as untrusted hints unless their source and
 meaning are independently trusted.
 
+Prepared-call batches are an immediate authorization boundary, not durable capabilities.
+`evaluate_many`/`enforce_many` pin one in-process runtime generation and validate the full batch
+before batch audit delivery, but trusted actor/context facts can still change after preparation.
+Prepare and dispatch without an avoidable TOCTOU gap, never mix calls prepared by different gates,
+and do not reuse a previously authorized batch. Within one batch, repeated prepared objects and
+repeated approval call IDs fail closed; applications still own approval consumption and replay
+protection across batches. The package does not execute the batch, cancel
+callbacks, roll back partial side effects, or make a custom audit sink transactional. A sink failure
+after earlier batch records were accepted still prevents authorization but may leave partial audit
+delivery; destinations own idempotency and reconciliation.
+
 An optional `ContextContract` can reject policy path typos and missing or mistyped declared facts
 before rule evaluation. A contract is trusted configuration, not authentication: it does not prove
 that identity, capability, approval, tenant, or risk facts came from a trusted source, and it

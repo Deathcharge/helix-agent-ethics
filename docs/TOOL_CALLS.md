@@ -57,7 +57,7 @@ send_email = gate.bind("send_email", capabilities=["external:write"])
 ```
 
 The returned frozen `BoundToolGate` exposes `fingerprint`, `evaluate`, `enforce`, `explain`,
-`execute`, and `execute_async` without per-call tool-name or capability parameters. Explanation is
+`prepare`, `execute`, and `execute_async` without per-call tool-name or capability parameters. Explanation is
 value-minimized operator diagnostics, not authorization. Its canonical capability tuple
 is detached from the input iterable. This makes the secure integration shape easier: untrusted
 model or protocol call data supplies the arguments and framework call ID, while the application
@@ -143,6 +143,53 @@ result = await read_ticket.execute_async(
     lambda arguments: ticket_client.read(arguments["ticket_id"]),
 )
 ```
+
+## Multi-call preflight
+
+Some agent runtimes can emit and schedule several tool calls from one model turn. Use
+`BoundToolGate.prepare(...)` to freeze each call with its trusted registration metadata, then call
+`gate.enforce_many(...)` before the framework dispatches any of them:
+
+```python
+calls = [
+    read_file.prepare(
+        {"path": "README.md"},
+        actor=actor,
+        context={"workspace_contained": True},
+    ),
+    run_tests.prepare(
+        {"command": "pytest"},
+        actor=actor,
+        context={"workspace_contained": True},
+    ),
+]
+decisions = gate.enforce_many(calls)
+dispatch([(call.tool_name, call.arguments) for call in calls])
+```
+
+`ToolGate.prepare(...)` is also available when a framework-owned trusted registry already supplies
+the name and capabilities. A `PreparedToolCall` is gate-specific, recursively immutable, and
+detached from source dictionaries; its `arguments` property returns a fresh dictionary. Calls from
+another gate, non-prepared items, a repeated prepared object, and repeated approval call IDs are
+rejected. A batch contains at most
+`MAX_TOOL_BATCH_ITEMS` (1,000) calls.
+
+`evaluate_many` and `enforce_many` first collect every prepared context, then delegate to the
+engine's bounded batch primitive. This has four deliberate properties:
+
+1. type, ownership, size, and within-batch replay checks finish before contexts are thawed;
+2. contexts are thawed and contract-validated one at a time, and a malformed late item produces no
+   batch audit records;
+3. a runtime-backed gate captures one policy generation for the whole batch;
+4. successful decisions are returned and audited in input order; and
+5. `enforce_many` evaluates and audits every item, then raises the first deny or review in input
+   order, so no call in that batch is authorized for dispatch.
+
+Audit sinks remain non-transactional. A sink failure can occur after earlier records were delivered,
+but fails closed before the caller receives batch authorization. The package deliberately does not
+run callbacks or promise all-or-nothing side effects. Dispatch immediately after authorization from
+the prepared calls, do not reuse a stale batch, and let the embedding runtime own scheduling,
+cancellation, callback failures, and any compensating transactions.
 
 ## Existing tool registries
 

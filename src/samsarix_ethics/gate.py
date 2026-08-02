@@ -17,14 +17,15 @@ from .approval import ToolCallApproval, _fingerprint_prepared_tool_call
 from .audit import AuditSink, JsonlAuditSink, _emit_audit_record, _validated_sink
 from .contracts import ContextContract
 from .deployment import DeploymentLock
-from .engine import PolicyEngine
+from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import InputValidationError, ToolCallDeniedError, ToolCallReviewRequiredError
 from .explanation import PolicyExplanation
 from .models import Decision, Outcome, Policy
 from .runtime import PolicyRuntime, PolicyRuntimeStatus
-from .validation import thaw_json_value, validate_context
+from .validation import freeze_json_value, thaw_json_value, validate_context
 
 MAX_TOOL_CAPABILITIES = 64
+MAX_TOOL_BATCH_ITEMS = MAX_BATCH_ITEMS
 TOOL_CONTEXT_VERSION = 1
 _TOOL_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _ResultT = TypeVar("_ResultT")
@@ -164,6 +165,57 @@ class ToolExecutionResult(Generic[_ResultT]):
     value: _ResultT
 
 
+@dataclass(frozen=True, slots=True, init=False)
+class PreparedToolCall:
+    """One immutable normalized call prepared by its enforcing ``ToolGate``."""
+
+    _gate: ToolGate
+    _context: Mapping[str, Any]
+
+    def __init__(self) -> None:
+        raise TypeError("PreparedToolCall objects are created by ToolGate.prepare")
+
+    @classmethod
+    def _create(cls, gate: ToolGate, context: Mapping[str, Any]) -> PreparedToolCall:
+        prepared = object.__new__(cls)
+        object.__setattr__(prepared, "_gate", gate)
+        object.__setattr__(
+            prepared, "_context", cast(Mapping[str, Any], freeze_json_value(context))
+        )
+        return prepared
+
+    @property
+    def tool_name(self) -> str:
+        """Return the normalized registered tool name."""
+
+        action = cast(Mapping[str, Any], self._context["action"])
+        return cast(str, action["operation"])
+
+    @property
+    def capabilities(self) -> tuple[str, ...]:
+        """Return the canonical immutable capability labels."""
+
+        action = cast(Mapping[str, Any], self._context["action"])
+        return cast(tuple[str, ...], action["capabilities"])
+
+    @property
+    def arguments(self) -> dict[str, Any]:
+        """Return fresh detached arguments for caller-owned dispatch after authorization."""
+
+        action = cast(Mapping[str, Any], self._context["action"])
+        return cast(dict[str, Any], thaw_json_value(action["arguments"]))
+
+    def _thaw_context(self) -> dict[str, Any]:
+        return cast(dict[str, Any], thaw_json_value(self._context))
+
+    def _approval_call_id(self) -> str | None:
+        context = cast(Mapping[str, Any], self._context["context"])
+        approval = context.get("approval")
+        if not isinstance(approval, Mapping):
+            return None
+        return cast(str, approval["tool_call_id"])
+
+
 class ToolGate:
     """Evaluate and enforce policy immediately before an in-process tool call."""
 
@@ -246,6 +298,32 @@ class ToolGate:
 
         return BoundToolGate(self, tool_name, capabilities)
 
+    def prepare(
+        self,
+        tool_name: str,
+        arguments: Mapping[str, Any],
+        *,
+        capabilities: Iterable[str] = (),
+        actor: Mapping[str, Any] | None = None,
+        context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
+    ) -> PreparedToolCall:
+        """Normalize and freeze one call for immediate batch authorization."""
+
+        return PreparedToolCall._create(
+            self,
+            build_tool_context(
+                tool_name,
+                arguments,
+                capabilities=capabilities,
+                actor=actor,
+                context=context,
+                tool_call_id=tool_call_id,
+                approval=approval,
+            ),
+        )
+
     def _evaluate_context(self, value: Mapping[str, Any]) -> Decision:
         decision = self._engine.evaluate(value)
         if self._audit_sink is not None:
@@ -284,6 +362,51 @@ class ToolGate:
                 approval=approval,
             )
         )
+
+    def evaluate_many(self, calls: Iterable[PreparedToolCall]) -> tuple[Decision, ...]:
+        """Evaluate a prepared batch in order against one captured policy generation."""
+
+        try:
+            iterator = iter(calls)
+        except TypeError as exc:
+            raise InputValidationError("tool-call batch must be iterable") from exc
+
+        prepared_calls: list[PreparedToolCall] = []
+        seen_calls: set[int] = set()
+        seen_approval_ids: set[str] = set()
+        for index, call in enumerate(iterator):
+            if index >= MAX_TOOL_BATCH_ITEMS:
+                raise InputValidationError(
+                    f"tool-call batch exceeds the limit of {MAX_TOOL_BATCH_ITEMS} items"
+                )
+            if not isinstance(call, PreparedToolCall):
+                raise InputValidationError(
+                    f"tool-call batch item {index} must be a PreparedToolCall"
+                )
+            if call._gate is not self:
+                raise InputValidationError(
+                    f"tool-call batch item {index} was prepared by a different ToolGate"
+                )
+            call_identity = id(call)
+            if call_identity in seen_calls:
+                raise InputValidationError(
+                    f"tool-call batch item {index} repeats a PreparedToolCall object"
+                )
+            seen_calls.add(call_identity)
+            approval_call_id = call._approval_call_id()
+            if approval_call_id is not None:
+                if approval_call_id in seen_approval_ids:
+                    raise InputValidationError(
+                        f"tool-call batch item {index} repeats approval tool_call_id"
+                    )
+                seen_approval_ids.add(approval_call_id)
+            prepared_calls.append(call)
+
+        decisions = self._engine.evaluate_many(call._thaw_context() for call in prepared_calls)
+        if self._audit_sink is not None:
+            for decision in decisions:
+                _emit_audit_record(self._audit_sink, decision)
+        return decisions
 
     def explain(
         self,
@@ -333,6 +456,14 @@ class ToolGate:
             approval=approval,
         )
         return self._require_allow(decision)
+
+    def enforce_many(self, calls: Iterable[PreparedToolCall]) -> tuple[Decision, ...]:
+        """Require every prepared call to be allowed before caller-owned dispatch."""
+
+        decisions = self.evaluate_many(calls)
+        for decision in decisions:
+            self._require_allow(decision)
+        return decisions
 
     def _authorize(
         self,
@@ -516,6 +647,27 @@ class BoundToolGate:
             arguments,
             capabilities=self._capabilities,
             actor=actor,
+        )
+
+    def prepare(
+        self,
+        arguments: Mapping[str, Any],
+        *,
+        actor: Mapping[str, Any] | None = None,
+        context: Mapping[str, Any] | None = None,
+        tool_call_id: str | None = None,
+        approval: ToolCallApproval | None = None,
+    ) -> PreparedToolCall:
+        """Prepare one immutable call using this binding's trusted metadata."""
+
+        return self._gate.prepare(
+            self._tool_name,
+            arguments,
+            capabilities=self._capabilities,
+            actor=actor,
+            context=context,
+            tool_call_id=tool_call_id,
+            approval=approval,
         )
 
     def evaluate(

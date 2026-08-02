@@ -270,14 +270,20 @@ def test_public_constructors_reject_wrong_argument_types() -> None:
         PolicyRuntime(policy).activate_deployment(object())  # type: ignore[arg-type]
 
 
-def test_checked_in_tool_call_deployment_is_exact_and_current() -> None:
+@pytest.mark.parametrize(
+    ("stem", "contract_stem"),
+    [
+        ("tool-call-baseline", "tool-call-context"),
+        ("coding-agent-baseline", "coding-agent-tool-context"),
+    ],
+)
+def test_checked_in_tool_call_deployment_is_exact_and_current(
+    stem: str, contract_stem: str
+) -> None:
     root = Path(__file__).parents[1]
     expected = create_policy_deployment(
-        load_policy(root / "examples/policies/tool-call-baseline.json"),
-        load_context_contract(root / "examples/contracts/tool-call-context.json"),
+        load_policy(root / f"examples/policies/{stem}.json"),
+        load_context_contract(root / f"examples/contracts/{contract_stem}.json"),
     )
 
-    assert (
-        load_policy_deployment(root / "examples/deployment/tool-call-baseline.deployment.json")
-        == expected
-    )
+    assert load_policy_deployment(root / f"examples/deployment/{stem}.deployment.json") == expected

@@ -99,6 +99,25 @@ This is framework-neutral and does not trust MCP annotations or model-generated 
 registries can either select a prebuilt binding by tool name or continue using the lower-level
 `ToolGate` API when their own registration object already guarantees trusted metadata.
 
+## Implemented gap: all-calls-before-dispatch authorization
+
+Current agent runtimes may propose more than one tool call in a turn and schedule them concurrently.
+Authorizing calls only as individual callbacks begin can allow a safe call to start before a later
+call in the same proposal is found to need review. `BoundToolGate.prepare(...)` now produces a
+gate-specific immutable normalized call, and `ToolGate.evaluate_many`/`enforce_many` collect the
+complete bounded batch before evaluating it.
+
+The runtime batch primitive pins one active policy generation. Contract-invalid late items produce
+no batch audit delivery; successful decisions are audited in input order; and `enforce_many` returns
+only if every item allows. This is a pre-dispatch authorization contract, not a transaction or task
+scheduler. Adapters must dispatch immediately from each prepared call's detached arguments and own
+concurrency, cancellation, callback failure, and partial side effects.
+
+The checked coding-agent deployment makes the integration reproducible without adding a framework
+dependency. Its trusted binding taxonomy treats unknown tools and under-labeled elevated tools as
+review, denies workspace escape and unapproved destruction, and never converts MCP annotations from
+an untrusted server directly into capabilities.
+
 ## Implemented gap: exact policy provenance
 
 Policy ID and version are operator-authored labels. Without a content-derived identifier, an edit
