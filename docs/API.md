@@ -442,6 +442,23 @@ strict `ToolCallApproval` dictionary matching the current call fingerprint befor
 enforcement. Rejection returns a generic error `ToolMessage` without invoking the tool. The adapter
 contract version is `LANGCHAIN_ADAPTER_VERSION = 1`. See [LANGCHAIN.md](LANGCHAIN.md).
 
+### `create_pydantic_ai_tool_policy(bindings, toolset, *, actor_provider=None, context_provider=None)`
+
+Creates an optional `PydanticAIToolPolicy` for one exact `BoundToolCatalog` and one real Pydantic
+AI `AbstractToolset`. Construction imports Pydantic AI only when called. `toolset` returns a public
+`WrapperToolset` subclass suitable for `Agent(toolsets=[...])`; every run step must expose an exact
+catalog-matching dictionary of real `ToolsetTool` objects, and execution must resolve to the
+snapshotted object.
+
+Providers are synchronous callbacks from `RunContext.deps` to fresh application-owned JSON facts.
+Allow delegates once after audited enforcement. Deny raises the typed gate error. Review raises
+native `ApprovalRequired` with `PYDANTIC_AI_REVIEW_METADATA_KEY` metadata.
+`build_results(requests, decisions)` validates selected deferred calls and creates either
+fingerprint-bound `PYDANTIC_AI_APPROVAL_METADATA_KEY` evidence or a generic `ToolDenied` result.
+A native boolean approval without this evidence fails closed, and approved resume re-enforces the
+current call and policy. The adapter contract version is `PYDANTIC_AI_ADAPTER_VERSION = 1`. See
+[PYDANTIC_AI.md](PYDANTIC_AI.md).
+
 ### `BoundToolCatalog`
 
 The immutable mapping returned by `ToolGate.bind_catalog(...)`. It exposes `gate`, `catalog`,
@@ -716,7 +733,7 @@ records. See [AUDIT_CHAINS.md](AUDIT_CHAINS.md) for the format and complete thre
 `PolicyValidationError`, `PolicyDeploymentValidationError`, `PolicyActivationError`,
 `PolicyCompositionError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
 `AuditLogError`, `AuditChainError`, `OpenAIAgentsIntegrationError`, `LangChainIntegrationError`,
-and the tool-call enforcement errors derive from
+`PydanticAIIntegrationError`, and the tool-call enforcement errors derive from
 `SamsarixEthicsError`. `AuditChainError` also derives from `AuditLogError`, preserving fail-closed
 gate handling. The base
 class and specialized errors are exported from `samsarix_ethics` and defined in

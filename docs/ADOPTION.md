@@ -6,14 +6,16 @@ deployment. It is intentionally specific enough for maintainers to reproduce and
 ## Public runtime contract
 
 The repository includes optional exact-version adapters for strict top-level OpenAI Agents SDK
-`FunctionTool` objects and exact LangChain `BaseTool` registries. Dedicated CI jobs install hashed
-dependency graphs for `openai-agents==0.18.3` and `langchain==1.3.14`, exercise real framework
-types, and run no-network examples. The OpenAI contract verifies guardrail execution, callback
-compatibility, and fail-closed handling before schema coercion. The LangChain contract verifies a
-real checkpointed interrupt/resume and proves that a final Samsarix middleware sees an earlier
-middleware's argument transformation before allowing execution. The [OpenAI guide](OPENAI_AGENTS.md)
-and [LangChain guide](LANGCHAIN.md) make this evidence reproducible from a public checkout. These
-are maintained compatibility contracts, not evidence of a third-party adopter, live model call,
+`FunctionTool` objects, exact LangChain `BaseTool` registries, and exact Pydantic AI `ToolsetTool`
+registries. Dedicated CI jobs install hashed dependency graphs for `openai-agents==0.18.3`,
+`langchain==1.3.14`, and `pydantic-ai-slim==2.22.0`, exercise real framework types, and run
+no-network examples. The OpenAI contract verifies guardrail execution and fail-closed handling
+before schema coercion. The LangChain contract verifies a real checkpointed interrupt/resume and
+final middleware ordering. The Pydantic AI contract verifies native deferred approval/rejection,
+requires Samsarix evidence beyond a native boolean, and detects registry drift. The
+[OpenAI guide](OPENAI_AGENTS.md), [LangChain guide](LANGCHAIN.md), and
+[Pydantic AI guide](PYDANTIC_AI.md) make this reproducible from a public checkout. These are
+maintained compatibility contracts, not evidence of a third-party adopter, live model call,
 production traffic, or hosted deployment.
 
 ## Implemented gap: exact-registry LangChain enforcement
@@ -34,6 +36,22 @@ Direct `BaseTool.invoke`, server-side tools, middleware that executes before cal
 and calls made outside the protected agent bypass this boundary. Parallel tool calls are not a
 transaction and may still produce partial side effects. This is exact public runtime evidence, not
 an adopter or production claim.
+
+## Implemented gap: native Pydantic AI deferred authorization
+
+Pydantic AI exposes `WrapperToolset.call_tool` as the public tool-execution wrapping seam and
+`DeferredToolRequests`/`DeferredToolResults` as its pause-and-resume contract. Its documentation
+also states that approval is not itself an authorization boundary. Samsarix therefore exact-matches
+the full run-step registry, raises native `ApprovalRequired` for policy review, and requires
+adapter-built fingerprint evidence in metadata before accepting a native approved resume. Current
+policy and fresh application facts remain authoritative.
+
+Pydantic schema and custom argument validation precedes the wrapper, so the boundary protects
+validated arguments and requires side-effect-free validators. Other toolsets, direct calls, and
+provider-side tools bypass the wrapper. Conversation and deferred state may retain proposed
+arguments, while reviewer authentication, decision expiry, one-time consumption, and durable
+storage remain application-owned. This is exact public runtime evidence, not adopter or production
+evidence.
 
 ## Samsarix Agent Framework
 

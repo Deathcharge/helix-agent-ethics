@@ -31,6 +31,9 @@ def test_public_api_is_importable() -> None:
     assert "OpenAIAgentsIntegrationError" in samsarix_ethics.__all__
     assert "OpenAIAgentsToolPolicy" in samsarix_ethics.__all__
     assert "create_openai_agents_tool_policy" in samsarix_ethics.__all__
+    assert "PydanticAIIntegrationError" in samsarix_ethics.__all__
+    assert "PydanticAIToolPolicy" in samsarix_ethics.__all__
+    assert "create_pydantic_ai_tool_policy" in samsarix_ethics.__all__
     assert "OpenTelemetryDecisionEventSink" in samsarix_ethics.__all__
     assert "OpenTelemetryIntegrationError" in samsarix_ethics.__all__
     assert "CompositeAuditSink" in samsarix_ethics.__all__
@@ -118,6 +121,9 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.LANGCHAIN_ADAPTER_VERSION == 1
     assert samsarix_ethics.LANGCHAIN_REVIEW_INTERRUPT_TYPE == "samsarix.tool_call.review"
     assert samsarix_ethics.OPENAI_AGENTS_ADAPTER_VERSION == 1
+    assert samsarix_ethics.PYDANTIC_AI_ADAPTER_VERSION == 1
+    assert samsarix_ethics.PYDANTIC_AI_APPROVAL_METADATA_KEY == "samsarix.tool_call.approval"
+    assert samsarix_ethics.PYDANTIC_AI_REVIEW_METADATA_KEY == "samsarix.tool_call.review"
     assert samsarix_ethics.OPENTELEMETRY_DECISION_EVENT_NAME == "samsarix.policy.decision"
     assert samsarix_ethics.OPENTELEMETRY_DECISION_EVENT_VERSION == 1
     assert samsarix_ethics.MAX_COMPOSITE_AUDIT_SINKS == 32

@@ -64,6 +64,16 @@ one-time resume, and treat direct `BaseTool` calls or side effects performed by 
 outside this adapter. Parallel tool nodes are not a transaction and may produce partial side
 effects. A rejected interrupt returns a generic tool error but is not an authorization audit record.
 
+When using the optional Pydantic AI adapter, register only `tool_policy.toolset` for the protected
+tools and require the complete run-step registry to remain equal to the trusted catalog. Pydantic
+schema and custom argument validators run before the wrapper; validators must not perform side
+effects, and policy sees their validated JSON-native result rather than the model's original
+spelling. A native Pydantic approval boolean is not Samsarix authorization: approved resume must
+carry adapter-built exact-call evidence and still pass current-policy enforcement. Protect
+message/deferred state and conversation IDs, authenticate reviewers, enforce expiry and atomic
+one-time consumption, and treat other toolsets, direct calls, provider tools, and pre-delegation
+side effects as outside this adapter. Parallel calls remain non-transactional.
+
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
 code, loads no plugins, and stores no raw evaluation input in its built-in audit record.

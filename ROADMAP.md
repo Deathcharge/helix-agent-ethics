@@ -25,6 +25,9 @@ adoption remain separate evidence-based decisions.
 - [x] Add exact-registry LangChain sync/async middleware with final-argument enforcement, native
   LangGraph review interrupts, fingerprint-bound resume, exact-version locking, and a real
   no-network agent contract.
+- [x] Add an exact-registry Pydantic AI wrapper toolset with native deferred review,
+  fingerprint-bound Samsarix resume evidence, exact slim-version locking, and a real no-network
+  agent contract.
 - [x] Expose one immutable metadata-only audit record to a caller-supplied sink while preserving
   the existing JSONL API and fail-closed behavior.
 - [x] Correlate metadata-only decisions with a caller-owned OpenTelemetry trace through an optional
@@ -79,7 +82,8 @@ Current hardening backlog:
 
 - No published package/release, public third-party adopter, or production deployment evidence.
 - The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible.
-  The public OpenAI, LangChain, and OpenTelemetry adapters are reproducible integration evidence,
+  The public OpenAI, LangChain, Pydantic AI, and OpenTelemetry adapters are reproducible
+  integration evidence,
   not external adopter case studies.
 - LangChain review checkpoints intentionally contain proposed tool arguments. Reviewer identity,
   checkpoint confidentiality, expiry, one-time resume, and multi-call transactionality remain
