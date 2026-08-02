@@ -238,4 +238,6 @@ samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema tool-catalog > tool-catalog-v1.schema.json
 samsarix-ethics schema tool-gate-deployment > tool-gate-deployment-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
+samsarix-ethics schema audit-chain-entry > audit-chain-entry-v1.schema.json
+samsarix-ethics schema audit-chain-verification > audit-chain-verification-v1.schema.json
 ```

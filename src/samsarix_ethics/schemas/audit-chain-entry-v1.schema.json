@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/audit-chain-entry/v1.json",
+  "title": "Samsarix Agent Ethics audit chain entry v1",
+  "description": "One HMAC-SHA-256 authenticated, metadata-only policy decision record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "audit_chain_version",
+    "algorithm",
+    "stream_id",
+    "sequence",
+    "previous_mac",
+    "record",
+    "mac"
+  ],
+  "properties": {
+    "audit_chain_version": { "type": "integer", "const": 1 },
+    "algorithm": { "const": "hmac-sha256" },
+    "stream_id": { "$ref": "#/$defs/identifier" },
+    "sequence": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+    "previous_mac": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/mac" }
+      ]
+    },
+    "record": { "$ref": "#/$defs/audit_record" },
+    "mac": { "$ref": "#/$defs/mac" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "mac": {
+      "type": "string",
+      "pattern": "^v1:hmac-sha256:[0-9a-f]{64}$"
+    },
+    "audit_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "audit_record_version",
+        "decision_id",
+        "evaluated_at",
+        "policy_id",
+        "policy_version",
+        "policy_fingerprint",
+        "outcome",
+        "matched_rules",
+        "warning_count"
+      ],
+      "properties": {
+        "audit_record_version": { "type": "integer", "const": 1 },
+        "decision_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "evaluated_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+        "policy_id": { "$ref": "#/$defs/identifier" },
+        "policy_version": { "$ref": "#/$defs/identifier" },
+        "policy_fingerprint": {
+          "type": "string",
+          "pattern": "^v1:sha256:[0-9a-f]{64}$"
+        },
+        "outcome": { "enum": ["allow", "deny", "review"] },
+        "matched_rules": {
+          "type": "array",
+          "maxItems": 1000,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "warning_count": { "type": "integer", "minimum": 0, "maximum": 1000 }
+      }
+    }
+  }
+}

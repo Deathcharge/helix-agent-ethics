@@ -40,6 +40,14 @@ def test_public_api_is_importable() -> None:
     assert "get_tool_approval_schema" in samsarix_ethics.__all__
     assert "get_audit_record_schema" in samsarix_ethics.__all__
     assert "AuditRecord" in samsarix_ethics.__all__
+    assert "AuditChainEntry" in samsarix_ethics.__all__
+    assert "AuditChainError" in samsarix_ethics.__all__
+    assert "AuditChainVerification" in samsarix_ethics.__all__
+    assert "HmacAuditChainSink" in samsarix_ethics.__all__
+    assert "generate_audit_chain_key" in samsarix_ethics.__all__
+    assert "verify_audit_chain" in samsarix_ethics.__all__
+    assert "get_audit_chain_entry_schema" in samsarix_ethics.__all__
+    assert "get_audit_chain_verification_schema" in samsarix_ethics.__all__
     assert "ToolCallApproval" in samsarix_ethics.__all__
     assert "fingerprint_tool_call" in samsarix_ethics.__all__
     assert "fingerprint_policy" in samsarix_ethics.__all__
@@ -101,6 +109,13 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.TOOL_CATALOG_FINGERPRINT_VERSION == 1
     assert samsarix_ethics.TOOL_GATE_DEPLOYMENT_VERSION == 1
     assert samsarix_ethics.AUDIT_RECORD_VERSION == 1
+    assert samsarix_ethics.AUDIT_CHAIN_VERSION == 1
+    assert samsarix_ethics.AUDIT_CHAIN_VERIFICATION_VERSION == 1
+    assert samsarix_ethics.MIN_AUDIT_CHAIN_KEY_BYTES == 32
+    assert samsarix_ethics.MAX_AUDIT_CHAIN_KEY_BYTES == 4_096
+    assert samsarix_ethics.MAX_AUDIT_CHAIN_BYTES == 1_073_741_824
+    assert samsarix_ethics.MAX_AUDIT_CHAIN_ENTRY_BYTES == 262_144
+    assert samsarix_ethics.MAX_AUDIT_CHAIN_ENTRIES == 1_000_000
     assert samsarix_ethics.CONTEXT_CONTRACT_VERSION == 1
     assert samsarix_ethics.CONTEXT_CONTRACT_FINGERPRINT_VERSION == 1
     assert samsarix_ethics.DEPLOYMENT_LOCK_VERSION == 1

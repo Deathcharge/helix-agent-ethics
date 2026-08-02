@@ -38,6 +38,7 @@ the legacy `helix-unified` repository.
 
 - `models.py`: strict schema validation and immutable policy/decision values.
 - `audit.py`: versioned metadata-only records, the caller sink contract, and local JSONL sink.
+- `audit_chain.py`: bounded HMAC-SHA-256 chain entries, single-writer sink, and verifier.
 - `approval.py`: immutable approval records and bounded exact-call fingerprints.
 - `catalog.py`: strict application-owned tool capability catalogs and exact registry matching.
 - `provenance.py`: canonical, domain-separated policy, contract, and catalog fingerprints.
@@ -190,9 +191,16 @@ Raw action context can contain credentials or personal data, so the versioned `A
 only decision metadata. Each decision and record identifies the complete validated policy content
 with a domain-separated, versioned SHA-256 fingerprint; operator-authored policy ID and version
 remain human-readable labels. JSON object keys are canonicalized and array order is preserved. The
-built-in JSONL sink is local best effort (`append` plus `fsync`), not an immutable or cross-process
-ordered ledger. A caller-owned sink receives the same frozen record, runs once before authorization,
-and owns transport, retries, idempotency, and durable retention.
+built-in JSONL sink is local best effort (`append` plus `fsync`). A caller-owned sink receives the
+same frozen record, runs once before authorization, and owns transport, retries, idempotency, and
+durable retention.
+
+`HmacAuditChainSink` is the optional local integrity layer. It authenticates each record, stream ID,
+one-based sequence, and prior MAC using domain-separated HMAC-SHA-256. A verifier recomputes the
+complete chain with bounded, duplicate-safe parsing. A separately protected expected head is needed
+to detect rollback to an earlier valid prefix. The sink serializes its own threads and rejects an
+observed external file change, but does not provide a cross-process lock, remove the check/append
+race, identify an individual signer, or protect against an attacker who has the shared key.
 
 ### Enforcement remains local and immediate
 
@@ -254,8 +262,9 @@ authorization and risk facts can be re-read.
   and the complete trusted registry snapshot. Exact matching prevents name-set drift but does not
   prove capability correctness. `ToolDispatcher` additionally freezes callback object selection,
   not code identity, internal state, delegation, or semantics.
-- **Filesystem/audit operator** owns access control, transport, idempotency, rotation, retention,
-  backups, and tamper detection for audit destinations.
+- **Filesystem/audit operator** owns access control, transport, idempotency, key custody/rotation,
+  external head checkpoints, cross-process writer exclusion, retention, backups, and availability
+  for audit destinations.
 
 ## Distribution
 

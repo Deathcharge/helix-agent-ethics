@@ -54,6 +54,9 @@ adoption remain separate evidence-based decisions.
   tool-gate deployment with atomic output and fail-closed registry binding.
 - [x] Bind verified catalogs to immutable final callback snapshots with framework-neutral sync,
   async, and all-calls-before-dispatch batch execution.
+- [x] Add a bounded keyed metadata-only audit chain and strict verifier for single-writer local
+  evidence, including externally anchored valid-prefix rollback detection without claiming a
+  cross-process ledger or hosted log service.
 
 ## Release candidate
 
@@ -70,7 +73,9 @@ Current hardening backlog:
   attestations exist. PyPI project ownership, Trusted Publishing, protected release approval, and
   durable registry publication evidence are not yet configured.
 - The “ethics” name may still overpromise relative to a deterministic authorization/policy gate.
-- Local audit logs are operational records, not tamper-evident compliance evidence.
+- Plain local audit logs remain operational records. The optional keyed chain supplies
+  single-writer integrity evidence, not compliance evidence, individual signatures, availability,
+  or cross-process coordination; rollback detection depends on an externally protected head.
 - Caller-owned sinks provide a delivery seam, not built-in HTTP, queues, retries, exactly-once
   storage, retention, or a hosted audit service.
 - Atomic runtime generations are process-local; durable desired state, artifact distribution,

@@ -63,6 +63,10 @@ class AuditLogError(SamsarixEthicsError):
     """Raised when a requested audit record cannot be durably appended."""
 
 
+class AuditChainError(AuditLogError):
+    """Raised when a keyed audit chain cannot be written or verified."""
+
+
 class ToolCallBlockedError(SamsarixEthicsError):
     """A typed block with its selected decision and complete evaluation set."""
 

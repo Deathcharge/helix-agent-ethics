@@ -88,6 +88,9 @@ All notable product changes are recorded here.
 - Framework-neutral `ToolDispatcher` bindings that exact-match and snapshot final Python callback
   references, authorize before sync/async execution, and preflight complete batches before ordered
   dispatch without claiming transactional side effects or callable-code authentication.
+- Keyed metadata-only HMAC-SHA-256 audit chains with strict bounded verification, single-instance
+  thread serialization, restart checkpoints, valid-prefix rollback detection, CLI/schema support,
+  adversarial integrity tests, and an end-to-end gate example.
 
 ### Changed
 

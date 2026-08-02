@@ -289,6 +289,12 @@ reports, and the built-in JSONL audit omit arguments. The embedding application 
 its own logs and traces, custom-sink transport security and idempotency, durable pending-call
 storage, reviewer authentication, audit retention, and post-execution outcome records.
 
+For a single-writer local file that needs authenticated order and mutation evidence, pass an
+`HmacAuditChainSink` as `audit_sink`. It keeps the same metadata-only record and fail-closed gate
+contract. An external head checkpoint is required for valid-prefix rollback detection, and the
+application still owns key custody, writer exclusion, retention, and recovery. See
+[AUDIT_CHAINS.md](AUDIT_CHAINS.md).
+
 Every decision and audit record includes `policy_fingerprint`, the canonical exact-content digest
 of the complete validated policy. Record the expected fingerprint during deployment if operators
 need to prove which policy body authorized a tool call; the human-readable policy ID/version alone
