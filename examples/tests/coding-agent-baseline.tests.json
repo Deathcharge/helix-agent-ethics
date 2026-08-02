@@ -50,6 +50,18 @@
       "expected_warning_count": 0
     },
     {
+      "name": "missing workspace containment is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "read_file", "capabilities": ["workspace:read"], "arguments": {"path": "README.md"}},
+        "context": {}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-missing-workspace-containment"],
+      "expected_warning_count": 0
+    },
+    {
       "name": "contained workspace read is allowed",
       "input": {
         "tool_context_version": 1,
@@ -156,6 +168,18 @@
       "expected_outcome": "allow",
       "expected_matched_rules": ["allow-approved-elevated-capabilities", "warn-sensitive-data"],
       "expected_warning_count": 1
+    },
+    {
+      "name": "approved external write is allowed",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "create_issue", "capabilities": ["external:write", "risk:elevated"], "arguments": {"title": "bug"}},
+        "context": {"workspace_contained": true, "approval": {"approval_version": 1, "tool_call_id": "issue-1", "approved": true, "tool_call_fingerprint": "v1:sha256:61715a920e0c1ff7be0d78bbfbe88d123099484311b684bf2a43c79ef835e548"}}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-approved-elevated-capabilities"],
+      "expected_warning_count": 0
     },
     {
       "name": "unknown capability defaults to review",

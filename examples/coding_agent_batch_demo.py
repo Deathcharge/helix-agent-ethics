@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from samsarix_ethics import (
+    Outcome,
     PolicyRuntime,
     ToolCallApproval,
     ToolCallBlockedError,
@@ -40,7 +41,11 @@ def main() -> None:
     try:
         gate.enforce_many([read_call, command_call])
     except ToolCallBlockedError as exc:
+        if exc.decision.outcome is not Outcome.REVIEW:
+            raise AssertionError("the unapproved elevated call must require review") from exc
         print(f"batch blocked before dispatch: {exc.decision.outcome.value}")
+    else:
+        raise AssertionError("the unapproved elevated call must block the batch")
 
     call_id = "run-tests-1"
     approval = ToolCallApproval(
@@ -57,6 +62,12 @@ def main() -> None:
     )
     calls = [read_call, approved_command]
     decisions = gate.enforce_many(calls)
+    expected_outcomes = (
+        Outcome.ALLOW,
+        Outcome.ALLOW,
+    )
+    if tuple(decision.outcome for decision in decisions) != expected_outcomes:
+        raise AssertionError("the approved batch must allow every call")
 
     # The embedding framework dispatches only after the complete batch is allowed.
     dispatch_plan = [{"tool": call.tool_name, "arguments": call.arguments} for call in calls]

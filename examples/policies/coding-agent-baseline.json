@@ -42,6 +42,15 @@
       ]
     },
     {
+      "id": "deny-missing-workspace-containment",
+      "effect": "deny",
+      "priority": 10,
+      "message": "The application must supply the workspace containment fact.",
+      "conditions": [
+        {"field": "context.workspace_contained", "operator": "not_exists"}
+      ]
+    },
+    {
       "id": "deny-uncontained-workspace-read",
       "effect": "deny",
       "priority": 10,

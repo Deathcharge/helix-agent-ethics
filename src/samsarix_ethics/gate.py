@@ -165,7 +165,7 @@ class ToolExecutionResult(Generic[_ResultT]):
     value: _ResultT
 
 
-@dataclass(frozen=True, slots=True, init=False)
+@dataclass(frozen=True, slots=True, init=False, eq=False, repr=False)
 class PreparedToolCall:
     """One immutable normalized call prepared by its enforcing ``ToolGate``."""
 
@@ -174,6 +174,11 @@ class PreparedToolCall:
 
     def __init__(self) -> None:
         raise TypeError("PreparedToolCall objects are created by ToolGate.prepare")
+
+    def __repr__(self) -> str:
+        """Return registered metadata without arguments, actor, context, or approval."""
+
+        return f"PreparedToolCall(tool_name={self.tool_name!r}, capabilities={self.capabilities!r})"
 
     @classmethod
     def _create(cls, gate: ToolGate, context: Mapping[str, Any]) -> PreparedToolCall:

@@ -49,6 +49,13 @@ def test_prepared_call_is_gate_created_immutable_and_detached() -> None:
     assert call.tool_name == "read_file"
     assert call.capabilities == ("data:sensitive", "resource:read")
     assert call.arguments == {"path": "README.md", "options": ["metadata"]}
+    assert repr(call) == (
+        "PreparedToolCall(tool_name='read_file', capabilities=('data:sensitive', 'resource:read'))"
+    )
+    assert "README.md" not in repr(call)
+    equivalent = bound.prepare({"path": "README.md", "options": ["metadata"]})
+    assert call != equivalent
+    assert len({call, equivalent}) == 2
     returned = call.arguments
     returned["path"] = "changed"
     assert call.arguments["path"] == "README.md"

@@ -75,7 +75,8 @@ All notable product changes are recorded here.
   consistency, exact approval preservation, within-batch duplicate object/approval-ID rejection,
   streaming context thaw, and no package-owned callback scheduling.
 - A 100%-rule-covered coding-agent policy, context contract, verified single-file deployment, and
-  runnable batch demo for contained workspace reads and approval-bound process/network/write risk.
+  runnable batch demo for contained workspace reads and approval-bound process/network/write risk;
+  missing containment fails closed even when the raw policy is used without its contract.
 
 ### Changed
 

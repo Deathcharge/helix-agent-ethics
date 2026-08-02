@@ -6,9 +6,9 @@ calls proposed by one turn before the embedding runtime schedules any of them.
 
 ## Included evidence
 
-- `examples/policies/coding-agent-baseline.json`: fourteen deterministic rules;
+- `examples/policies/coding-agent-baseline.json`: fifteen deterministic rules;
 - `examples/contracts/coding-agent-tool-context.json`: the application fact boundary;
-- `examples/tests/coding-agent-baseline.tests.json`: fourteen allow/deny/review cases with 100% rule
+- `examples/tests/coding-agent-baseline.tests.json`: sixteen allow/deny/review cases with 100% rule
   coverage; and
 - `examples/deployment/coding-agent-baseline.deployment.json`: one verified policy, contract, and
   exact-content lock.
@@ -41,7 +41,7 @@ python examples/coding_agent_batch_demo.py
 | `network:access` | Communicate outside the local workspace | Review unless approved; warn when used |
 | `external:write` | Create an effect in another system | Review unless approved |
 | `destructive` | Delete or irreversibly overwrite state | Deny without exact-call approval |
-| `data:sensitive` | Access secrets, credentials, personal, or confidential data | Never inherits the read-only allow; warn when approved |
+| `data:sensitive` | Access secrets, credentials, personal, or confidential data | Never inherits the read-only allow; warns whenever present |
 | `risk:elevated` | Application-owned marker requiring human approval | Review without approval, deny after rejection, allow only a known capability subset after approval |
 
 Unknown capabilities default to review. Known elevated capabilities accidentally registered without
@@ -60,6 +60,8 @@ receive `risk:elevated` or remain unknown, both of which require review here.
 `context.workspace_contained` is also application-owned. Compute it from resolved paths, the
 approved workspace root, symlink/reparse-point policy, and the semantics of the actual executor.
 The policy only consumes the boolean; it does not parse paths or contain the filesystem itself.
+The context contract permits the field to be absent solely so the policy's explicit missing-fact
+denial remains regression-tested; omission never authorizes a call.
 
 OpenAI Agents SDK function-tool guardrails, Claude Code permission controls, and LangGraph
 human-in-the-loop review all expose interception points, but their scheduling and tool categories

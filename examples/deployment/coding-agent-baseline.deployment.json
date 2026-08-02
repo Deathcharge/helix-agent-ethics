@@ -58,6 +58,18 @@
         "priority": 0
       },
       {
+        "id": "deny-missing-workspace-containment",
+        "effect": "deny",
+        "conditions": [
+          {
+            "field": "context.workspace_contained",
+            "operator": "not_exists"
+          }
+        ],
+        "message": "The application must supply the workspace containment fact.",
+        "priority": 10
+      },
+      {
         "id": "deny-uncontained-workspace-read",
         "effect": "deny",
         "conditions": [
@@ -289,7 +301,7 @@
       },
       "context.workspace_contained": {
         "type": "boolean",
-        "required": true
+        "required": false
       },
       "context.approval": {
         "type": "object",
@@ -306,12 +318,12 @@
     "policy": {
       "id": "coding-agent-baseline",
       "version": "1.0.0",
-      "fingerprint": "v1:sha256:9649ac473867437f607d0fa97beda626c796f22cedc6d48e3f1ee6f8dd781d61"
+      "fingerprint": "v1:sha256:917f7b6745e5c190a9deb9e383387ba76ddf5d46c510219fd9db72b56d2e0eab"
     },
     "context_contract": {
       "id": "coding-agent-tool-context",
       "version": "1.0.0",
-      "fingerprint": "v1:sha256:55ffeabcce6e741d6bb8940a7200add2a6c4f5f3cfb9752f0b61e3d093733e87"
+      "fingerprint": "v1:sha256:58e3d03743f32d98e918d4cea0cf1ee1ec684f08716832d5a3d439acd41d76f5"
     }
   }
 }

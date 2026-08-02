@@ -321,7 +321,7 @@ certification or ethics truth.
   authentication, immutable transport, signing, replication, and promotion approval.
 - Added immutable gate-specific prepared calls and bounded `ToolGate` batch evaluation/enforcement.
   Every call is collected before evaluation, runtime batches pin one generation, contract errors
-  precede audit delivery, and dispatch remains framework-owned. A fourteen-rule coding-agent pack,
+  precede audit delivery, and dispatch remains framework-owned. A fifteen-rule coding-agent pack,
   matching context contract, 100%-covered suite, verified deployment, and runnable review/approval
   demo cover workspace, process, network, destructive, and sensitive capabilities.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
