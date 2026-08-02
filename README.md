@@ -445,6 +445,27 @@ For coherent promotion, package the locked policy deployment and reviewed catalo
 `ToolGateDeployment`, then call `ToolGate.bind_deployment(...)` with the complete trusted registry
 snapshot. See [coherent tool-gate deployments](docs/TOOL_GATE_DEPLOYMENTS.md).
 
+To keep authorization and callback selection on one dependency-free runtime path, bind the final
+Python callables themselves:
+
+```python
+from samsarix_ethics import ToolDispatcher, load_tool_gate_deployment
+
+gate_deployment = load_tool_gate_deployment("coding-agent.gate-deployment.json")
+dispatcher = ToolDispatcher.bind_deployment(
+    gate_deployment,
+    registered_tools={
+        name: registry.get_tool(name).function
+        for name in registry.list_tools()
+    },
+)
+result = dispatcher.execute(model_tool_name, model_arguments, context=trusted_context)
+```
+
+The dispatcher snapshots the mapping and callback references, exact-matches every name, supplies
+detached arguments as keyword arguments, and never invokes a blocked tool. Do not bind a wrapper
+that performs another mutable registry lookup. See [immutable tool dispatch](docs/TOOL_DISPATCH.md).
+
 When a model turn proposes several calls, prepare them from trusted bindings and authorize the
 complete batch before dispatching any item:
 
@@ -466,7 +487,9 @@ effects, and the requirement to dispatch immediately from each prepared call's f
 `arguments`. See the [coding-agent policy pack](docs/CODING_AGENT_POLICY.md) and run
 `python examples/coding_agent_batch_demo.py` for a read-plus-command review and approval flow.
 
-`execute_async` provides the same fail-closed boundary for async callbacks. Denials raise
+`execute_async` provides the same fail-closed boundary for async callbacks. `ToolDispatcher` also
+provides `execute_many` and `execute_many_async`, which preflight the entire batch before invoking
+frozen callbacks sequentially. Denials raise
 `ToolCallDeniedError`; review outcomes raise `ToolCallReviewRequiredError`; neither invokes the
 tool. See the [tool-call integration guide](docs/TOOL_CALLS.md), [API reference](docs/API.md), and
 [policy format](docs/POLICY_FORMAT.md).
@@ -597,7 +620,8 @@ validated immutable models, deterministic evaluation, fail-closed in-process too
 versioned trusted tool catalogs, versioned schemas, bounded I/O, authoring diagnostics, regression
 testing, rule coverage, policy impact comparison, layered composition, application context
 contracts, exact deployment locks, single-file policy deployments, value-minimized policy
-explanations, baseline-authoritative shadow rollout, atomic live policy activation, and
+explanations, baseline-authoritative shadow rollout, atomic live policy activation, immutable
+framework-neutral dispatch bindings, and
 presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 
@@ -617,6 +641,8 @@ Deliberate limitations:
   establish freshness, or prevent rollback.
 - Policy deployments make one local file coherent but do not sign it, persist desired state,
   verify transport identity, or make a distributed rollout atomic.
+- Dispatcher snapshots stabilize callable references, not mutable callback internals, delegated
+  registry lookups, imported globals, code identity, or side-effect transactions.
 - Explanations cover one supplied input and disclose rule/path/operator status; they do not prove
   policy correctness or hide authorization behavior from a caller allowed to query them.
 - Policies must be reviewed and tested for the embedding application's real threat model.

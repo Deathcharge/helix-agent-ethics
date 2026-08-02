@@ -64,6 +64,7 @@ from .diagnostics import (
     PolicyLintSeverity,
     lint_policy,
 )
+from .dispatch import ToolCallback, ToolDispatcher
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import (
     AuditLogError,
@@ -279,9 +280,11 @@ __all__ = [
     "ToolCallBlockedError",
     "ToolCallDeniedError",
     "ToolCallReviewRequiredError",
+    "ToolCallback",
     "ToolCatalog",
     "ToolCatalogEntry",
     "ToolCatalogValidationError",
+    "ToolDispatcher",
     "ToolExecutionResult",
     "ToolGate",
     "ToolGateDeployment",

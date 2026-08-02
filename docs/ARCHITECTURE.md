@@ -17,6 +17,7 @@ untrusted action JSON ─> bounded parser ─> context object ──────
 
 trusted tool catalog + complete local registry names ─> exact match ─> immutable gate bindings
 locked policy deployment + fingerprinted catalog ─> ToolGateDeployment ─> verified bindings
+verified bindings + final callback objects ─> ToolDispatcher ─> authorized sequential dispatch
 
 validated policy + optional contract/lock ─> PolicyRuntime generation N ─> live gates
 validated complete candidate ─> compare-and-swap atomic activation ──────┘
@@ -43,6 +44,7 @@ the legacy `helix-unified` repository.
 - `deployment.py`: strict immutable deployment locks and exact artifact verification.
 - `policy_deployment.py`: complete single-file enforcement units and internal lock verification.
 - `tool_gate_deployment.py`: coherent policy-and-catalog units with exact catalog pinning.
+- `dispatch.py`: exact callback snapshots and framework-neutral sync/async dispatch.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `contracts.py`: immutable application fact declarations, policy compatibility, and runtime type
   enforcement.
@@ -207,7 +209,17 @@ therefore occur before batch audit delivery, and a runtime captures one generati
 outcome is allow. Its first typed block retains all metadata-only decisions and the blocked index,
 so an adapter does not need to repeat evaluation to build a multi-call review surface. It does not
 execute callbacks or make their side effects transactional; framework scheduling remains outside
-the package boundary.
+the base gate boundary. The optional dispatcher below supplies only sequential in-process
+scheduling.
+
+`ToolDispatcher` is the optional local scheduling seam for runtimes that want authorization and
+callback selection owned by one object. It exact-matches a complete callback mapping to the
+catalog, copies the mapping, and retains each final callback object. Single calls authorize before
+selection; batches authorize every call before invoking callbacks sequentially. This prevents a
+later dictionary or registry replacement from changing the selected reference, but it is not code
+identity or semantic attestation. A mutable callable, closure, module global, monkey patch, or
+callback that delegates into another registry can still change behavior. Batch execution is not a
+transaction and does not provide rollback after a later callback error.
 Applications with durable approval workflows store an exact-call fingerprint with pending-call
 state. On resume, `ToolGate` verifies a structured approval against the normalized call before
 policy evaluation, audit delivery, or callback execution, then re-evaluates fresh trusted facts.
@@ -240,7 +252,8 @@ authorization and risk facts can be re-read.
   name and capabilities used at enforcement; remote protocol annotations remain untrusted hints.
 - **Tool catalog operator** owns catalog authorship, review, authenticated distribution, freshness,
   and the complete trusted registry snapshot. Exact matching prevents name-set drift but does not
-  inspect callables or prove capability correctness.
+  prove capability correctness. `ToolDispatcher` additionally freezes callback object selection,
+  not code identity, internal state, delegation, or semantics.
 - **Filesystem/audit operator** owns access control, transport, idempotency, rotation, retention,
   backups, and tamper detection for audit destinations.
 

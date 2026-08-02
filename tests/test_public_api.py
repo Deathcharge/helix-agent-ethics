@@ -22,6 +22,8 @@ def test_public_api_is_importable() -> None:
     assert "ToolCatalog" in samsarix_ethics.__all__
     assert "ToolCatalogEntry" in samsarix_ethics.__all__
     assert "ToolCatalogValidationError" in samsarix_ethics.__all__
+    assert "ToolCallback" in samsarix_ethics.__all__
+    assert "ToolDispatcher" in samsarix_ethics.__all__
     assert "load_tool_catalog" in samsarix_ethics.__all__
     assert "fingerprint_tool_catalog" in samsarix_ethics.__all__
     assert "validate_tool_catalog_registration" in samsarix_ethics.__all__

@@ -208,14 +208,15 @@ index zero.
 
 Audit sinks remain non-transactional. A sink failure can occur after earlier records were delivered,
 but fails closed before the caller receives batch authorization. The package deliberately does not
-run callbacks or promise all-or-nothing side effects. Dispatch immediately after authorization from
-the prepared calls, do not reuse a stale batch, and let the embedding runtime own scheduling,
-cancellation, callback failures, and any compensating transactions.
+make side effects transactional. Base `ToolGate` batch methods do not run callbacks. The optional
+`ToolDispatcher` can snapshot final callback references and invoke an allowed batch sequentially;
+the embedding runtime still owns cancellation, callback failures, retries, idempotency, and any
+compensating transactions. Do not reuse a stale prepared batch.
 
 ## Existing tool registries
 
-Keep the registry as the canonical executor and create bindings from its trusted registration
-metadata:
+For the smallest integration, keep the registry as the canonical executor and create bindings from
+its trusted registration metadata:
 
 ```python
 bindings = {
@@ -230,7 +231,24 @@ result = binding.execute(
 ```
 
 This works with Samsarix Agent Framework's `ToolRegistry` and any equivalent registry without an
-import-time dependency. The policy package and runtime remain independently versioned.
+import-time dependency, but the wrapper performs another registry lookup at call time. When the
+registry can expose final functions, prefer `ToolDispatcher` so later registry replacement cannot
+change selection:
+
+```python
+dispatcher = ToolDispatcher.bind_catalog(
+    gate,
+    catalog,
+    registered_tools={
+        name: registry.get_tool(name).function
+        for name in registry.list_tools()
+    },
+)
+result = dispatcher.execute(model_tool_name, model_arguments, actor={"id": current_agent_id})
+```
+
+The policy package and runtime remain independently versioned. See
+[immutable tool dispatch](TOOL_DISPATCH.md) for the callback and batch boundaries.
 
 ## Human review lifecycle
 

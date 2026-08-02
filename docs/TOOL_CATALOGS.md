@@ -59,6 +59,10 @@ exceeds 256 tools. The resulting `BoundToolCatalog` is immutable, gate-specific,
 exact catalog fingerprint. Each contained `BoundToolGate` freezes the catalog's canonical name and
 capability tuple.
 
+If the registry exposes its final Python functions, `ToolDispatcher.bind_catalog(...)` can also
+snapshot those references and own post-authorization selection. See
+[immutable tool dispatch](TOOL_DISPATCH.md).
+
 For Samsarix Core, derive names from `(spec.name for spec in registry.list())`. For Samsarix Agent
 Framework, `registry.list_tools().keys()` is already a name view. Other frameworks should expose an
 equivalent application-controlled snapshot. Passing a partial, model-generated, or remote-server

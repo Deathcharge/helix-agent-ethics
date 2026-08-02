@@ -44,6 +44,9 @@ are bounded and type-checked. The embedding application remains responsible for:
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
 code, loads no plugins, and stores no raw evaluation input in its built-in audit record.
+`ToolDispatcher` optionally snapshots final application callback references and selects them by a
+cataloged name after authorization. It does not authenticate callback code, validate a framework's
+tool schema, freeze mutable callback/closure/global state, or isolate the resulting side effect.
 Policy-test, comparison, and coverage reports exclude case inputs but expose case names. Shadow
 reports exclude action inputs and have no case-name field. These report types still expose policy
 and rule identifiers, fingerprints, and bounded evaluation errors; do not place secrets in those
@@ -89,8 +92,9 @@ before batch audit delivery, but trusted actor/context facts can still change af
 Prepare and dispatch without an avoidable TOCTOU gap, never mix calls prepared by different gates,
 and do not reuse a previously authorized batch. Within one batch, repeated prepared objects and
 repeated approval call IDs fail closed; applications still own approval consumption and replay
-protection across batches. The package does not execute the batch, cancel
-callbacks, roll back partial side effects, or make a custom audit sink transactional. A sink failure
+protection across batches. The base `ToolGate` batch API does not execute callbacks;
+`ToolDispatcher` can invoke an allowed batch sequentially but cannot cancel callbacks, roll back
+partial side effects, or make a custom audit sink transactional. A sink failure
 after earlier batch records were accepted still prevents authorization but may leave partial audit
 delivery; destinations own idempotency and reconciliation.
 
