@@ -199,9 +199,11 @@ from .provenance import (
     fingerprint_tool_gate_deployment,
 )
 from .pydantic_ai import (
+    MAX_PENDING_PYDANTIC_AI_APPROVALS,
     PYDANTIC_AI_ADAPTER_VERSION,
     PYDANTIC_AI_APPROVAL_METADATA_KEY,
     PYDANTIC_AI_REVIEW_METADATA_KEY,
+    PydanticAIApprovalStore,
     PydanticAIIntegrationError,
     PydanticAIToolPolicy,
     create_pydantic_ai_tool_policy,
@@ -281,6 +283,7 @@ __all__ = [
     "MAX_DEPLOYMENT_AUTH_SEQUENCE",
     "MAX_DEPLOYMENT_LOCK_BYTES",
     "MAX_PENDING_OPENAI_APPROVALS",
+    "MAX_PENDING_PYDANTIC_AI_APPROVALS",
     "MAX_POLICY_DEPLOYMENT_BYTES",
     "MAX_POLICY_RULES",
     "MAX_POLICY_TEST_BYTES",
@@ -387,6 +390,7 @@ __all__ = [
     "PolicyTestValidationError",
     "PolicyValidationError",
     "PreparedToolCall",
+    "PydanticAIApprovalStore",
     "PydanticAIIntegrationError",
     "PydanticAIToolPolicy",
     "RuleExplanation",

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any
@@ -69,6 +70,11 @@ class _DeferredCall:
     tool_name: Any
     args: Any
     tool_call_id: Any
+
+    def args_as_dict(self) -> Any:
+        if isinstance(self.args, str):
+            return json.loads(self.args)
+        return self.args
 
 
 @dataclass
@@ -251,6 +257,8 @@ def test_factory_is_optional_and_validates_runtime(
 
     with pytest.raises(TypeError, match="synchronous callable"):
         create_pydantic_ai_tool_policy(bindings, inner, actor_provider=async_provider)
+    with pytest.raises(TypeError, match="remember and consume"):
+        create_pydantic_ai_tool_policy(bindings, inner, approval_store=object())
 
     monkeypatch.setattr(
         adapter_module,
@@ -356,6 +364,15 @@ def test_review_builds_exact_results_and_resumes_or_rejects(
         )
         == "executed"
     )
+    assert len(inner.calls) == 1
+
+    replay_wrapper, replay_tools = asyncio.run(_run_wrapper(adapter, resumed_ctx))
+    with pytest.raises(PydanticAIIntegrationError, match="already consumed"):
+        asyncio.run(
+            replay_wrapper.call_tool(
+                "send_message", arguments, resumed_ctx, replay_tools["send_message"]
+            )
+        )
     assert len(inner.calls) == 1
 
     rejected = adapter.build_results(request, {"call-1": False})
@@ -484,6 +501,26 @@ def _valid_deferred_request() -> _DeferredToolRequests:
             }
         },
     )
+
+
+@pytest.mark.parametrize(
+    "pending_arguments",
+    [{"mode": "send"}, '{"mode":"send"}'],
+    ids=["mapping", "json-string"],
+)
+def test_build_results_normalizes_pending_arguments(
+    fake_pydantic_ai: None,
+    bindings: BoundToolCatalog,
+    pending_arguments: Any,
+) -> None:
+    adapter = create_pydantic_ai_tool_policy(bindings, _InnerToolset())
+    request = _valid_deferred_request()
+    request.approvals[0].args = pending_arguments
+
+    results = adapter.build_results(request, {"call-1": True})
+
+    assert results.approvals == {"call-1": True}
+    assert PYDANTIC_AI_APPROVAL_METADATA_KEY in results.metadata["call-1"]
 
 
 def test_build_results_rejects_mutated_request_metadata(

@@ -623,7 +623,8 @@ After authenticating the reviewer, use `tool_policy.build_results(requests, deci
 resume evidence. A plain Pydantic AI boolean approval is not enough: resume requires Samsarix
 metadata, fresh actor/context providers, and current-policy re-enforcement. Pydantic AI performs
 schema validation before the wrapper, so this adapter authorizes validated JSON-native arguments;
-custom argument validators must have no side effects. See the
+custom argument validators must have no side effects. Approved results are first-write recorded
+and atomically consumed; durable reconstruction supplies an application-owned approval store. See the
 [Pydantic AI toolset guide](docs/PYDANTIC_AI.md) for multi-call resolution, persistence, sensitive
 metadata, and unsupported-path boundaries.
 

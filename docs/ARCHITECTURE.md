@@ -20,7 +20,7 @@ locked policy deployment + fingerprinted catalog ─> ToolGateDeployment ─> ve
 verified bindings + final callback objects ─> ToolDispatcher ─> authorized sequential dispatch
 verified bindings + exact LangChain BaseTools ─> final middleware ─> allow / interrupt / block
 
-verified bindings + exact Pydantic AI ToolsetTools ─> wrapper toolset ─> allow / defer / block
+verified bindings + exact Pydantic AI ToolsetTool ─> wrapper toolset ─> allow / defer / block
 
 validated policy + optional contract/lock ─> PolicyRuntime generation N ─> live gates
 validated complete candidate ─> compare-and-swap atomic activation ──────┘
@@ -279,7 +279,9 @@ real `ToolsetTool` map every run step. The wrapper snapshots resolved tool ident
 Pydantic-validated detached JSON arguments, and delegates once only after final enforcement.
 Review raises native `ApprovalRequired`; the application converts selected requests through the
 adapter so resume metadata carries exact-call Samsarix evidence. Native approval alone cannot
-authorize a reviewed call. Resume refreshes actor/context facts and re-enforces current policy.
+authorize a reviewed call. A first-write store atomically consumes approved evidence so the same
+result cannot execute twice; durable reconstruction supplies that store with protected workflow
+state. Resume refreshes actor/context facts and re-enforces current policy.
 Pydantic schema and custom argument validation occur before the wrapper, while other toolsets,
 provider-side tools, and direct calls remain outside this boundary.
 

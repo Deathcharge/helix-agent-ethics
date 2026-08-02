@@ -10,7 +10,8 @@ import inspect
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
-from typing import Any, cast
+from threading import Lock
+from typing import Any, Protocol, cast
 
 from .approval import TOOL_CALL_APPROVAL_VERSION, ToolCallApproval
 from .catalog import MAX_TOOL_CATALOG_TOOLS, validate_tool_catalog_registration
@@ -23,6 +24,7 @@ from .validation import freeze_json_value, thaw_json_value, validate_context
 PYDANTIC_AI_ADAPTER_VERSION = 1
 PYDANTIC_AI_REVIEW_METADATA_KEY = "samsarix.tool_call.review"
 PYDANTIC_AI_APPROVAL_METADATA_KEY = "samsarix.tool_call.approval"
+MAX_PENDING_PYDANTIC_AI_APPROVALS = 4096
 _REJECTION_MESSAGE = "Tool call rejected by human review."
 
 _FactsProvider = Callable[[Any], Mapping[str, Any] | None]
@@ -30,6 +32,64 @@ _FactsProvider = Callable[[Any], Mapping[str, Any] | None]
 
 class PydanticAIIntegrationError(SamsarixEthicsError):
     """Raised when Pydantic AI cannot enforce a tool policy safely."""
+
+
+class PydanticAIApprovalStore(Protocol):
+    """Application-owned first-write and atomic-consume approval state."""
+
+    def remember(
+        self,
+        tool_name: str,
+        tool_call_id: str,
+        tool_call_fingerprint: str,
+    ) -> str:
+        """Atomically retain and return the first fingerprint for this call."""
+
+    def consume(
+        self,
+        tool_name: str,
+        tool_call_id: str,
+        tool_call_fingerprint: str,
+    ) -> bool:
+        """Atomically remove matching state, returning whether it existed."""
+
+
+class _InMemoryApprovalStore:
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._fingerprints: dict[tuple[str, str], str] = {}
+
+    def remember(
+        self,
+        tool_name: str,
+        tool_call_id: str,
+        tool_call_fingerprint: str,
+    ) -> str:
+        key = (tool_name, tool_call_id)
+        with self._lock:
+            existing = self._fingerprints.get(key)
+            if existing is not None:
+                return existing
+            if len(self._fingerprints) >= MAX_PENDING_PYDANTIC_AI_APPROVALS:
+                raise PydanticAIIntegrationError("in-memory Pydantic AI approval store is full")
+            self._fingerprints[key] = tool_call_fingerprint
+            return tool_call_fingerprint
+
+    def consume(
+        self,
+        tool_name: str,
+        tool_call_id: str,
+        tool_call_fingerprint: str,
+    ) -> bool:
+        key = (tool_name, tool_call_id)
+        with self._lock:
+            existing = self._fingerprints.get(key)
+            if existing is None or not hmac.compare_digest(
+                existing.encode("utf-8"), tool_call_fingerprint.encode("utf-8")
+            ):
+                return False
+            del self._fingerprints[key]
+            return True
 
 
 def _empty_facts(_application_context: Any) -> Mapping[str, Any]:
@@ -62,6 +122,7 @@ class PydanticAIToolPolicy:
     _bindings: BoundToolCatalog
     _actor_provider: _FactsProvider
     _context_provider: _FactsProvider
+    _approval_store: PydanticAIApprovalStore
     _abstract_toolset_type: type[Any]
     _toolset_tool_type: type[Any]
     _run_context_type: type[Any]
@@ -254,6 +315,14 @@ class PydanticAIToolPolicy:
                     }
                 )
             approval = self._verify_approval(value, getattr(ctx, "tool_call_metadata", None))
+            if not self._approval_store.consume(
+                value.tool_name,
+                value.tool_call_id,
+                value.fingerprint,
+            ):
+                raise PydanticAIIntegrationError(
+                    "Pydantic AI approval is missing, already consumed, or does not match"
+                )
 
         value.binding.enforce(
             value.arguments,
@@ -329,6 +398,18 @@ class PydanticAIToolPolicy:
             payload = per_call_metadata.get(PYDANTIC_AI_REVIEW_METADATA_KEY)
             approval = self._approval_from_payload(call, payload, approved=approved)
             if approved:
+                remembered = self._approval_store.remember(
+                    cast(str, getattr(call, "tool_name", None)),
+                    call_id,
+                    approval.tool_call_fingerprint,
+                )
+                if not hmac.compare_digest(
+                    remembered.encode("utf-8"),
+                    approval.tool_call_fingerprint.encode("utf-8"),
+                ):
+                    raise PydanticAIIntegrationError(
+                        "Pydantic AI approval store contains different call evidence"
+                    )
                 results[call_id] = True
                 metadata[call_id] = {PYDANTIC_AI_APPROVAL_METADATA_KEY: approval.to_dict()}
             else:
@@ -358,7 +439,25 @@ class PydanticAIToolPolicy:
             raise PydanticAIIntegrationError("Pydantic AI review metadata is malformed")
         call_id = getattr(call, "tool_call_id", None)
         tool_name = getattr(call, "tool_name", None)
-        arguments = getattr(call, "args", None)
+        args_as_dict = getattr(call, "args_as_dict", None)
+        if not callable(args_as_dict):
+            raise PydanticAIIntegrationError(
+                "Pydantic AI deferred approval has no args_as_dict method"
+            )
+        try:
+            arguments = args_as_dict()
+        except (TypeError, ValueError) as exc:
+            raise PydanticAIIntegrationError(
+                "Pydantic AI deferred approval arguments are malformed"
+            ) from exc
+        if not isinstance(arguments, dict):
+            raise PydanticAIIntegrationError(
+                "Pydantic AI deferred approval arguments must be a dictionary"
+            )
+        arguments = validate_context(
+            arguments,
+            label="Pydantic AI deferred approval arguments",
+        )
         if binding.get("tool_call_id") != call_id:
             raise PydanticAIIntegrationError(
                 "Pydantic AI review metadata call ID does not match the pending call"
@@ -382,6 +481,7 @@ def create_pydantic_ai_tool_policy(
     *,
     actor_provider: _FactsProvider | None = None,
     context_provider: _FactsProvider | None = None,
+    approval_store: PydanticAIApprovalStore | None = None,
 ) -> PydanticAIToolPolicy:
     """Wrap one exact Pydantic AI toolset without adding a core dependency."""
 
@@ -389,6 +489,18 @@ def create_pydantic_ai_tool_policy(
         raise TypeError("bindings must be a BoundToolCatalog")
     actor = _validate_provider(actor_provider, label="actor_provider")
     context = _validate_provider(context_provider, label="context_provider")
+    selected_store: PydanticAIApprovalStore = (
+        _InMemoryApprovalStore() if approval_store is None else approval_store
+    )
+    remember = getattr(selected_store, "remember", None)
+    consume = getattr(selected_store, "consume", None)
+    if (
+        not callable(remember)
+        or inspect.iscoroutinefunction(remember)
+        or not callable(consume)
+        or inspect.iscoroutinefunction(consume)
+    ):
+        raise TypeError("approval_store must define synchronous remember and consume methods")
     try:
         pydantic_ai = import_module("pydantic_ai")
         abstract_toolset_type = pydantic_ai.AbstractToolset
@@ -462,6 +574,7 @@ def create_pydantic_ai_tool_policy(
         _bindings=bindings,
         _actor_provider=actor,
         _context_provider=context,
+        _approval_store=selected_store,
         _abstract_toolset_type=cast(type[Any], abstract_toolset_type),
         _toolset_tool_type=cast(type[Any], toolset_tool_type),
         _run_context_type=cast(type[Any], run_context_type),

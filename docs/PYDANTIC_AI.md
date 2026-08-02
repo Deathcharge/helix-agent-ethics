@@ -23,7 +23,7 @@ Create and populate the toolset, then bind the same complete name set to a trust
 catalog:
 
 ```python
-from pydantic_ai import Agent, FunctionToolset
+from pydantic_ai import Agent, DeferredToolRequests, FunctionToolset
 from samsarix_ethics import ToolGate, create_pydantic_ai_tool_policy
 
 tools = FunctionToolset()
@@ -46,7 +46,12 @@ tool_policy = create_pydantic_ai_tool_policy(
     actor_provider=lambda deps: {"id": deps.user_id},
     context_provider=lambda deps: {"tenant": deps.tenant_id},
 )
-agent = Agent(model, toolsets=[tool_policy.toolset], deps_type=ApplicationContext)
+agent = Agent(
+    model,
+    toolsets=[tool_policy.toolset],
+    deps_type=ApplicationContext,
+    output_type=[str, DeferredToolRequests],
+)
 ```
 
 The wrapped registry must contain only real Pydantic AI `ToolsetTool` values, each registry key
@@ -93,12 +98,21 @@ Pydantic AI's plain native `True` approval is deliberately insufficient because 
 does not define approval as an application authorization boundary. Forging or omitting Samsarix
 metadata fails closed.
 
-On approved resume, the adapter recomputes the fingerprint from the current name, validated
-arguments, trusted catalog capabilities, and freshly supplied actor. It then re-evaluates the
-current policy and context facts. Changed arguments or actor, a different call ID, missing or
-malformed evidence, a replay against another call, or a current deny/review never invokes the
-tool. Approval evidence is ordinary unsigned application data: the reviewer system must own
-identity, authorization, expiry, revocation, persistence, and atomic one-time consumption.
+On approved resume, the adapter recomputes the fingerprint from the tool-context format version,
+current call ID, name, validated arguments, trusted catalog capabilities, and freshly supplied
+actor. General context and the optional context-contract identity/version are deliberately not
+fingerprint fields; current policy and context facts are re-evaluated instead. Changed bound fields,
+missing or malformed evidence, replay against another call, or a current deny/review never invokes
+the tool.
+
+Approved `build_results` also records the fingerprint in a first-write approval store, and resume
+atomically consumes it before final enforcement. Replaying the same result fails closed. The
+bounded thread-safe default retains up to 4,096 calls in one process and fails closed after
+reconstruction. Durable workflows supply `approval_store=` implementing synchronous `remember`
+and atomic `consume` methods alongside protected Pydantic state. The store is trusted security
+state; it does not authenticate a reviewer. The reviewer system still owns identity,
+authorization, expiry, revocation, durable persistence, and prevention of repeatedly minting new
+results from the same pending review.
 
 For multiple deferred calls, an application can resolve a subset and later combine or supply the
 result objects according to Pydantic AI's workflow contract. Samsarix does not make parallel tool

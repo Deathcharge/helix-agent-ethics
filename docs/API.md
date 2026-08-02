@@ -442,7 +442,7 @@ strict `ToolCallApproval` dictionary matching the current call fingerprint befor
 enforcement. Rejection returns a generic error `ToolMessage` without invoking the tool. The adapter
 contract version is `LANGCHAIN_ADAPTER_VERSION = 1`. See [LANGCHAIN.md](LANGCHAIN.md).
 
-### `create_pydantic_ai_tool_policy(bindings, toolset, *, actor_provider=None, context_provider=None)`
+### `create_pydantic_ai_tool_policy(bindings, toolset, *, actor_provider=None, context_provider=None, approval_store=None)`
 
 Creates an optional `PydanticAIToolPolicy` for one exact `BoundToolCatalog` and one real Pydantic
 AI `AbstractToolset`. Construction imports Pydantic AI only when called. `toolset` returns a public
@@ -451,6 +451,10 @@ catalog-matching dictionary of real `ToolsetTool` objects, and execution must re
 snapshotted object.
 
 Providers are synchronous callbacks from `RunContext.deps` to fresh application-owned JSON facts.
+`approval_store` implements `PydanticAIApprovalStore.remember(...)` and atomic `.consume(...)`.
+The bounded thread-safe process-local default retains at most
+`MAX_PENDING_PYDANTIC_AI_APPROVALS` (4,096) pending calls and fails closed after reconstruction;
+durable workflows supply protected application-owned state.
 Allow delegates once after audited enforcement. Deny raises the typed gate error. Review raises
 native `ApprovalRequired` with `PYDANTIC_AI_REVIEW_METADATA_KEY` metadata.
 `build_results(requests, decisions)` validates selected deferred calls and creates either

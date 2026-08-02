@@ -309,8 +309,8 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 552 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 552
-  passed and 95.05% total branch-aware coverage under the configured `--cov-branch` gate. Separate
+- Added 554 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 554
+  passed and 94.90% total branch-aware coverage under the configured `--cov-branch` gate. Separate
   real-SDK contract tests run against exact hashed `openai-agents==0.18.3`, `langchain==1.3.14`,
   `pydantic-ai-slim==2.22.0`, and OpenTelemetry 1.44.0 dependency graphs.
 - Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an
@@ -398,8 +398,9 @@ certification or ethics truth.
   sync/async suite preserve the dependency-free base package boundary.
 - Added an optional Pydantic AI wrapper toolset that exact-matches every real run-step registry,
   authorizes validated detached arguments, and converts native deferred review into
-  fingerprint-bound Samsarix resume evidence. A real no-network agent contract proves approval,
-  rejection, forged native-approval blocking, and registry-drift failure against exact
+  fingerprint-bound, atomically consumed Samsarix resume evidence. A real no-network agent
+  contract proves approval, replay blocking, rejection, deny, serialized-history resume, forged
+  native-approval blocking, and registry-drift failure against exact
   `pydantic-ai-slim==2.22.0` without changing the dependency-free base install.
 - Added a versioned metadata-only OpenTelemetry event sink, bounded ordered audit-sink composition,
   exact API/SDK contract test, and an in-memory no-network example. The application retains SDK,
@@ -475,8 +476,9 @@ External validation gates:
   bypass or precede middleware, while parallel calls remain non-transactional.
 - Pydantic AI schema and custom argument validation occur before the wrapper; validators must be
   side-effect-free and policy sees validated values. Deferred state contains proposed arguments,
-  reviewer authentication/expiry/consumption remains application-owned, other execution paths can
-  bypass the wrapped toolset, and parallel calls are not transactional.
+  reviewer authentication/expiry remains application-owned, and durable reconstruction needs an
+  application-owned first-write/consume store. Other execution paths can bypass the wrapped
+  toolset, and parallel calls are not transactional.
 - File permissions and retention vary by operating system and are caller responsibilities.
 - Python dependency tooling resolves transitive development dependencies; exact direct pins reduce
   drift but do not constitute a fully hashed supply-chain lock.

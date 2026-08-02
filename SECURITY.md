@@ -73,6 +73,8 @@ carry adapter-built exact-call evidence and still pass current-policy enforcemen
 message/deferred state and conversation IDs, authenticate reviewers, enforce expiry and atomic
 one-time consumption, and treat other toolsets, direct calls, provider tools, and pre-delegation
 side effects as outside this adapter. Parallel calls remain non-transactional.
+The default first-write/consume store blocks result replay only inside one live adapter instance;
+durable reconstruction requires an application-owned implementation stored with workflow state.
 
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy

@@ -10,12 +10,14 @@ from typing import Any
 
 import pytest
 from pydantic_ai import Agent, DeferredToolRequests, FunctionToolset
+from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.models.test import TestModel
 
 from samsarix_ethics import (
     PYDANTIC_AI_REVIEW_METADATA_KEY,
     Policy,
     PydanticAIIntegrationError,
+    ToolCallDeniedError,
     ToolCatalog,
     ToolCatalogValidationError,
     ToolGate,
@@ -23,7 +25,26 @@ from samsarix_ethics import (
 )
 
 
-def _bindings() -> Any:
+def _bindings(*, deny: bool = False) -> Any:
+    deny_rules = (
+        [
+            {
+                "id": "deny-recipient",
+                "effect": "deny",
+                "priority": -1,
+                "message": "This recipient is blocked.",
+                "conditions": [
+                    {
+                        "field": "action.arguments.recipient",
+                        "operator": "eq",
+                        "value": "a",
+                    }
+                ],
+            }
+        ]
+        if deny
+        else []
+    )
     policy = Policy.from_dict(
         {
             "schema_version": 1,
@@ -31,6 +52,7 @@ def _bindings() -> Any:
             "version": "1",
             "default_effect": "deny",
             "rules": [
+                *deny_rules,
                 {
                     "id": "allow-approved",
                     "effect": "allow",
@@ -69,7 +91,7 @@ def _bindings() -> Any:
     return ToolGate(policy).bind_catalog(catalog, registered_tools=["send_message"])
 
 
-def _agent(calls: list[str]) -> tuple[Agent[Any, Any], Any]:
+def _agent(calls: list[str], *, deny: bool = False) -> tuple[Agent[Any, Any], Any]:
     tools = FunctionToolset()
 
     @tools.tool_plain
@@ -77,7 +99,7 @@ def _agent(calls: list[str]) -> tuple[Agent[Any, Any], Any]:
         calls.append(recipient)
         return "sent"
 
-    policy = create_pydantic_ai_tool_policy(_bindings(), tools)
+    policy = create_pydantic_ai_tool_policy(_bindings(deny=deny), tools)
     agent = Agent(
         TestModel(call_tools=["send_message"]),
         toolsets=[policy.toolset],
@@ -103,16 +125,37 @@ def test_real_agent_approves_exact_deferred_call_once() -> None:
         "arguments": {"recipient": "a"},
     }
     results = policy.build_results(first.output, {pending.tool_call_id: True})
+    serialized_history = ModelMessagesTypeAdapter.dump_json(first.all_messages())
+    restored_history = ModelMessagesTypeAdapter.validate_json(serialized_history)
 
     completed = agent.run_sync(
         "Continue.",
-        message_history=first.all_messages(),
+        message_history=restored_history,
         deferred_tool_results=results,
         conversation_id="approval-contract",
     )
 
     assert not isinstance(completed.output, DeferredToolRequests)
     assert calls == ["a"]
+
+    with pytest.raises(PydanticAIIntegrationError, match="already consumed"):
+        agent.run_sync(
+            "Continue.",
+            message_history=restored_history,
+            deferred_tool_results=results,
+            conversation_id="approval-contract-replay",
+        )
+    assert calls == ["a"]
+
+
+def test_real_agent_deny_never_calls_tool() -> None:
+    calls: list[str] = []
+    agent, _policy = _agent(calls, deny=True)
+
+    with pytest.raises(ToolCallDeniedError):
+        agent.run_sync("Send the blocked update.", conversation_id="deny-contract")
+
+    assert calls == []
 
 
 def test_real_agent_rejection_never_calls_tool() -> None:

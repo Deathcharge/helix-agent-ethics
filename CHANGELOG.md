@@ -106,8 +106,9 @@ All notable product changes are recorded here.
   enforcement, native LangGraph interrupts, strict fingerprint-bound approval resume, generic
   rejection results, a no-network real-agent example, and a dedicated hashed CI contract.
 - Optional exact-registry Pydantic AI `2.22.0` wrapper toolset with native deferred approvals,
-  strict Samsarix evidence on resume, fresh current-policy enforcement, a no-network real-agent
-  example, adversarial tests, and a dedicated slim hash-locked CI contract.
+  strict Samsarix evidence on resume, atomic single-use approval consumption, fresh current-policy
+  enforcement, a no-network real-agent example, adversarial tests, and a dedicated slim
+  hash-locked CI contract.
 
 ### Changed
 
