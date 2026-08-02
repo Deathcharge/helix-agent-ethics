@@ -117,6 +117,7 @@ class ToolCatalog:
     def __post_init__(self) -> None:
         if (
             isinstance(self.tool_catalog_version, bool)
+            or not isinstance(self.tool_catalog_version, int)
             or self.tool_catalog_version != TOOL_CATALOG_VERSION
         ):
             raise ToolCatalogValidationError("tool_catalog_version must be 1")
@@ -160,6 +161,7 @@ class ToolCatalog:
         )
         if (
             isinstance(value["tool_catalog_version"], bool)
+            or not isinstance(value["tool_catalog_version"], int)
             or value["tool_catalog_version"] != TOOL_CATALOG_VERSION
         ):
             raise ToolCatalogValidationError("tool_catalog_version must be 1")

@@ -75,7 +75,9 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--format text|json]
 samsarix-ethics catalog TOOL_CATALOG.json [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|tool-catalog|audit-record]
+samsarix-ethics gate-deployment create --policy-deployment DEPLOYMENT.json --tool-catalog CATALOG.json --output OUTPUT.json
+samsarix-ethics gate-deployment verify TOOL_GATE_DEPLOYMENT.json [--format text|json]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|tool-catalog|tool-gate-deployment|audit-record]
 samsarix-ethics explain (--policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] | --deployment DEPLOYMENT.json) [--input INPUT.json|-] [--format json|text]
 samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
 samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
@@ -139,6 +141,7 @@ samsarix-ethics schema policy-deployment > policy-deployment-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema tool-catalog > tool-catalog-v1.schema.json
+samsarix-ethics schema tool-gate-deployment > tool-gate-deployment-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```
 
@@ -437,6 +440,10 @@ run_command = bindings["run_command"]
 The returned immutable `BoundToolCatalog` carries an exact canonical fingerprint and fails setup if
 the registry contains an uncataloged tool or omits a cataloged one. It never infers authorization
 facts from MCP hints or tool descriptions. See [trusted tool catalogs](docs/TOOL_CATALOGS.md).
+
+For coherent promotion, package the locked policy deployment and reviewed catalog into one
+`ToolGateDeployment`, then call `ToolGate.bind_deployment(...)` with the complete trusted registry
+snapshot. See [coherent tool-gate deployments](docs/TOOL_GATE_DEPLOYMENTS.md).
 
 When a model turn proposes several calls, prepare them from trusted bindings and authorize the
 complete batch before dispatching any item:

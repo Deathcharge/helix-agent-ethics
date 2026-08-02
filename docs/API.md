@@ -301,6 +301,18 @@ trusted local registry names and returns its sorted tuple only when the name set
 catalog. Missing cataloged tools, uncataloged registered tools, duplicates, invalid names, and
 oversized snapshots fail closed.
 
+### `ToolGateDeployment` / `create_tool_gate_deployment(...)`
+
+`ToolGateDeployment` packages one internally verified `PolicyDeployment`, one immutable
+`ToolCatalog`, and the catalog's matching canonical fingerprint. `from_dict` rejects unknown or
+missing fields, invalid nested artifacts, and fingerprint mismatch; `to_dict` returns fresh
+containers. `load_tool_gate_deployment` reads at most `MAX_TOOL_GATE_DEPLOYMENT_BYTES` and
+`write_tool_gate_deployment` provides atomic no-overwrite-by-default output.
+
+`ToolGate.bind_deployment(deployment, *, registered_tools, audit_log=None, audit_sink=None)` creates
+the gate from the embedded policy deployment and returns a `BoundToolCatalog` only after complete
+registry matching succeeds. This is internal coherence and equality evidence, not authentication.
+
 ### `ToolGate(policy_or_runtime, *, context_contract=None, deployment_lock=None, audit_log=None, audit_sink=None)`
 
 Provides a fail-closed boundary immediately before an in-process side effect:
@@ -323,6 +335,8 @@ uses its immutable registered tool name and capabilities.
   registration metadata once;
 - `bind_catalog(catalog, *, registered_tools) -> BoundToolCatalog` first requires the catalog to
   exactly match a trusted complete registry-name snapshot, then freezes every binding;
+- `bind_deployment(deployment, *, registered_tools, ...) -> BoundToolCatalog` constructs the gate
+  from one coherent policy-and-catalog unit and performs the same exact registry check;
 - `prepare(...) -> PreparedToolCall` validates, detaches, and recursively freezes one call for
   immediate single-generation batch authorization;
 - `evaluate(...) -> Decision` evaluates the normalized call and optionally appends audit metadata;
@@ -413,14 +427,14 @@ runs.
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, application
 context contracts, deployment locks, policy deployments, regression suites, comparison,
 composition, coverage, explanation, lint, runtime-status, and shadow reports, the normalized
-tool-call context, bound approval records, trusted tool catalogs, and metadata-only audit
-records. The other accessors are
+tool-call context, bound approval records, trusted tool catalogs, metadata-only audit records, and
+coherent tool-gate deployments. The other accessors are
 `get_policy_test_schema`, `get_policy_comparison_schema`, `get_policy_composition_schema`,
 `get_policy_coverage_schema`, `get_policy_explanation_schema`, `get_policy_lint_schema`,
 `get_policy_runtime_status_schema`, `get_policy_shadow_schema`, `get_deployment_lock_schema`,
 `get_policy_deployment_schema`, `get_tool_context_schema`, `get_tool_approval_schema`,
-`get_tool_catalog_schema`, and `get_audit_record_schema`. These calls perform no network
-access and callers may mutate a returned
+`get_tool_catalog_schema`, `get_tool_gate_deployment_schema`, and `get_audit_record_schema`. These
+calls perform no network access and callers may mutate a returned
 value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`

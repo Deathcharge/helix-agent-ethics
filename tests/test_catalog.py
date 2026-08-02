@@ -89,6 +89,7 @@ def test_direct_catalog_constructors_preserve_validated_immutable_invariants() -
     ("mutate", "message"),
     [
         (lambda value: value.update(tool_catalog_version=True), "version must be 1"),
+        (lambda value: value.update(tool_catalog_version=1.0), "version must be 1"),
         (lambda value: value.update(id="bad id"), "tool catalog.id"),
         (lambda value: value.update(description=1), "description"),
         (lambda value: value.update(tools={}), "tools must be a JSON array"),

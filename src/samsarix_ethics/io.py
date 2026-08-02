@@ -25,9 +25,11 @@ from .errors import (
     PolicyValidationError,
     SamsarixEthicsError,
     ToolCatalogValidationError,
+    ToolGateDeploymentValidationError,
 )
 from .models import Decision, Policy
 from .policy_deployment import PolicyDeployment
+from .tool_gate_deployment import ToolGateDeployment
 from .validation import validate_json_shape
 
 MAX_INPUT_BYTES = 262_144
@@ -35,6 +37,7 @@ MAX_CONTEXT_CONTRACT_BYTES = 262_144
 MAX_DEPLOYMENT_LOCK_BYTES = 65_536
 MAX_POLICY_DEPLOYMENT_BYTES = 4_194_304
 MAX_TOOL_CATALOG_BYTES = 262_144
+MAX_TOOL_GATE_DEPLOYMENT_BYTES = 4_718_592
 
 SAMPLE_POLICY: dict[str, Any] = {
     "schema_version": 1,
@@ -256,6 +259,23 @@ def load_policy_deployment(path: str | Path) -> PolicyDeployment:
         raise PolicyDeploymentValidationError(str(exc)) from exc
 
 
+def load_tool_gate_deployment(path: str | Path) -> ToolGateDeployment:
+    """Load and internally verify one bounded coherent tool-gate deployment."""
+
+    try:
+        data = _parse_json(
+            _read_file(
+                path,
+                max_bytes=MAX_TOOL_GATE_DEPLOYMENT_BYTES,
+                label="tool gate deployment",
+            ),
+            label="tool gate deployment",
+        )
+        return ToolGateDeployment.from_dict(data)
+    except InputValidationError as exc:
+        raise ToolGateDeploymentValidationError(str(exc)) from exc
+
+
 def load_context(path: str | Path | None, *, stdin: BinaryIO | None = None) -> dict[str, Any]:
     """Load a bounded evaluation object from a path or binary standard input."""
 
@@ -304,6 +324,31 @@ def write_policy_deployment(
         force=force,
         label="policy deployment",
         error_type=PolicyDeploymentValidationError,
+    )
+
+
+def write_tool_gate_deployment(
+    path: str | Path,
+    deployment: ToolGateDeployment,
+    *,
+    force: bool = False,
+) -> Path:
+    """Atomically write one coherent tool-gate deployment."""
+
+    if not isinstance(deployment, ToolGateDeployment):
+        raise TypeError("deployment must be a ToolGateDeployment")
+    payload = serialize_policy_document(
+        deployment.to_dict(),
+        label="tool gate deployment",
+        max_bytes=MAX_TOOL_GATE_DEPLOYMENT_BYTES,
+        error_type=ToolGateDeploymentValidationError,
+    )
+    return _write_atomic_payload(
+        path,
+        payload,
+        force=force,
+        label="tool gate deployment",
+        error_type=ToolGateDeploymentValidationError,
     )
 
 

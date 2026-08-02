@@ -43,6 +43,10 @@ class ToolCatalogValidationError(SamsarixEthicsError):
     """Raised when a trusted tool catalog or registry snapshot is invalid."""
 
 
+class ToolGateDeploymentValidationError(SamsarixEthicsError):
+    """Raised when a coherent tool-gate deployment is malformed or inconsistent."""
+
+
 class InputValidationError(SamsarixEthicsError):
     """Raised when an evaluation input cannot be safely parsed or validated."""
 

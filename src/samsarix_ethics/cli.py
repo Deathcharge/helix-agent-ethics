@@ -35,9 +35,11 @@ from .io import (
     load_policy,
     load_policy_deployment,
     load_tool_catalog,
+    load_tool_gate_deployment,
     write_policy,
     write_policy_deployment,
     write_sample_policy,
+    write_tool_gate_deployment,
 )
 from .models import Decision, Outcome
 from .policy_deployment import PolicyDeployment, create_policy_deployment
@@ -59,9 +61,11 @@ from .schema import (
     get_tool_approval_schema,
     get_tool_catalog_schema,
     get_tool_context_schema,
+    get_tool_gate_deployment_schema,
 )
 from .shadow import PolicyShadowEvaluation, PolicyShadowEvaluator
 from .testing import PolicyTestReport, load_policy_test_suite, run_policy_tests
+from .tool_gate_deployment import ToolGateDeployment, create_tool_gate_deployment
 
 EXIT_ALLOWED = 0
 EXIT_TEST_FAILED = 1
@@ -237,6 +241,32 @@ def _parser() -> argparse.ArgumentParser:
     deployment_verify.add_argument("deployment", help="path to a policy deployment")
     deployment_verify.add_argument("--format", choices=("json", "text"), default="text")
 
+    gate_deployment = subparsers.add_parser(
+        "gate-deployment", help="create or verify one coherent policy-and-catalog deployment"
+    )
+    gate_deployment_subparsers = gate_deployment.add_subparsers(
+        dest="gate_deployment_command", required=True
+    )
+    gate_deployment_create = gate_deployment_subparsers.add_parser(
+        "create", help="create an atomically written tool-gate deployment"
+    )
+    gate_deployment_create.add_argument(
+        "--policy-deployment", required=True, help="path to a verified policy deployment"
+    )
+    gate_deployment_create.add_argument(
+        "--tool-catalog", required=True, help="path to a trusted tool catalog"
+    )
+    gate_deployment_create.add_argument("--output", required=True, help="output deployment path")
+    gate_deployment_create.add_argument(
+        "--force", action="store_true", help="explicitly replace an existing output file"
+    )
+    gate_deployment_create.add_argument("--format", choices=("json", "text"), default="text")
+    gate_deployment_verify = gate_deployment_subparsers.add_parser(
+        "verify", help="parse and internally verify a tool-gate deployment"
+    )
+    gate_deployment_verify.add_argument("deployment", help="path to a tool-gate deployment")
+    gate_deployment_verify.add_argument("--format", choices=("json", "text"), default="text")
+
     catalog = subparsers.add_parser(
         "catalog", help="validate and identify a trusted tool-capability catalog"
     )
@@ -275,6 +305,7 @@ def _parser() -> argparse.ArgumentParser:
             "tool-context",
             "tool-approval",
             "tool-catalog",
+            "tool-gate-deployment",
             "audit-record",
         ),
         default="policy",
@@ -567,6 +598,47 @@ def _policy_deployment_summary(
     }
 
 
+def _tool_gate_deployment_summary(
+    deployment: ToolGateDeployment,
+    *,
+    output_path: Path | None = None,
+) -> dict[str, Any]:
+    """Return identity-only metadata for one coherent gate deployment."""
+
+    summary = _policy_deployment_summary(deployment.policy_deployment)
+    summary.update(
+        {
+            "tool_catalog": {
+                "id": deployment.tool_catalog.id,
+                "version": deployment.tool_catalog.version,
+                "fingerprint": deployment.tool_catalog_fingerprint,
+                "tool_count": len(deployment.tool_catalog.tools),
+            },
+            "tool_gate_deployment_version": deployment.tool_gate_deployment_version,
+            "output": None if output_path is None else str(output_path),
+        }
+    )
+    return summary
+
+
+def _render_tool_gate_deployment(
+    deployment: ToolGateDeployment,
+    *,
+    action: str,
+    output_path: Path | None = None,
+) -> str:
+    catalog = deployment.tool_catalog
+    policy_lock = deployment.policy_deployment.deployment_lock.policy
+    output_label = "" if output_path is None else f"\nOutput: {output_path}"
+    return (
+        f"{action} tool gate deployment: "
+        f"policy={policy_lock.id}@{policy_lock.version} ({policy_lock.fingerprint}), "
+        f"catalog={catalog.id}@{catalog.version} "
+        f"({deployment.tool_catalog_fingerprint}), tools={len(catalog.tools)}, verified"
+        f"{output_label}"
+    )
+
+
 def _resolve_contract_and_lock(
     deployment: PolicyDeployment | None,
     *,
@@ -621,6 +693,7 @@ def main(
                 "tool-context": get_tool_context_schema,
                 "tool-approval": get_tool_approval_schema,
                 "tool-catalog": get_tool_catalog_schema,
+                "tool-gate-deployment": get_tool_gate_deployment_schema,
                 "audit-record": get_audit_record_schema,
             }
             schema = schema_loaders[arguments.kind]()
@@ -705,6 +778,39 @@ def main(
                     else _render_policy_deployment(policy_deployment, action="Verified")
                 )
                 print(rendered, file=output)
+            return EXIT_ALLOWED
+
+        if arguments.command == "gate-deployment":
+            gate_target: Path | None
+            if arguments.gate_deployment_command == "create":
+                gate_deployment = create_tool_gate_deployment(
+                    load_policy_deployment(arguments.policy_deployment),
+                    load_tool_catalog(arguments.tool_catalog),
+                )
+                gate_target = write_tool_gate_deployment(
+                    arguments.output,
+                    gate_deployment,
+                    force=arguments.force,
+                )
+                action = "Created"
+            else:
+                gate_deployment = load_tool_gate_deployment(arguments.deployment)
+                gate_target = None
+                action = "Verified"
+            rendered = (
+                json.dumps(
+                    _tool_gate_deployment_summary(gate_deployment, output_path=gate_target),
+                    indent=2,
+                    sort_keys=True,
+                )
+                if arguments.format == "json"
+                else _render_tool_gate_deployment(
+                    gate_deployment,
+                    action=action,
+                    output_path=gate_target,
+                )
+            )
+            print(rendered, file=output)
             return EXIT_ALLOWED
 
         if arguments.command == "lock":

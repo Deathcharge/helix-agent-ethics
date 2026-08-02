@@ -79,6 +79,38 @@ def get_policy_deployment_schema() -> dict[str, Any]:
     }
 
 
+def get_tool_gate_deployment_schema() -> dict[str, Any]:
+    """Return a self-contained tool-gate-deployment version 1 JSON Schema."""
+
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://schemas.samsarix.com/agent-ethics/tool-gate-deployment/v1.json",
+        "title": "Samsarix Agent Ethics tool gate deployment v1",
+        "description": "One locked policy deployment and exact trusted tool catalog.",
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "tool_gate_deployment_version",
+            "policy_deployment",
+            "tool_catalog",
+            "tool_catalog_fingerprint",
+        ],
+        "properties": {
+            "tool_gate_deployment_version": {"type": "integer", "const": 1},
+            "policy_deployment": {"$ref": "#/$defs/policy_deployment"},
+            "tool_catalog": {"$ref": "#/$defs/tool_catalog"},
+            "tool_catalog_fingerprint": {
+                "type": "string",
+                "pattern": "^v1:sha256:[0-9a-f]{64}$",
+            },
+        },
+        "$defs": {
+            "policy_deployment": get_policy_deployment_schema(),
+            "tool_catalog": get_tool_catalog_schema(),
+        },
+    }
+
+
 def get_audit_record_schema() -> dict[str, Any]:
     """Return a fresh copy of the audit-record version 1 JSON Schema."""
 
