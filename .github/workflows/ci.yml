@@ -171,6 +171,7 @@ jobs:
           python examples/tool_gate_demo.py
           python examples/policy_runtime_demo.py
           python examples/coding_agent_batch_demo.py
+          python examples/tool_dispatcher_demo.py
       - name: Build distributions
         if: matrix.python-version == '3.11'
         run: python -m build --no-isolation
@@ -222,6 +223,7 @@ jobs:
               PolicyShadowEvaluator,
               PolicyTestSuite,
               ToolCallDeniedError,
+              ToolDispatcher,
               ToolGate,
               compare_policies,
               compose_policies,
@@ -336,6 +338,21 @@ jobs:
           assert deployed_bindings.catalog_fingerprint == (
               gate_deployment.tool_catalog_fingerprint
           )
+          deployed_dispatcher = ToolDispatcher.bind_deployment(
+              gate_deployment,
+              registered_tools={
+                  name: (lambda **arguments: arguments)
+                  for name in registered_tools
+              },
+          )
+          dispatched = deployed_dispatcher.execute(
+              "read_file",
+              {"path": "README.md"},
+              actor={"id": "wheel-smoke"},
+              context={"workspace_contained": True},
+          )
+          assert dispatched.value == {"path": "README.md"}
+          assert dispatched.decision.allowed is True
           delete_ticket = gate.bind("delete_ticket", capabilities=["destructive"])
           blocked_batch = [prepared, delete_ticket.prepare({"ticket_id": "T-101"})]
           try:

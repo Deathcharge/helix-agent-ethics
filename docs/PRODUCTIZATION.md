@@ -218,6 +218,8 @@ certification or ethics truth.
   capabilities, and actor before allowing a resumed call.
 - [x] Add immutable registration-time tool bindings so per-call payloads cannot downgrade trusted
   tool identity or capability labels.
+- [x] Bind final callback references to verified catalogs so ordinary mutable registry replacement
+  cannot change post-authorization dispatch selection.
 - [x] Migrate artifact retention/provenance jobs off the deprecated Node 20 action runtime and add
   automated GitHub Actions update proposals.
 - [x] Migrate new build-provenance generation from the compatibility wrapper to direct,
@@ -328,7 +330,8 @@ certification or ethics truth.
   authentication, immutable transport, signing, replication, and promotion approval.
 - Added immutable gate-specific prepared calls and bounded `ToolGate` batch evaluation/enforcement.
   Every call is collected before evaluation, runtime batches pin one generation, contract errors
-  precede audit delivery, and dispatch remains framework-owned. A fifteen-rule coding-agent pack,
+  precede audit delivery, and the base gate leaves dispatch framework-owned. A fifteen-rule
+  coding-agent pack,
   matching context contract, 100%-covered suite, verified deployment, and runnable review/approval
   demo cover workspace, process, network, destructive, and sensitive capabilities.
 - Added complete metadata-only batch diagnostics to the existing typed tool-call block exceptions.
@@ -345,6 +348,10 @@ certification or ethics truth.
   catalog fingerprint in one bounded atomically written unit. `ToolGate.bind_deployment` verifies
   the complete runtime registry before returning any binding; the artifact deliberately remains
   internal equality evidence rather than a signature or control plane.
+- Added a zero-dependency `ToolDispatcher` that exact-matches complete callable mappings, snapshots
+  final callback references, keeps authorization and dispatch on one object, supports sync/async
+  calls, and preflights full batches before sequential execution. It deliberately does not claim
+  code identity, immutable callback internals, or transactional side effects.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -389,9 +396,10 @@ External validation gates:
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Prepared batches authorize no transaction: audit delivery may be partial on sink failure, and
   framework scheduling or callback failure may still produce partial side effects.
-- Catalog exact matching proves only that two trusted name sets agree. It does not authenticate the
-  registry or catalog, inspect callable identity, validate label correctness, establish freshness,
-  or authenticate the separate coherent tool-gate deployment that pins catalog provenance.
+- Catalog exact matching and dispatcher snapshots prove only that trusted names agree and selected
+  callback object references remain stable. They do not authenticate the registry, catalog,
+  deployment, or callback code; freeze closure/global/object state or delegated registry lookups;
+  validate label correctness; or establish freshness.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own
   protected pending-call storage, expiry, and atomic one-time consumption.
 - File permissions and retention vary by operating system and are caller responsibilities.

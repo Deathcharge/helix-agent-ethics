@@ -36,6 +36,10 @@ lock, then performs the catalog's exact name-set check before returning any bind
 nested artifact, mismatched catalog fingerprint, missing tool, uncataloged tool, duplicate name, or
 invalid capability fails closed.
 
+For a complete in-process execution boundary, `ToolDispatcher.bind_deployment(...)` accepts a
+mapping of final Python callback objects, performs the same exact match, snapshots those references,
+and dispatches only after an allow decision. See [immutable tool dispatch](TOOL_DISPATCH.md).
+
 Current agent runtimes already own pause/resume and durable human-review workflows. The
 [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/human_in_the_loop/) surfaces mixed
 pending tool approvals as interruptions, while
@@ -53,7 +57,9 @@ the file.
 
 - The catalog fingerprint detects mixed or changed local content; it is not a signature.
 - Anyone able to replace the whole document can recompute its internal fingerprints.
-- Exact name matching does not prove callable identity or capability-label correctness.
+- Exact name matching does not prove callable identity or capability-label correctness. A
+  `ToolDispatcher` can stabilize selected object references, but cannot authenticate their code or
+  freeze their closure, global, delegated-registry, or object state.
 - The artifact does not fetch, distribute, approve, encrypt, sign, retain, or roll back itself.
 - Durable desired state, transport authentication, promotion authorization, multi-host convergence,
   and restart recovery remain deployment-system responsibilities.

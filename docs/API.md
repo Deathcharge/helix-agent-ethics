@@ -313,6 +313,28 @@ containers. `load_tool_gate_deployment` reads at most `MAX_TOOL_GATE_DEPLOYMENT_
 the gate from the embedded policy deployment and returns a `BoundToolCatalog` only after complete
 registry matching succeeds. This is internal coherence and equality evidence, not authentication.
 
+### `ToolDispatcher.bind_catalog(...)` / `ToolDispatcher.bind_deployment(...)`
+
+Create an immutable framework-neutral execution registry from a complete mapping of trusted local
+names to final Python callbacks. `bind_catalog` accepts an existing `ToolGate` and `ToolCatalog`;
+`bind_deployment` constructs the gate from one coherent `ToolGateDeployment` and accepts the same
+optional audit configuration. Both exact-match catalog and mapping names, reject non-callables,
+copy the mapping, and retain the selected callable objects.
+
+`prepare` uses the trusted binding for a model-selected name. Batch execution rechecks every
+prepared name and capability tuple against those bindings before evaluation. `execute` and
+`execute_async` authorize one call and invoke the frozen callback with detached keyword arguments.
+`execute_many`
+and `execute_many_async` authorize the complete bounded batch before invoking callbacks
+sequentially in input order. They return `ToolExecutionResult` objects carrying each authorizing
+decision and callback value.
+
+The synchronous path rejects an awaitable result; the async path requires one. Callback errors are
+not hidden. Batch preflight is not transactional, so an error from a later callback does not undo
+earlier side effects. The snapshot prevents replacement in the supplied mapping, but does not
+authenticate callable code, freeze closure/global/object state, or protect a callback that performs
+a new mutable registry lookup. See [TOOL_DISPATCH.md](TOOL_DISPATCH.md).
+
 ### `ToolGate(policy_or_runtime, *, context_contract=None, deployment_lock=None, audit_log=None, audit_sink=None)`
 
 Provides a fail-closed boundary immediately before an in-process side effect:

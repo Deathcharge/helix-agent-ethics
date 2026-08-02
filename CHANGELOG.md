@@ -85,6 +85,9 @@ All notable product changes are recorded here.
 - Strict versioned trusted tool-capability catalogs with canonical fingerprints, bounded loading,
   bundled schema and CLI validation, exact registry-name drift checks, immutable gate-specific
   binding maps, and a coding-agent catalog that never trusts remote MCP annotations.
+- Framework-neutral `ToolDispatcher` bindings that exact-match and snapshot final Python callback
+  references, authorize before sync/async execution, and preflight complete batches before ordered
+  dispatch without claiming transactional side effects or callable-code authentication.
 
 ### Changed
 

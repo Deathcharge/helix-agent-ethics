@@ -52,6 +52,8 @@ adoption remain separate evidence-based decisions.
   full-registry matching before immutable gate bindings are created.
 - [x] Package a verified policy deployment and exact trusted catalog into one bounded coherent
   tool-gate deployment with atomic output and fail-closed registry binding.
+- [x] Bind verified catalogs to immutable final callback snapshots with framework-neutral sync,
+  async, and all-calls-before-dispatch batch execution.
 
 ## Release candidate
 
@@ -75,8 +77,9 @@ Current hardening backlog:
   authenticated deployment, restart recovery, and multi-host convergence remain caller-owned.
 - Single-file deployments prevent mixed local reads but remain unsigned; OCI/repository identity,
   immutable transport digests, signature policy, and promotion authorization remain caller-owned.
-- Tool catalogs now have deployment-level pinning in a separate coherent gate artifact;
-  authenticated distribution, freshness, approval, and callable identity remain caller-owned.
+- Tool catalogs now have deployment-level pinning and immutable callback-reference snapshots;
+  authenticated distribution, freshness, approval, callable code identity, mutable callback state,
+  and semantic correctness remain caller-owned.
 - Migration from any surviving `helix_ethics` callers is destructive; old compatibility imports are not retained.
 
 ## Samsarix adoption
