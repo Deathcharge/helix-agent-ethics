@@ -10,13 +10,13 @@ from importlib import import_module
 from typing import Any, cast
 
 from .audit import AuditRecord
-from .errors import SamsarixEthicsError
+from .errors import AuditLogError
 
 OPENTELEMETRY_DECISION_EVENT_VERSION = 1
 OPENTELEMETRY_DECISION_EVENT_NAME = "samsarix.policy.decision"
 
 
-class OpenTelemetryIntegrationError(SamsarixEthicsError):
+class OpenTelemetryIntegrationError(AuditLogError):
     """Raised when the OpenTelemetry API cannot receive decision events safely."""
 
 

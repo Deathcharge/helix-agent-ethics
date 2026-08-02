@@ -23,7 +23,7 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
 
 1. Confirm `main` is clean, synchronized, and green at the intended commit.
 2. Confirm `pyproject.toml`, `samsarix_ethics.__version__`, and the changelog name the same version.
-3. Install the hash-locked development environment and run the local release suite:
+3. Install the hash-locked development environment and run the base release suite:
 
    ```bash
    python -m pip install --require-hashes -r requirements-dev.lock
@@ -31,19 +31,31 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m ruff check .
    python -m mypy
    python -m pytest
-   python -m pip install --require-hashes \
-     -r requirements-dev.lock \
-     -r requirements-openai-agents.lock \
-     -r requirements-opentelemetry.lock
-   python -m pytest --no-cov integration_tests/test_openai_agents_sdk.py
-   python examples/openai_agents_guardrail_demo.py
-   python -m pytest --no-cov integration_tests/test_opentelemetry_sdk.py
-   python examples/opentelemetry_decision_event_demo.py
    python -m build --no-isolation
    python -m twine check dist/*
    ```
 
-4. Download the exact CI distributions for the commit, then verify their provenance:
+4. In a fresh virtual environment, validate only the OpenAI Agents optional contract:
+
+   ```bash
+   python -m pip install --require-hashes \
+     -r requirements-dev.lock \
+     -r requirements-openai-agents.lock
+   python -m pytest --no-cov integration_tests/test_openai_agents_sdk.py
+   python examples/openai_agents_guardrail_demo.py
+   ```
+
+5. In a second fresh virtual environment, validate only the OpenTelemetry optional contract:
+
+   ```bash
+   python -m pip install --require-hashes \
+     -r requirements-dev.lock \
+     -r requirements-opentelemetry.lock
+   python -m pytest --no-cov integration_tests/test_opentelemetry_sdk.py
+   python examples/opentelemetry_decision_event_demo.py
+   ```
+
+6. Download the exact CI distributions for the commit, then verify their provenance:
 
    ```bash
    gh run download RUN_ID \
@@ -55,9 +67,9 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
      --repo Deathcharge/samsarix-agent-ethics
    ```
 
-5. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
+7. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
    `samsarix-ethics --version`, schema export, policy validation, and one allow/deny walkthrough.
-6. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
+8. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
    ref in the release notes.
 
 ## Registry publication prerequisites

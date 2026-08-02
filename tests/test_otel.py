@@ -115,6 +115,14 @@ def test_opentelemetry_sink_validates_dependency_and_api_shape(
     monkeypatch.setattr(
         otel_module,
         "import_module",
+        lambda _name: SimpleNamespace(),
+    )
+    with pytest.raises(OpenTelemetryIntegrationError, match=r"\[opentelemetry\]"):
+        OpenTelemetryDecisionEventSink()
+
+    monkeypatch.setattr(
+        otel_module,
+        "import_module",
         lambda _name: SimpleNamespace(get_current_span=None),
     )
     with pytest.raises(OpenTelemetryIntegrationError, match="must be callable"):

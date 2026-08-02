@@ -43,10 +43,11 @@ are bounded and type-checked. The embedding application remains responsible for:
 
 When using `OpenTelemetryDecisionEventSink`, the application also owns SDK/exporter configuration,
 trace-context propagation, sampling, attribute/event limits, collector authentication and TLS,
-queue/export failures, backend access, and retention. The sink emits only the `AuditRecord` field
-set, but policy/rule identifiers and fingerprints are still operational metadata. A non-recording
-span intentionally accepts no event, and a successful local `add_event` does not prove export.
-Never use trace events as the sole durable authorization record.
+queue/export failures, backend access, and retention. The sink emits only versioned event
+attributes derived from `AuditRecord`, plus the event-version and audit-record-version attributes,
+but policy/rule identifiers and fingerprints are still operational metadata. A non-recording span
+intentionally accepts no event, and a successful local `add_event` does not prove export. Never use
+trace events as the sole durable authorization record.
 
 When using the optional OpenAI Agents SDK adapter, applications must also keep actor/context
 providers application-owned, use strict top-level `FunctionTool` objects, leave pre-approval input
