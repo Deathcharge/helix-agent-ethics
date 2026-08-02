@@ -20,6 +20,8 @@ locked policy deployment + fingerprinted catalog ─> ToolGateDeployment ─> ve
 verified bindings + final callback objects ─> ToolDispatcher ─> authorized sequential dispatch
 verified bindings + exact LangChain BaseTools ─> final middleware ─> allow / interrupt / block
 
+verified bindings + exact Pydantic AI ToolsetTool ─> wrapper toolset ─> allow / defer / block
+
 validated policy + optional contract/lock ─> PolicyRuntime generation N ─> live gates
 validated complete candidate ─> compare-and-swap atomic activation ──────┘
 
@@ -68,6 +70,8 @@ the legacy `helix-unified` repository.
   without importing the SDK at core package import time.
 - `langchain.py`: optional exact-registry sync/async middleware, final-argument enforcement, and
   fingerprint-bound LangGraph interrupt resume without importing LangChain at core package import.
+- `pydantic_ai.py`: optional exact-registry wrapper toolset, validated-argument enforcement, and
+  fingerprint-bound native deferred approval without importing Pydantic AI until construction.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
 - `__init__.py`: deliberate public Python API.
 
@@ -269,6 +273,17 @@ interruption workflow. The SDK
 passes raw JSON to guardrails before Pydantic callback conversion, so the adapter applies the core
 bounded duplicate-safe parser and policy types to raw values. It deliberately rejects namespaces
 and agent-as-tool wrappers and cannot intercept hosted, built-in, MCP-hosted, or handoff paths.
+
+The optional Pydantic AI adapter wraps one public `AbstractToolset` and exact-matches the complete
+real `ToolsetTool` map every run step. The wrapper snapshots resolved tool identities, evaluates
+Pydantic-validated detached JSON arguments, and delegates once only after final enforcement.
+Review raises native `ApprovalRequired`; the application converts selected requests through the
+adapter so resume metadata carries exact-call Samsarix evidence. Native approval alone cannot
+authorize a reviewed call. A first-write store atomically consumes approved evidence so the same
+result cannot execute twice; durable reconstruction supplies that store with protected workflow
+state. Resume refreshes actor/context facts and re-enforces current policy.
+Pydantic schema and custom argument validation occur before the wrapper, while other toolsets,
+provider-side tools, and direct calls remain outside this boundary.
 
 ## Trust boundaries
 

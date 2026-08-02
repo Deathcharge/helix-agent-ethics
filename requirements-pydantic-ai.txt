@@ -1,0 +1,2 @@
+# Exact optional Pydantic AI contract used by CI and the no-network example.
+pydantic-ai-slim==2.22.0

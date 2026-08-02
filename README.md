@@ -7,11 +7,11 @@ review?**
 It is for Python developers who need a small policy-as-code boundary in front of tool calls,
 workflows, or other consequential operations. Policies and inputs are JSON, decisions are
 explainable, and the optional audit log excludes raw input by design. The package makes no
-network calls and its core has no runtime dependencies. An optional OpenAI Agents SDK adapter is
-isolated behind one install extra, an optional LangChain middleware protects exact tool registries
-with fingerprint-bound review interrupts, and an optional OpenTelemetry API extra emits
-metadata-only decision events into caller-owned traces. Other Samsarix repositories can embed the
-core, but none is required; the package and its release lifecycle stand on their own.
+network calls and its core has no runtime dependencies. Optional exact-version adapters protect
+OpenAI Agents SDK function tools, LangChain tool registries, and Pydantic AI toolsets with
+fingerprint-bound native review flows. An optional OpenTelemetry API extra emits metadata-only
+decision events into caller-owned traces. Other Samsarix repositories can embed the core, but none
+is required; the package and its release lifecycle stand on their own.
 
 Within the Samsarix portfolio, this repository owns agent-action safety policy, human-review
 outcomes, exact-call enforcement, privacy-minimized decision evidence, and the policy lifecycle.
@@ -604,6 +604,30 @@ the reviewer, so production checkpointers need sensitive-data controls and an au
 surface. See the [LangChain middleware guide](docs/LANGCHAIN.md) for ordering, rejection, audit,
 parallel-call, persistence, and unsupported-path boundaries.
 
+## Pydantic AI integration
+
+Install the slim optional runtime and run its deterministic no-network agent:
+
+```bash
+python -m pip install -e '.[pydantic-ai]'
+python examples/pydantic_ai_policy_toolset_demo.py
+```
+
+`create_pydantic_ai_tool_policy(bound_catalog, toolset)` returns a policy object whose `toolset`
+wraps Pydantic AI's public execution seam. Every run step must expose the complete exact catalog
+as real `ToolsetTool` objects, and each call must resolve to the snapshotted object. Allow delegates
+once, deny never delegates, and review becomes native `DeferredToolRequests` metadata bound to the
+exact call fingerprint.
+
+After authenticating the reviewer, use `tool_policy.build_results(requests, decisions)` to create
+resume evidence. A plain Pydantic AI boolean approval is not enough: resume requires Samsarix
+metadata, fresh actor/context providers, and current-policy re-enforcement. Pydantic AI performs
+schema validation before the wrapper, so this adapter authorizes validated JSON-native arguments;
+custom argument validators must have no side effects. Approved results are first-write recorded
+and atomically consumed; durable reconstruction supplies an application-owned approval store. See the
+[Pydantic AI toolset guide](docs/PYDANTIC_AI.md) for multi-call resolution, persistence, sensitive
+metadata, and unsupported-path boundaries.
+
 ## Downstream adoption
 
 Samsarix Agent Framework is the first verified downstream consumer. Its optional policy registry
@@ -612,9 +636,10 @@ capabilities outside model arguments, re-reads authentication/approval facts for
 blocks execution on every non-allow outcome or gate failure. The consumer contract runs on Python
 3.11-3.14 while the framework's dependency-free core retains Python 3.10 support.
 
-The repository also carries public, reproducible OpenAI Agents SDK and LangChain adapters with
-exact-version contract tests. The consumer repository remains private as of 2026-08-01, so none of
-these items is a public third-party case study or production deployment. Exact commits,
+The repository also carries public, reproducible OpenAI Agents SDK, LangChain, and Pydantic AI
+adapters with exact-version contract tests. The consumer repository remains private as of
+2026-08-01, so none of these items is a public third-party case study or production deployment.
+Exact commits,
 compatibility, rollback, support level, and evidence limits are recorded in
 [adoption and compatibility evidence](docs/ADOPTION.md).
 

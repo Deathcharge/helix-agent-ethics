@@ -198,6 +198,16 @@ from .provenance import (
     fingerprint_tool_catalog,
     fingerprint_tool_gate_deployment,
 )
+from .pydantic_ai import (
+    MAX_PENDING_PYDANTIC_AI_APPROVALS,
+    PYDANTIC_AI_ADAPTER_VERSION,
+    PYDANTIC_AI_APPROVAL_METADATA_KEY,
+    PYDANTIC_AI_REVIEW_METADATA_KEY,
+    PydanticAIApprovalStore,
+    PydanticAIIntegrationError,
+    PydanticAIToolPolicy,
+    create_pydantic_ai_tool_policy,
+)
 from .runtime import POLICY_RUNTIME_STATUS_VERSION, PolicyRuntime, PolicyRuntimeStatus
 from .schema import (
     get_audit_chain_entry_schema,
@@ -273,6 +283,7 @@ __all__ = [
     "MAX_DEPLOYMENT_AUTH_SEQUENCE",
     "MAX_DEPLOYMENT_LOCK_BYTES",
     "MAX_PENDING_OPENAI_APPROVALS",
+    "MAX_PENDING_PYDANTIC_AI_APPROVALS",
     "MAX_POLICY_DEPLOYMENT_BYTES",
     "MAX_POLICY_RULES",
     "MAX_POLICY_TEST_BYTES",
@@ -298,6 +309,9 @@ __all__ = [
     "POLICY_LINT_VERSION",
     "POLICY_RUNTIME_STATUS_VERSION",
     "POLICY_SHADOW_VERSION",
+    "PYDANTIC_AI_ADAPTER_VERSION",
+    "PYDANTIC_AI_APPROVAL_METADATA_KEY",
+    "PYDANTIC_AI_REVIEW_METADATA_KEY",
     "TOOL_CALL_APPROVAL_VERSION",
     "TOOL_CALL_FINGERPRINT_VERSION",
     "TOOL_CATALOG_FINGERPRINT_VERSION",
@@ -376,6 +390,9 @@ __all__ = [
     "PolicyTestValidationError",
     "PolicyValidationError",
     "PreparedToolCall",
+    "PydanticAIApprovalStore",
+    "PydanticAIIntegrationError",
+    "PydanticAIToolPolicy",
     "RuleExplanation",
     "SamsarixEthicsError",
     "ToolCallApproval",
@@ -402,6 +419,7 @@ __all__ = [
     "create_langchain_tool_policy",
     "create_openai_agents_tool_policy",
     "create_policy_deployment",
+    "create_pydantic_ai_tool_policy",
     "create_tool_gate_deployment",
     "fingerprint_context_contract",
     "fingerprint_policy",
