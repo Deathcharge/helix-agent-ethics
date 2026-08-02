@@ -249,6 +249,7 @@ def test_tool_gate_denial_never_calls_executor_or_exposes_arguments() -> None:
     assert captured.value.decision.outcome is Outcome.DENY
     assert captured.value.decisions == (captured.value.decision,)
     assert captured.value.blocking_index == 0
+    assert captured.value.decision is captured.value.decisions[0]
     assert "never-report-this" not in str(captured.value)
 
 
@@ -267,6 +268,7 @@ def test_tool_gate_review_never_calls_executor() -> None:
     assert captured.value.decision.outcome is Outcome.REVIEW
     assert captured.value.decisions == (captured.value.decision,)
     assert captured.value.blocking_index == 0
+    assert captured.value.decision is captured.value.decisions[0]
 
 
 def test_tool_gate_enforce_returns_only_allow() -> None:
