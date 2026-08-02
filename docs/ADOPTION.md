@@ -99,6 +99,21 @@ This is framework-neutral and does not trust MCP annotations or model-generated 
 registries can either select a prebuilt binding by tool name or continue using the lower-level
 `ToolGate` API when their own registration object already guarantees trusted metadata.
 
+## Implemented gap: exact trusted tool catalogs
+
+Independent bindings prevent per-call downgrades but do not prove that the complete runtime
+registry was classified. `ToolCatalog` adds a strict standalone JSON v1 artifact for 1-256 trusted
+local names and canonical capability sets. `ToolGate.bind_catalog(...)` requires the caller's
+complete trusted registry-name snapshot to match exactly before returning an immutable
+`BoundToolCatalog`; a missing, extra, duplicate, or malformed name fails setup.
+
+The catalog has a domain-separated exact-content fingerprint, bounded loader, bundled schema, CLI
+identity report, and checked coding-agent example. Samsarix Core callers pass
+`(spec.name for spec in registry.list())`; Samsarix Agent Framework callers pass
+`registry.list_tools().keys()`. MCP tools are cataloged under application-approved local aliases,
+never by trusting remote behavioral annotations. The catalog proves content equality, not
+authorship, freshness, callable identity, or correctness of the assigned labels.
+
 ## Implemented gap: all-calls-before-dispatch authorization
 
 Current agent runtimes may propose more than one tool call in a turn and schedule them concurrently.

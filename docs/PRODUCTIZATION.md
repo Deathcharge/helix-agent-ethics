@@ -104,6 +104,10 @@ Bounded review used current primary sources:
   framework-owned scheduling, and a complete ordered batch decision surface.
 - The [MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema) explicitly says
   tool annotations are hints and must not drive decisions when their server is untrusted.
+- Samsarix Core and Samsarix Agent Framework both expose deterministic local registry-name
+  snapshots, but only Core carries MCP behavioral hints and neither registry owns Agent Ethics
+  capabilities. This supports a separate application-authored catalog that checks the complete
+  local name set instead of coupling Agent Ethics to either runtime or inferring labels from hints.
 - [OPA decision logs](https://www.openpolicyagent.org/docs/management-decision-logs) carry the
   evaluated bundle revision alongside each decision, while
   [OPA bundles](https://www.openpolicyagent.org/docs/management-bundles) define revision as bundle
@@ -331,6 +335,11 @@ certification or ethics truth.
   Integrations receive every ordered decision and the first blocked index from the original
   evaluation, preserving existing catch behavior while avoiding a second evaluation, new decision
   IDs, or duplicate audit records when populating multi-call review queues.
+- Added strict standalone tool-catalog v1 artifacts with canonical exact-content fingerprints,
+  bounded duplicate-safe loading, bundled schema/CLI validation, and exact full-registry name
+  comparison before immutable gate bindings exist. The coding-agent example now proves a seven-tool
+  catalog across workspace, process, network, external-write, destructive, and sensitive labels
+  without trusting MCP annotations or adding sibling-repository dependencies.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit
@@ -375,6 +384,9 @@ External validation gates:
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Prepared batches authorize no transaction: audit delivery may be partial on sink failure, and
   framework scheduling or callback failure may still produce partial side effects.
+- Catalog exact matching proves only that two trusted name sets agree. It does not authenticate the
+  registry or catalog, inspect callable identity, validate label correctness, establish freshness,
+  or bind catalog provenance into policy deployment v1.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own
   protected pending-call storage, expiry, and atomic one-time consumption.
 - File permissions and retention vary by operating system and are caller responsibilities.

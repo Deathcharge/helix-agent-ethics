@@ -10,6 +10,14 @@ from .approval import (
     ToolCallApproval,
 )
 from .audit import AUDIT_RECORD_VERSION, AuditRecord, AuditSink, JsonlAuditSink
+from .catalog import (
+    MAX_TOOL_CATALOG_CAPABILITIES,
+    MAX_TOOL_CATALOG_TOOLS,
+    TOOL_CATALOG_VERSION,
+    ToolCatalog,
+    ToolCatalogEntry,
+    validate_tool_catalog_registration,
+)
 from .comparison import (
     POLICY_COMPARISON_VERSION,
     PolicyComparisonChange,
@@ -72,6 +80,7 @@ from .errors import (
     ToolCallBlockedError,
     ToolCallDeniedError,
     ToolCallReviewRequiredError,
+    ToolCatalogValidationError,
 )
 from .explanation import (
     POLICY_EXPLANATION_VERSION,
@@ -84,6 +93,7 @@ from .gate import (
     MAX_TOOL_BATCH_ITEMS,
     MAX_TOOL_CAPABILITIES,
     TOOL_CONTEXT_VERSION,
+    BoundToolCatalog,
     BoundToolGate,
     PreparedToolCall,
     ToolExecutionResult,
@@ -95,12 +105,14 @@ from .io import (
     MAX_CONTEXT_CONTRACT_BYTES,
     MAX_DEPLOYMENT_LOCK_BYTES,
     MAX_POLICY_DEPLOYMENT_BYTES,
+    MAX_TOOL_CATALOG_BYTES,
     append_audit_record,
     load_context,
     load_context_contract,
     load_deployment_lock,
     load_policy,
     load_policy_deployment,
+    load_tool_catalog,
     write_policy,
     write_policy_deployment,
 )
@@ -113,8 +125,10 @@ from .policy_deployment import (
 from .provenance import (
     CONTEXT_CONTRACT_FINGERPRINT_VERSION,
     POLICY_FINGERPRINT_VERSION,
+    TOOL_CATALOG_FINGERPRINT_VERSION,
     fingerprint_context_contract,
     fingerprint_policy,
+    fingerprint_tool_catalog,
 )
 from .runtime import POLICY_RUNTIME_STATUS_VERSION, PolicyRuntime, PolicyRuntimeStatus
 from .schema import (
@@ -132,6 +146,7 @@ from .schema import (
     get_policy_shadow_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
+    get_tool_catalog_schema,
     get_tool_context_schema,
 )
 from .shadow import (
@@ -172,6 +187,9 @@ __all__ = [
     "MAX_TOOL_BATCH_ITEMS",
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
     "MAX_TOOL_CAPABILITIES",
+    "MAX_TOOL_CATALOG_BYTES",
+    "MAX_TOOL_CATALOG_CAPABILITIES",
+    "MAX_TOOL_CATALOG_TOOLS",
     "POLICY_COMPARISON_VERSION",
     "POLICY_COMPOSITION_VERSION",
     "POLICY_COVERAGE_VERSION",
@@ -183,10 +201,13 @@ __all__ = [
     "POLICY_SHADOW_VERSION",
     "TOOL_CALL_APPROVAL_VERSION",
     "TOOL_CALL_FINGERPRINT_VERSION",
+    "TOOL_CATALOG_FINGERPRINT_VERSION",
+    "TOOL_CATALOG_VERSION",
     "TOOL_CONTEXT_VERSION",
     "AuditLogError",
     "AuditRecord",
     "AuditSink",
+    "BoundToolCatalog",
     "BoundToolGate",
     "ConditionExplanation",
     "ConditionExplanationStatus",
@@ -246,6 +267,9 @@ __all__ = [
     "ToolCallBlockedError",
     "ToolCallDeniedError",
     "ToolCallReviewRequiredError",
+    "ToolCatalog",
+    "ToolCatalogEntry",
+    "ToolCatalogValidationError",
     "ToolExecutionResult",
     "ToolGate",
     "append_audit_record",
@@ -257,6 +281,7 @@ __all__ = [
     "fingerprint_context_contract",
     "fingerprint_policy",
     "fingerprint_tool_call",
+    "fingerprint_tool_catalog",
     "get_audit_record_schema",
     "get_context_contract_schema",
     "get_deployment_lock_schema",
@@ -271,6 +296,7 @@ __all__ = [
     "get_policy_shadow_schema",
     "get_policy_test_schema",
     "get_tool_approval_schema",
+    "get_tool_catalog_schema",
     "get_tool_context_schema",
     "lint_policy",
     "load_context",
@@ -279,11 +305,13 @@ __all__ = [
     "load_policy",
     "load_policy_deployment",
     "load_policy_test_suite",
+    "load_tool_catalog",
     "measure_policy_coverage",
     "run_policy_tests",
     "validate_context",
     "validate_context_against_contract",
     "validate_policy_context_contract",
+    "validate_tool_catalog_registration",
     "verify_deployment_lock",
     "write_policy",
     "write_policy_deployment",

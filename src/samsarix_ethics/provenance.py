@@ -11,12 +11,18 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from .catalog import ToolCatalog
 from .contracts import ContextContract
-from .errors import ContextContractValidationError, PolicyValidationError
+from .errors import (
+    ContextContractValidationError,
+    PolicyValidationError,
+    ToolCatalogValidationError,
+)
 from .models import Policy
 
 POLICY_FINGERPRINT_VERSION = 1
 CONTEXT_CONTRACT_FINGERPRINT_VERSION = 1
+TOOL_CATALOG_FINGERPRINT_VERSION = 1
 
 _POLICY_FINGERPRINT = re.compile(r"^v1:sha256:[0-9a-f]{64}$")
 _CONTEXT_CONTRACT_FINGERPRINT = re.compile(r"^v1:sha256:[0-9a-f]{64}$")
@@ -73,6 +79,24 @@ def fingerprint_context_contract(contract: ContextContract) -> str:
             f"context contract cannot be fingerprinted: {type(exc).__name__}"
         ) from exc
     return f"v{CONTEXT_CONTRACT_FINGERPRINT_VERSION}:sha256:{digest}"
+
+
+def fingerprint_tool_catalog(catalog: ToolCatalog) -> str:
+    """Return a versioned SHA-256 fingerprint of one validated tool catalog."""
+
+    if not isinstance(catalog, ToolCatalog):
+        raise TypeError("catalog must be a ToolCatalog")
+    payload = {
+        "tool_catalog_fingerprint_version": TOOL_CATALOG_FINGERPRINT_VERSION,
+        "tool_catalog": catalog.to_dict(),
+    }
+    try:
+        digest = _fingerprint_json(payload)
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise ToolCatalogValidationError(
+            f"tool catalog cannot be fingerprinted: {type(exc).__name__}"
+        ) from exc
+    return f"v{TOOL_CATALOG_FINGERPRINT_VERSION}:sha256:{digest}"
 
 
 def _is_policy_fingerprint(value: object) -> bool:

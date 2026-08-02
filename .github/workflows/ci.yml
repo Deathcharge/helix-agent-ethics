@@ -65,9 +65,11 @@ jobs:
           from samsarix_ethics import (
               fingerprint_context_contract,
               fingerprint_policy,
+              fingerprint_tool_catalog,
               load_context_contract,
               load_policy,
               load_policy_deployment,
+              load_tool_catalog,
           )
 
           report = json.load(open("/tmp/policy-composition.json"))
@@ -85,6 +87,7 @@ jobs:
           coding_deployment = load_policy_deployment(
               "examples/deployment/coding-agent-baseline.deployment.json"
           )
+          coding_catalog = load_tool_catalog("examples/catalogs/coding-agent-tools.json")
           assert coding_deployment.policy == coding_policy
           assert coding_deployment.context_contract == coding_contract
           assert coding_deployment.deployment_lock.policy.fingerprint == fingerprint_policy(
@@ -95,6 +98,16 @@ jobs:
               coding_deployment.deployment_lock.context_contract.fingerprint
               == fingerprint_context_contract(coding_contract)
           )
+          assert coding_catalog.tool_names == (
+              "delete_file",
+              "fetch_url",
+              "read_file",
+              "read_secret",
+              "run_command",
+              "send_message",
+              "write_file",
+          )
+          assert fingerprint_tool_catalog(coding_catalog).startswith("v1:sha256:")
           PY
           samsarix-ethics test \
             --policy examples/policies/safe-agent-actions.json \
@@ -113,6 +126,8 @@ jobs:
           samsarix-ethics schema policy-shadow >/dev/null
           samsarix-ethics schema policy-runtime-status >/dev/null
           samsarix-ethics schema policy-deployment >/dev/null
+          samsarix-ethics schema tool-catalog >/dev/null
+          samsarix-ethics catalog examples/catalogs/coding-agent-tools.json >/dev/null
           samsarix-ethics deployment verify \
             examples/deployment/tool-call-baseline.deployment.json
           samsarix-ethics deployment verify \
@@ -174,6 +189,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-shadow >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-runtime-status >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-deployment >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-catalog >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
@@ -201,6 +217,7 @@ jobs:
               create_policy_deployment,
               fingerprint_policy,
               lint_policy,
+              load_tool_catalog,
               measure_policy_coverage,
           )
 
@@ -278,6 +295,25 @@ jobs:
           assert isinstance(prepared, PreparedToolCall)
           assert prepared.arguments == {"ticket_id": "T-101"}
           assert gate.enforce_many([prepared])[0].allowed is True
+          coding_catalog = load_tool_catalog("examples/catalogs/coding-agent-tools.json")
+          registered_tools = {
+              "delete_file",
+              "fetch_url",
+              "read_file",
+              "read_secret",
+              "run_command",
+              "send_message",
+              "write_file",
+          }
+          catalog_bindings = gate.bind_catalog(
+              coding_catalog,
+              registered_tools=registered_tools,
+          )
+          assert catalog_bindings.catalog_fingerprint.startswith("v1:sha256:")
+          assert catalog_bindings["run_command"].capabilities == (
+              "process:execute",
+              "risk:elevated",
+          )
           delete_ticket = gate.bind("delete_ticket", capabilities=["destructive"])
           blocked_batch = [prepared, delete_ticket.prepare({"ticket_id": "T-101"})]
           try:

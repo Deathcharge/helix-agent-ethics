@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.samsarix.com/agent-ethics/tool-catalog/v1.json",
+  "title": "Samsarix Agent Ethics tool catalog v1",
+  "description": "Application-owned local tool names and canonical policy capability labels.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tool_catalog_version", "id", "version", "tools"],
+  "properties": {
+    "tool_catalog_version": {"const": 1},
+    "id": {"$ref": "#/$defs/identifier"},
+    "version": {"$ref": "#/$defs/identifier"},
+    "description": {"type": "string", "maxLength": 1000},
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {"$ref": "#/$defs/tool"}
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "capabilities"],
+      "properties": {
+        "name": {"$ref": "#/$defs/identifier"},
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        }
+      }
+    }
+  }
+}

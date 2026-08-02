@@ -52,10 +52,12 @@ classification: the application must conservatively label every registration.
 
 MCP `readOnlyHint`, `destructiveHint`, `idempotentHint`, and `openWorldHint` are protocol hints, not
 authorization facts. Their specification defines conservative defaults but explicitly forbids
-security decisions based on annotations from untrusted servers. Keep a trusted local allowlist that
-maps server identity plus tool name to a frozen `BoundToolGate`; do not let the model or an
-untrusted server choose its capability labels. A newly discovered or under-classified tool should
-receive `risk:elevated` or remain unknown, both of which require review here.
+security decisions based on annotations from untrusted servers. Keep a trusted local allowlist and
+map its complete local alias set through
+[`examples/catalogs/coding-agent-tools.json`](../examples/catalogs/coding-agent-tools.json) before
+creating frozen bindings; do not let the model or an untrusted server choose capability labels. A
+newly discovered tool makes exact catalog binding fail until the application reviews and catalogs
+it. An under-classified elevated tool still fails to inherit an allow rule.
 
 `context.workspace_contained` is also application-owned. Compute it from resolved paths, the
 approved workspace root, symlink/reparse-point policy, and the semantics of the actual executor.

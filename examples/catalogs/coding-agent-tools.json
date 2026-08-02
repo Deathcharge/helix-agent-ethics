@@ -1,0 +1,36 @@
+{
+  "tool_catalog_version": 1,
+  "id": "coding-agent-tools",
+  "version": "1.0.0",
+  "description": "Trusted local capability labels for the coding-agent policy example.",
+  "tools": [
+    {
+      "name": "delete_file",
+      "capabilities": ["destructive", "workspace:write"]
+    },
+    {
+      "name": "fetch_url",
+      "capabilities": ["network:access", "risk:elevated"]
+    },
+    {
+      "name": "read_file",
+      "capabilities": ["workspace:read"]
+    },
+    {
+      "name": "read_secret",
+      "capabilities": ["data:sensitive", "workspace:read"]
+    },
+    {
+      "name": "run_command",
+      "capabilities": ["process:execute", "risk:elevated"]
+    },
+    {
+      "name": "send_message",
+      "capabilities": ["external:write", "risk:elevated"]
+    },
+    {
+      "name": "write_file",
+      "capabilities": ["workspace:write"]
+    }
+  ]
+}

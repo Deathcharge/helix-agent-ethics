@@ -34,13 +34,14 @@ from .io import (
     load_deployment_lock,
     load_policy,
     load_policy_deployment,
+    load_tool_catalog,
     write_policy,
     write_policy_deployment,
     write_sample_policy,
 )
 from .models import Decision, Outcome
 from .policy_deployment import PolicyDeployment, create_policy_deployment
-from .provenance import fingerprint_policy
+from .provenance import fingerprint_policy, fingerprint_tool_catalog
 from .schema import (
     get_audit_record_schema,
     get_context_contract_schema,
@@ -56,6 +57,7 @@ from .schema import (
     get_policy_shadow_schema,
     get_policy_test_schema,
     get_tool_approval_schema,
+    get_tool_catalog_schema,
     get_tool_context_schema,
 )
 from .shadow import PolicyShadowEvaluation, PolicyShadowEvaluator
@@ -235,6 +237,12 @@ def _parser() -> argparse.ArgumentParser:
     deployment_verify.add_argument("deployment", help="path to a policy deployment")
     deployment_verify.add_argument("--format", choices=("json", "text"), default="text")
 
+    catalog = subparsers.add_parser(
+        "catalog", help="validate and identify a trusted tool-capability catalog"
+    )
+    catalog.add_argument("catalog", help="path to a JSON tool catalog")
+    catalog.add_argument("--format", choices=("json", "text"), default="text")
+
     lock = subparsers.add_parser("lock", help="create or verify an exact policy deployment lock")
     lock_subparsers = lock.add_subparsers(dest="lock_command", required=True)
     lock_create = lock_subparsers.add_parser("create", help="print a new deployment lock")
@@ -266,6 +274,7 @@ def _parser() -> argparse.ArgumentParser:
             "policy-deployment",
             "tool-context",
             "tool-approval",
+            "tool-catalog",
             "audit-record",
         ),
         default="policy",
@@ -611,10 +620,33 @@ def main(
                 "policy-deployment": get_policy_deployment_schema,
                 "tool-context": get_tool_context_schema,
                 "tool-approval": get_tool_approval_schema,
+                "tool-catalog": get_tool_catalog_schema,
                 "audit-record": get_audit_record_schema,
             }
             schema = schema_loaders[arguments.kind]()
             print(json.dumps(schema, indent=2, sort_keys=True), file=output)
+            return EXIT_ALLOWED
+
+        if arguments.command == "catalog":
+            tool_catalog = load_tool_catalog(arguments.catalog)
+            catalog_fingerprint = fingerprint_tool_catalog(tool_catalog)
+            summary = {
+                "valid": True,
+                "tool_catalog_version": tool_catalog.tool_catalog_version,
+                "catalog_id": tool_catalog.id,
+                "catalog_version": tool_catalog.version,
+                "catalog_fingerprint": catalog_fingerprint,
+                "tool_count": len(tool_catalog.tools),
+            }
+            rendered = (
+                json.dumps(summary, indent=2, sort_keys=True)
+                if arguments.format == "json"
+                else (
+                    f"Valid tool catalog {tool_catalog.id}@{tool_catalog.version}: "
+                    f"{len(tool_catalog.tools)} tools, fingerprint={catalog_fingerprint}"
+                )
+            )
+            print(rendered, file=output)
             return EXIT_ALLOWED
 
         if arguments.command == "compose":

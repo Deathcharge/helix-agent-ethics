@@ -15,6 +15,8 @@ untrusted action JSON ─> bounded parser ─> context object ──────
                                                                                ├─> optional metadata-only audit sink
                                                                                └─> ToolGate ─> callback or typed block
 
+trusted tool catalog + complete local registry names ─> exact match ─> immutable gate bindings
+
 validated policy + optional contract/lock ─> PolicyRuntime generation N ─> live gates
 validated complete candidate ─> compare-and-swap atomic activation ──────┘
 
@@ -35,7 +37,8 @@ the legacy `helix-unified` repository.
 - `models.py`: strict schema validation and immutable policy/decision values.
 - `audit.py`: versioned metadata-only records, the caller sink contract, and local JSONL sink.
 - `approval.py`: immutable approval records and bounded exact-call fingerprints.
-- `provenance.py`: canonical, domain-separated policy and context-contract fingerprints.
+- `catalog.py`: strict application-owned tool capability catalogs and exact registry matching.
+- `provenance.py`: canonical, domain-separated policy, contract, and catalog fingerprints.
 - `deployment.py`: strict immutable deployment locks and exact artifact verification.
 - `policy_deployment.py`: complete single-file enforcement units and internal lock verification.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
@@ -233,6 +236,9 @@ authorization and risk facts can be re-read.
   state against forgery and replay.
 - **Bound tool metadata** is application-owned registration state. A `BoundToolGate` freezes the
   name and capabilities used at enforcement; remote protocol annotations remain untrusted hints.
+- **Tool catalog operator** owns catalog authorship, review, authenticated distribution, freshness,
+  and the complete trusted registry snapshot. Exact matching prevents name-set drift but does not
+  inspect callables or prove capability correctness.
 - **Filesystem/audit operator** owns access control, transport, idempotency, rotation, retention,
   backups, and tamper detection for audit destinations.
 

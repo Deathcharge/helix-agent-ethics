@@ -31,6 +31,7 @@ def test_help_and_version() -> None:
 
     assert help_result.returncode == 0
     assert "check" in help_result.stdout
+    assert "catalog" in help_result.stdout
     assert "compare" in help_result.stdout
     assert "compose" in help_result.stdout
     assert "coverage" in help_result.stdout
@@ -100,6 +101,21 @@ def test_validate_and_init_commands(
     assert "refusing to overwrite" in overwrite.stderr
 
 
+def test_catalog_command_reports_value_minimized_identity() -> None:
+    catalog_path = Path(__file__).parents[1] / "examples/catalogs/coding-agent-tools.json"
+
+    result = _run_cli("catalog", str(catalog_path), "--format", "json")
+
+    assert result.returncode == 0
+    report = json.loads(result.stdout)
+    assert report["valid"] is True
+    assert report["catalog_id"] == "coding-agent-tools"
+    assert report["catalog_version"] == "1.0.0"
+    assert report["tool_count"] == 7
+    assert report["catalog_fingerprint"].startswith("v1:sha256:")
+    assert "capabilities" not in result.stdout
+
+
 def test_text_output_and_audit_log(
     tmp_path: Path, write_json: Any, policy_document: dict[str, Any]
 ) -> None:
@@ -141,6 +157,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     policy_deployment = _run_cli("schema", "policy-deployment")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
+    tool_catalog = _run_cli("schema", "tool-catalog")
     audit_record = _run_cli("schema", "audit-record")
 
     assert policy.returncode == 0
@@ -173,6 +190,8 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
     assert json.loads(tool_approval.stdout)["$id"].endswith("/tool-approval/v1.json")
+    assert tool_catalog.returncode == 0
+    assert json.loads(tool_catalog.stdout)["$id"].endswith("/tool-catalog/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
 
