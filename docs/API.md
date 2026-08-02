@@ -601,6 +601,8 @@ the stream ID, entry count, sequence range, and head MAC. Duplicate fields, unkn
 incomplete lines, sequence/link discontinuity, stream changes, malformed records, and incorrect
 MACs fail with `AuditChainError`. An expected head detects valid-prefix rollback; without that
 external anchor, the verifier cannot distinguish a legitimate shorter stream from rollback.
+The verifier accepts only a regular file and rejects state changes observed during its read. Quiesce
+the writer or provide an immutable snapshot when the report must represent a complete stream.
 
 `generate_audit_chain_key()` returns a fresh 32-byte key. The application owns secret storage,
 rotation, external checkpoint retention, cross-process writer exclusion, and post-execution outcome

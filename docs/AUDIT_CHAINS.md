@@ -26,12 +26,20 @@ Generate and store a raw key separately from the chain. This example writes a ne
 production key storage and file permissions are operator decisions.
 
 ```python
-from pathlib import Path
+import os
 
 from samsarix_ethics import HmacAuditChainSink, ToolGate, generate_audit_chain_key
 
 key = generate_audit_chain_key()
-Path("audit-chain.key").write_bytes(key)
+flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+if hasattr(os, "O_BINARY"):
+    flags |= os.O_BINARY
+descriptor = os.open("audit-chain.key", flags, 0o600)
+with os.fdopen(descriptor, "wb") as key_file:
+    if key_file.write(key) != len(key):
+        raise OSError("short audit-chain key write")
+    key_file.flush()
+    os.fsync(key_file.fileno())
 
 sink = HmacAuditChainSink(
     "decisions.chain.jsonl",
@@ -41,10 +49,14 @@ sink = HmacAuditChainSink(
 gate = ToolGate(policy, audit_sink=sink)
 ```
 
-The sink accepts the same synchronous `AuditSink` contract as any application-owned destination.
-Each call writes and flushes one compact JSON line before the gate can authorize a callback. A
-write, flush, validation, or observed external-change failure raises `AuditChainError`, which is an
-`AuditLogError`, so existing fail-closed gate behavior is preserved.
+The exclusive create preserves an existing key on reruns; mode `0o600` requests owner-only access
+where the operating system honors POSIX modes. The sink accepts the same synchronous `AuditSink`
+contract as any application-owned destination. Each call writes and flushes one compact JSON line
+before the gate can authorize a callback; on platforms with `O_DIRECTORY`, first creation also
+flushes the parent directory entry. Chain and storage failures raise `AuditChainError`, which is an
+`AuditLogError`, so existing fail-closed gate behavior is preserved. Calling the sink directly with
+a value other than `AuditRecord` raises `TypeError`; `ToolGate` separately wraps ordinary sink
+exceptions as documented in the API.
 
 The key must be a 32-4096 byte `bytes`, `bytearray`, or `memoryview`. The sink immediately copies
 mutable key inputs and never includes the key in its representation or output. A `stream_id` is a
@@ -79,6 +91,12 @@ bounded at 4096 bytes. Chain entries are bounded at 256 KiB and streams at 1,000
 GiB, whichever comes first. Rotate before either limit.
 Parsing rejects duplicate JSON keys, blank lines, invalid UTF-8/JSON, unknown fields, non-canonical
 record shapes, broken sequence/link values, incomplete final lines, and invalid MACs.
+
+Verification requires a regular file and checks its descriptor identity, size, and modification
+time before and after the bounded read, then confirms the path still names that same state. A
+change observed during verification fails closed. Quiesce the writer or verify an immutable
+snapshot when the result must represent a complete stream: no path-based API can prevent an append
+that begins after its final state check.
 
 Persist `head_mac` somewhere an attacker who can modify the chain cannot also roll back—for
 example, an authenticated deployment record or separate append-only store. Then require it:
@@ -138,8 +156,10 @@ on Python object serialization or platform-specific newlines.
 - Use one sink instance in one writer process per file. The instance serializes threads and rejects
   an observed external file change, but it does not acquire a cross-process lock. Another writer
   can still race between the pre-append check and the append.
-- A crash or short write can leave an incomplete final line. Verification fails closed; this
-  package does not truncate, repair, or guess which record was committed.
+- A crash or short write can leave an incomplete final line, which fails verification. A complete
+  entry written before an uncertain `fsync` can still verify while its durability is unknown; it
+  requires operator recovery and must not be treated as durably committed. This package does not
+  truncate, repair, or guess which record was committed.
 - A successful authorization record proves that policy evaluation and configured audit delivery
   occurred before execution. It does not prove the callback ran, succeeded, had immutable code or
   state, or produced a particular side effect.

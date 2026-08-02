@@ -81,8 +81,10 @@ rewrite the chain. A separately protected `head_mac` is required to detect rollb
 earlier prefix or replacement with an older copy; deletion and availability require backups and
 monitoring. Use one writer process per file. The sink serializes its own threads and rejects an
 observed external change, but does not acquire a cross-process lock and another writer can race
-between its file check and append. A crash, short write, or uncertain `fsync` can leave an
-incomplete or ambiguously committed final entry; verification fails rather than repairing it.
+between its file check and append. A crash or short write can leave an incomplete final entry,
+which fails verification. A complete entry written before an uncertain `fsync` may later pass HMAC
+verification while its durability remains unknown; recovery must not treat it as durably committed.
+Verification never repairs either state.
 Operators own key generation/storage/rotation, filesystem permissions, writer exclusion, external
 checkpoints, retention, backup, and recovery. An audit entry records authorization, not callback
 execution or success.

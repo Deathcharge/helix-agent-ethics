@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from jsonschema import Draft202012Validator, ValidationError  # type: ignore[import-untyped]
@@ -364,18 +365,23 @@ def test_read_and_stat_failures_are_explicit(
     key = b"o" * MIN_AUDIT_CHAIN_KEY_BYTES
     path = tmp_path / "audit-chain.jsonl"
     _write_chain(path, key, count=1)
+    original_open = Path.open
 
     class BrokenReader:
+        def __init__(self) -> None:
+            self._source = original_open(path, "rb")
+
         def __enter__(self) -> BrokenReader:
             return self
 
         def __exit__(self, *_args: object) -> None:
-            return None
+            self._source.close()
+
+        def fileno(self) -> int:
+            return self._source.fileno()
 
         def readline(self, _limit: int) -> bytes:
             raise OSError("simulated read failure")
-
-    original_open = Path.open
 
     def broken_open(target: Path, *args: object, **kwargs: object) -> object:
         if target == path:
@@ -397,6 +403,106 @@ def test_read_and_stat_failures_are_explicit(
     monkeypatch.setattr(Path, "stat", broken_stat)
     with pytest.raises(AuditChainError, match="cannot inspect audit chain"):
         HmacAuditChainSink(path, key, stream_id="stream")
+
+
+def test_verifier_rejects_a_file_that_changes_during_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    key = b"c" * MIN_AUDIT_CHAIN_KEY_BYTES
+    path = tmp_path / "changing.jsonl"
+    _write_chain(path, key, count=1)
+    original_fstat = audit_chain_module.os.fstat
+    calls = 0
+
+    def changing_fstat(descriptor: int) -> object:
+        nonlocal calls
+        status = original_fstat(descriptor)
+        calls += 1
+        if calls == 2:
+            return SimpleNamespace(
+                st_dev=status.st_dev,
+                st_ino=status.st_ino,
+                st_size=status.st_size + 1,
+                st_mtime_ns=status.st_mtime_ns + 1,
+            )
+        return status
+
+    monkeypatch.setattr(audit_chain_module.os, "fstat", changing_fstat)
+    with pytest.raises(AuditChainError, match="changed while it was being verified"):
+        verify_audit_chain(path, key)
+
+
+def test_new_chain_syncs_parent_directory_when_supported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    opened: list[tuple[object, int]] = []
+    synced: list[int] = []
+    closed: list[int] = []
+
+    def fake_open(path: object, flags: int, _mode: int = 0o777) -> int:
+        opened.append((path, flags))
+        return 101 if len(opened) == 1 else 202
+
+    monkeypatch.setattr(audit_chain_module.os, "O_DIRECTORY", 0x10000, raising=False)
+    monkeypatch.setattr(audit_chain_module.os, "open", fake_open)
+    monkeypatch.setattr(
+        audit_chain_module.os,
+        "write",
+        lambda _descriptor, payload: len(payload),
+    )
+    monkeypatch.setattr(audit_chain_module.os, "fsync", synced.append)
+    monkeypatch.setattr(audit_chain_module.os, "close", closed.append)
+    path = tmp_path / "new-chain.jsonl"
+    HmacAuditChainSink(
+        path,
+        b"d" * MIN_AUDIT_CHAIN_KEY_BYTES,
+        stream_id="directory-sync",
+    )(_record())
+
+    assert opened[0][0] == path
+    assert opened[1][0] == path.parent
+    assert synced == [101, 202]
+    assert closed == [101, 202]
+
+
+@pytest.mark.parametrize("failure_point", ["fsync", "close"])
+def test_parent_directory_sync_failures_fail_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_point: str,
+) -> None:
+    opened = 0
+
+    def fake_open(_path: object, _flags: int, _mode: int = 0o777) -> int:
+        nonlocal opened
+        opened += 1
+        return 101 if opened == 1 else 202
+
+    def fake_fsync(descriptor: int) -> None:
+        if descriptor == 202 and failure_point == "fsync":
+            raise OSError("simulated directory fsync failure")
+
+    def fake_close(descriptor: int) -> None:
+        if descriptor == 202 and failure_point == "close":
+            raise OSError("simulated directory close failure")
+
+    monkeypatch.setattr(audit_chain_module.os, "O_DIRECTORY", 0x10000, raising=False)
+    monkeypatch.setattr(audit_chain_module.os, "open", fake_open)
+    monkeypatch.setattr(
+        audit_chain_module.os,
+        "write",
+        lambda _descriptor, payload: len(payload),
+    )
+    monkeypatch.setattr(audit_chain_module.os, "fsync", fake_fsync)
+    monkeypatch.setattr(audit_chain_module.os, "close", fake_close)
+    sink = HmacAuditChainSink(
+        tmp_path / f"directory-{failure_point}.jsonl",
+        b"e" * MIN_AUDIT_CHAIN_KEY_BYTES,
+        stream_id="directory-failure",
+    )
+
+    with pytest.raises(AuditChainError, match=f"directory {failure_point} failure"):
+        sink(_record())
 
 
 def test_sink_copies_mutable_key_and_repr_excludes_it(tmp_path: Path) -> None:
@@ -430,7 +536,7 @@ def test_sink_serializes_threads_and_rejects_observed_external_change(tmp_path: 
     ("payload", "message"),
     [
         (b"\n", "blank"),
-        (b'{"audit_chain_version":1}', "missing"),
+        (b'{"audit_chain_version":1}\n', "audit chain entry is missing"),
         (b'{"mac":"one","mac":"two"}\n', "duplicate JSON field"),
         (b"not-json\n", "invalid audit chain JSON"),
         (b"\xff\n", "invalid audit chain JSON"),

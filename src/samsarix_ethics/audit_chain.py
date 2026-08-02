@@ -11,6 +11,7 @@ import json
 import os
 import re
 import secrets
+import stat
 import threading
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -91,6 +92,27 @@ def _canonical_bytes(value: Mapping[str, Any]) -> bytes:
 def _entry_mac(key: bytes, unsigned: Mapping[str, Any]) -> str:
     digest = hmac.new(key, _DOMAIN + _canonical_bytes(unsigned), hashlib.sha256)
     return f"v{AUDIT_CHAIN_VERSION}:{_ALGORITHM}:{digest.hexdigest()}"
+
+
+def _unsigned_fields(
+    *,
+    stream_id: str,
+    sequence: int,
+    previous_mac: str | None,
+    record: AuditRecord,
+) -> dict[str, Any]:
+    return {
+        "audit_chain_version": AUDIT_CHAIN_VERSION,
+        "algorithm": _ALGORITHM,
+        "stream_id": stream_id,
+        "sequence": sequence,
+        "previous_mac": previous_mac,
+        "record": record.to_dict(),
+    }
+
+
+def _file_state(status: os.stat_result) -> tuple[int, int, int, int]:
+    return (status.st_dev, status.st_ino, status.st_size, status.st_mtime_ns)
 
 
 def generate_audit_chain_key() -> bytes:
@@ -181,14 +203,12 @@ class AuditChainEntry:
     def unsigned_dict(self) -> dict[str, Any]:
         """Return the canonical authenticated fields, excluding the MAC itself."""
 
-        return {
-            "audit_chain_version": self.audit_chain_version,
-            "algorithm": self.algorithm,
-            "stream_id": self.stream_id,
-            "sequence": self.sequence,
-            "previous_mac": self.previous_mac,
-            "record": self.record.to_dict(),
-        }
+        return _unsigned_fields(
+            stream_id=self.stream_id,
+            sequence=self.sequence,
+            previous_mac=self.previous_mac,
+            record=self.record,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a detached JSON-compatible entry."""
@@ -295,6 +315,10 @@ def verify_audit_chain(
         raise AuditChainError(f"cannot open audit chain {target}: {exc}") from exc
     try:
         with source:
+            initial_status = os.fstat(source.fileno())
+            if not stat.S_ISREG(initial_status.st_mode):
+                raise AuditChainError(f"audit chain must be a regular file: {target}")
+            initial_state = _file_state(initial_status)
             while True:
                 line = source.readline(MAX_AUDIT_CHAIN_ENTRY_BYTES + 2)
                 if not line:
@@ -345,6 +369,11 @@ def verify_audit_chain(
                         f"audit chain MAC verification failed at entry {entry_count}"
                     )
                 previous_mac = entry.mac
+            final_state = _file_state(os.fstat(source.fileno()))
+            if final_state != initial_state or bytes_read != initial_status.st_size:
+                raise AuditChainError("audit chain changed while it was being verified")
+        if _file_state(target.stat()) != final_state:
+            raise AuditChainError("audit chain path changed while it was being verified")
     except OSError as exc:
         raise AuditChainError(f"cannot read audit chain {target}: {exc}") from exc
 
@@ -425,7 +454,7 @@ class HmacAuditChainSink:
             return None
         except OSError as exc:
             raise AuditChainError(f"cannot inspect audit chain {self._path}: {exc}") from exc
-        return (status.st_dev, status.st_ino, status.st_size, status.st_mtime_ns)
+        return _file_state(status)
 
     def _resume(self, *, expected_head: str | None = None) -> None:
         state = self._stat()
@@ -467,14 +496,12 @@ class HmacAuditChainSink:
                 raise AuditChainError(
                     f"audit chain exceeds the limit of {MAX_AUDIT_CHAIN_ENTRIES} entries"
                 )
-            unsigned = {
-                "audit_chain_version": AUDIT_CHAIN_VERSION,
-                "algorithm": _ALGORITHM,
-                "stream_id": self._stream_id,
-                "sequence": next_sequence,
-                "previous_mac": self._head_mac,
-                "record": record.to_dict(),
-            }
+            unsigned = _unsigned_fields(
+                stream_id=self._stream_id,
+                sequence=next_sequence,
+                previous_mac=self._head_mac,
+                record=record,
+            )
             entry = AuditChainEntry(
                 stream_id=self._stream_id,
                 sequence=next_sequence,
@@ -497,6 +524,7 @@ class HmacAuditChainSink:
                 flags |= os.O_BINARY
             descriptor: int | None = None
             failure: OSError | None = None
+            created = current_state is None
             try:
                 descriptor = os.open(self._path, flags, 0o600)
                 written = os.write(descriptor, payload)
@@ -512,6 +540,23 @@ class HmacAuditChainSink:
                     except OSError as exc:
                         if failure is None:
                             failure = exc
+            if failure is None and created and hasattr(os, "O_DIRECTORY"):
+                directory_descriptor: int | None = None
+                try:
+                    directory_descriptor = os.open(
+                        self._path.parent,
+                        os.O_RDONLY | os.O_DIRECTORY,
+                    )
+                    os.fsync(directory_descriptor)
+                except OSError as exc:
+                    failure = exc
+                finally:
+                    if directory_descriptor is not None:
+                        try:
+                            os.close(directory_descriptor)
+                        except OSError as exc:
+                            if failure is None:
+                                failure = exc
             if failure is not None:
                 raise AuditChainError(
                     f"cannot append audit chain entry to {self._path}: {failure}"

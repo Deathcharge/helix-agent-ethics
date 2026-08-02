@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from contextlib import suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -15,6 +14,10 @@ from samsarix_ethics import (
     load_policy,
     verify_audit_chain,
 )
+
+
+def _denied_callback(_arguments: dict[str, object]) -> None:
+    raise AssertionError("the denied callback ran")
 
 
 def main() -> None:
@@ -40,12 +43,17 @@ def main() -> None:
         )
 
         delete_ticket = gate.bind("delete_ticket", capabilities=["destructive"])
-        with suppress(ToolCallDeniedError):
+        try:
             delete_ticket.execute(
                 {"ticket_id": "T-100"},
-                lambda _arguments: print("this callback must not run"),
+                _denied_callback,
                 actor={"id": "support-agent"},
             )
+        except ToolCallDeniedError as blocked:
+            if blocked.decision.outcome.value != "deny":
+                raise AssertionError("the destructive call did not produce deny") from blocked
+        else:
+            raise AssertionError("the destructive call was unexpectedly allowed")
 
         head_mac = sink.head_mac
         if head_mac is None:
