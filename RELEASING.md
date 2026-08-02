@@ -8,7 +8,9 @@ attested artifact, publishing a release, and claiming adopter evidence are disti
 The Python 3.11 CI job builds the wheel and source distribution once, validates both files, installs
 the wheel into a clean virtual environment, and uploads the exact files as
 `python-distributions-<commit>` for 14 days. The same workflow exercises the source package across
-Python 3.11-3.14; release candidates are valid only when that complete matrix is green.
+Python 3.11-3.14. Dedicated hash-locked lanes exercise the exact OpenAI Agents SDK and
+OpenTelemetry API/SDK contracts plus their no-network examples; release candidates are valid only
+when the complete matrix and both optional-integration lanes are green.
 
 For pushes to `main`, a separate least-privilege job waits for the complete matrix, downloads those
 already-verified files, and creates GitHub build-provenance attestations. The attestation links each
@@ -29,6 +31,14 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m ruff check .
    python -m mypy
    python -m pytest
+   python -m pip install --require-hashes \
+     -r requirements-dev.lock \
+     -r requirements-openai-agents.lock \
+     -r requirements-opentelemetry.lock
+   python -m pytest --no-cov integration_tests/test_openai_agents_sdk.py
+   python examples/openai_agents_guardrail_demo.py
+   python -m pytest --no-cov integration_tests/test_opentelemetry_sdk.py
+   python examples/opentelemetry_decision_event_demo.py
    python -m build --no-isolation
    python -m twine check dist/*
    ```

@@ -206,6 +206,14 @@ built-in JSONL sink is local best effort (`append` plus `fsync`). A caller-owned
 same frozen record, runs once before authorization, and owns transport, retries, idempotency, and
 durable retention.
 
+`CompositeAuditSink` provides only bounded ordered fan-out. It stops on the first child failure;
+earlier deliveries are not transactional and later sinks are skipped. The optional
+`OpenTelemetryDecisionEventSink` attaches the same record as one versioned `samsarix.*` event on
+the current recording span. It creates no span, exporter, or network client and deliberately emits
+no input, actor/context facts, tool metadata, policy values/messages, approvals, or callback data.
+A non-recording span is an OpenTelemetry no-op, and successful `add_event` does not prove later
+export or storage, so trace correlation never replaces durable audit evidence.
+
 `HmacAuditChainSink` is the optional local integrity layer. It authenticates each record, stream ID,
 one-based sequence, and prior MAC using domain-separated HMAC-SHA-256. A verifier recomputes the
 complete chain with bounded, duplicate-safe parsing. A separately protected expected head is needed

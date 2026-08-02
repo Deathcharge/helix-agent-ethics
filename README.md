@@ -8,8 +8,9 @@ It is for Python developers who need a small policy-as-code boundary in front of
 workflows, or other consequential operations. Policies and inputs are JSON, decisions are
 explainable, and the optional audit log excludes raw input by design. The package makes no
 network calls and its core has no runtime dependencies. An optional OpenAI Agents SDK adapter is
-isolated behind an install extra. Other Samsarix repositories can embed the core, but none is
-required; the package and its release lifecycle stand on their own.
+isolated behind one install extra, and an optional OpenTelemetry API extra emits metadata-only
+decision events into caller-owned traces. Other Samsarix repositories can embed the core, but none
+is required; the package and its release lifecycle stand on their own.
 
 Within the Samsarix portfolio, this repository owns agent-action safety policy, human-review
 outcomes, exact-call enforcement, privacy-minimized decision evidence, and the policy lifecycle.
@@ -534,6 +535,26 @@ complete stream; an externally retained expected head detects rollback to an ear
 Key custody, external checkpoints, cross-process locking, retention, and callback outcome records
 remain application responsibilities. See the [keyed audit-chain guide](docs/AUDIT_CHAINS.md) and
 run `python examples/audit_chain_demo.py` for the complete temporary journey.
+
+## OpenTelemetry decision correlation
+
+Attach each metadata-only decision to the caller's current OpenTelemetry span without recording
+tool arguments, actor/context facts, policy messages, or callback results:
+
+```python
+from samsarix_ethics import OpenTelemetryDecisionEventSink, ToolGate
+
+gate = ToolGate(policy, audit_sink=OpenTelemetryDecisionEventSink())
+```
+
+Install with `python -m pip install -e '.[opentelemetry]'`. The optional extra pins only
+`opentelemetry-api==1.44.0`; the application owns its SDK, exporter, sampling, and collector. Use
+`CompositeAuditSink(durable_sink, OpenTelemetryDecisionEventSink())` when a decision must reach
+both durable storage and trace correlation. Ordered fan-out stops on failure but cannot roll back
+an earlier delivery. A non-recording span is an intentional OpenTelemetry no-op, so events are
+operational correlation—not durable audit evidence. See the
+[OpenTelemetry decision-event guide](docs/OPENTELEMETRY.md) and run
+`python examples/opentelemetry_decision_event_demo.py` in the exact SDK contract environment.
 
 ## OpenAI Agents SDK integration
 

@@ -28,6 +28,9 @@ def test_public_api_is_importable() -> None:
     assert "OpenAIAgentsIntegrationError" in samsarix_ethics.__all__
     assert "OpenAIAgentsToolPolicy" in samsarix_ethics.__all__
     assert "create_openai_agents_tool_policy" in samsarix_ethics.__all__
+    assert "OpenTelemetryDecisionEventSink" in samsarix_ethics.__all__
+    assert "OpenTelemetryIntegrationError" in samsarix_ethics.__all__
+    assert "CompositeAuditSink" in samsarix_ethics.__all__
     assert "load_tool_catalog" in samsarix_ethics.__all__
     assert "fingerprint_tool_catalog" in samsarix_ethics.__all__
     assert "validate_tool_catalog_registration" in samsarix_ethics.__all__
@@ -110,6 +113,9 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.MAX_TOOL_CALL_FINGERPRINT_BYTES == 1_048_576
     assert samsarix_ethics.MAX_PENDING_OPENAI_APPROVALS == 4_096
     assert samsarix_ethics.OPENAI_AGENTS_ADAPTER_VERSION == 1
+    assert samsarix_ethics.OPENTELEMETRY_DECISION_EVENT_NAME == "samsarix.policy.decision"
+    assert samsarix_ethics.OPENTELEMETRY_DECISION_EVENT_VERSION == 1
+    assert samsarix_ethics.MAX_COMPOSITE_AUDIT_SINKS == 32
     assert samsarix_ethics.POLICY_FINGERPRINT_VERSION == 1
     assert samsarix_ethics.POLICY_COMPARISON_VERSION == 1
     assert samsarix_ethics.POLICY_COMPOSITION_VERSION == 1

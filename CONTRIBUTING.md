@@ -25,6 +25,12 @@ and review the resulting dependency changes before committing them. The lock inc
 backend, so development installs and release checks disable build isolation to keep every installed
 tool inside the hash-verified dependency boundary.
 
+Optional integrations have separate exact contract inputs and locks. Regenerate them with the same
+universal Python 3.11 flags and run their dedicated integration tests and examples in environments
+that install `requirements-openai-agents.lock` or `requirements-opentelemetry.lock` together with
+the development lock. Keep optional packages out of the base development environment so the
+dependency-free import contract remains testable.
+
 ## Required checks
 
 ```bash
