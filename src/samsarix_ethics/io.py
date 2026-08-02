@@ -14,6 +14,7 @@ from typing import Any, BinaryIO
 
 from ._policy_payload import MAX_POLICY_BYTES, serialize_policy_document
 from .audit import AuditRecord, JsonlAuditSink
+from .catalog import ToolCatalog
 from .contracts import ContextContract
 from .deployment import DeploymentLock
 from .errors import (
@@ -23,6 +24,7 @@ from .errors import (
     PolicyDeploymentValidationError,
     PolicyValidationError,
     SamsarixEthicsError,
+    ToolCatalogValidationError,
 )
 from .models import Decision, Policy
 from .policy_deployment import PolicyDeployment
@@ -32,6 +34,7 @@ MAX_INPUT_BYTES = 262_144
 MAX_CONTEXT_CONTRACT_BYTES = 262_144
 MAX_DEPLOYMENT_LOCK_BYTES = 65_536
 MAX_POLICY_DEPLOYMENT_BYTES = 4_194_304
+MAX_TOOL_CATALOG_BYTES = 262_144
 
 SAMPLE_POLICY: dict[str, Any] = {
     "schema_version": 1,
@@ -204,6 +207,19 @@ def load_context_contract(path: str | Path) -> ContextContract:
         return ContextContract.from_dict(data)
     except InputValidationError as exc:
         raise ContextContractValidationError(str(exc)) from exc
+
+
+def load_tool_catalog(path: str | Path) -> ToolCatalog:
+    """Load and validate a bounded JSON tool-catalog file."""
+
+    try:
+        data = _parse_json(
+            _read_file(path, max_bytes=MAX_TOOL_CATALOG_BYTES, label="tool catalog"),
+            label="tool catalog",
+        )
+        return ToolCatalog.from_dict(data)
+    except InputValidationError as exc:
+        raise ToolCatalogValidationError(str(exc)) from exc
 
 
 def load_deployment_lock(path: str | Path) -> DeploymentLock:

@@ -283,6 +283,24 @@ fingerprint with constant-time comparisons of both ID and digest before adding t
 approval to `context`. A `tool_call_id` without approval is rejected rather than silently ignored.
 The `context.approval` field is reserved and cannot be injected through ordinary context metadata.
 
+### `ToolCatalog.from_dict(value)` / `load_tool_catalog(path)`
+
+Parse a bounded tool-catalog v1 document containing an application-owned ID/version and 1-256
+unique local tool names. Every tool declares 1-64 unique capability identifiers. Tool entries and
+capabilities are normalized into canonical sorted tuples; unknown fields, duplicate names, empty
+labels, and malformed or oversized JSON fail with `ToolCatalogValidationError`.
+
+`ToolCatalog.tool_names` returns the canonical name tuple, `get(name)` returns one immutable
+`ToolCatalogEntry`, and `to_dict()` returns fresh canonical JSON containers.
+`fingerprint_tool_catalog(catalog)` produces a domain-separated
+`v1:sha256:<lowercase-hex>` identity. Input ordering does not affect it; any semantic metadata
+change does.
+
+`validate_tool_catalog_registration(catalog, registered_tools)` validates a bounded iterable of
+trusted local registry names and returns its sorted tuple only when the name set exactly matches the
+catalog. Missing cataloged tools, uncataloged registered tools, duplicates, invalid names, and
+oversized snapshots fail closed.
+
 ### `ToolGate(policy_or_runtime, *, context_contract=None, deployment_lock=None, audit_log=None, audit_sink=None)`
 
 Provides a fail-closed boundary immediately before an in-process side effect:
@@ -303,6 +321,8 @@ uses its immutable registered tool name and capabilities.
 
 - `bind(tool_name, *, capabilities=()) -> BoundToolGate` validates and freezes trusted
   registration metadata once;
+- `bind_catalog(catalog, *, registered_tools) -> BoundToolCatalog` first requires the catalog to
+  exactly match a trusted complete registry-name snapshot, then freezes every binding;
 - `prepare(...) -> PreparedToolCall` validates, detaches, and recursively freezes one call for
   immediate single-generation batch authorization;
 - `evaluate(...) -> Decision` evaluates the normalized call and optionally appends audit metadata;
@@ -348,6 +368,19 @@ properties, the gate's `policy_fingerprint`, plus
 Use a trusted application registry to select a binding. This prevents model or protocol payloads
 from downgrading capability labels, but it does not establish that remote tool metadata is honest.
 
+### `BoundToolCatalog`
+
+The immutable mapping returned by `ToolGate.bind_catalog(...)`. It exposes `gate`, `catalog`,
+`catalog_fingerprint`, canonical `tool_names`, mapping iteration, and name lookup returning a
+`BoundToolGate`. Its representation includes only catalog ID/version and tool count. Construction
+is gate-owned, and the internal mapping cannot be mutated.
+
+Exact matching prevents a registry tool from silently bypassing the reviewed catalog and prevents
+stale catalog entries from creating bindings for absent tools. The caller must supply the complete
+name snapshot from a trusted local registry; the package does not inspect framework objects or
+trust model/provider/MCP discovery data. The fingerprint proves content equality, not authorship,
+freshness, or capability correctness.
+
 ### `PreparedToolCall`
 
 The frozen gate-specific object returned by `ToolGate.prepare(...)` or
@@ -380,12 +413,14 @@ runs.
 Return fresh dictionaries containing the bundled Draft 2020-12 schemas for policies, application
 context contracts, deployment locks, policy deployments, regression suites, comparison,
 composition, coverage, explanation, lint, runtime-status, and shadow reports, the normalized
-tool-call context, bound approval records, and metadata-only audit records. The other accessors are
+tool-call context, bound approval records, trusted tool catalogs, and metadata-only audit
+records. The other accessors are
 `get_policy_test_schema`, `get_policy_comparison_schema`, `get_policy_composition_schema`,
 `get_policy_coverage_schema`, `get_policy_explanation_schema`, `get_policy_lint_schema`,
 `get_policy_runtime_status_schema`, `get_policy_shadow_schema`, `get_deployment_lock_schema`,
-`get_policy_deployment_schema`, `get_tool_context_schema`, `get_tool_approval_schema`, and
-`get_audit_record_schema`. These calls perform no network access and callers may mutate a returned
+`get_policy_deployment_schema`, `get_tool_context_schema`, `get_tool_approval_schema`,
+`get_tool_catalog_schema`, and `get_audit_record_schema`. These calls perform no network
+access and callers may mutate a returned
 value without changing future calls.
 
 ### `load_policy_test_suite(path) -> PolicyTestSuite`

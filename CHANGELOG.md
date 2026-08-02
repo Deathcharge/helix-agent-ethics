@@ -80,6 +80,9 @@ All notable product changes are recorded here.
 - Backward-compatible complete batch diagnostics on typed tool-call block exceptions, retaining
   every metadata-only decision and the first blocked index from one evaluation for multi-call
   review surfaces without duplicate decision IDs or audit delivery.
+- Strict versioned trusted tool-capability catalogs with canonical fingerprints, bounded loading,
+  bundled schema and CLI validation, exact registry-name drift checks, immutable gate-specific
+  binding maps, and a coding-agent catalog that never trusts remote MCP annotations.
 
 ### Changed
 

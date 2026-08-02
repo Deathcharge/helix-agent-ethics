@@ -74,7 +74,8 @@ echo '{"action":{"operation":"read","risk":"low"}}' | \
 ```text
 samsarix-ethics init POLICY.json [--force]
 samsarix-ethics validate POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|audit-record]
+samsarix-ethics catalog TOOL_CATALOG.json [--format text|json]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|tool-catalog|audit-record]
 samsarix-ethics explain (--policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] | --deployment DEPLOYMENT.json) [--input INPUT.json|-] [--format json|text]
 samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
 samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
@@ -137,6 +138,7 @@ samsarix-ethics schema deployment-lock > deployment-lock-v1.schema.json
 samsarix-ethics schema policy-deployment > policy-deployment-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
+samsarix-ethics schema tool-catalog > tool-catalog-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```
 
@@ -379,7 +381,7 @@ For an in-process tool boundary, `ToolGate` turns non-allow outcomes into typed 
 invokes the callback only after an allow decision:
 
 ```python
-from samsarix_ethics import ToolGate, load_policy
+from samsarix_ethics import ToolGate, load_policy, load_tool_catalog
 
 gate = ToolGate(load_policy("examples/policies/tool-call-baseline.json"))
 read_ticket = gate.bind("read_ticket", capabilities=["resource:read"])
@@ -422,6 +424,19 @@ expiration, atomic one-time consumption, and protected pending-call storage. A p
 `ToolCallApproval` is evidence supplied by the caller, not proof that its source is authentic.
 `gate.bind(...)` also freezes the application-owned tool name and capability labels once at
 registration, so untrusted invocation data cannot downgrade them per call.
+
+For a complete runtime registry, put every trusted local name and capability set in a versioned
+tool catalog, then require an exact name-set match before accepting model-selected calls:
+
+```python
+catalog = load_tool_catalog("examples/catalogs/coding-agent-tools.json")
+bindings = gate.bind_catalog(catalog, registered_tools=registry.list_tools().keys())
+run_command = bindings["run_command"]
+```
+
+The returned immutable `BoundToolCatalog` carries an exact canonical fingerprint and fails setup if
+the registry contains an uncataloged tool or omits a cataloged one. It never infers authorization
+facts from MCP hints or tool descriptions. See [trusted tool catalogs](docs/TOOL_CATALOGS.md).
 
 When a model turn proposes several calls, prepare them from trusted bindings and authorize the
 complete batch before dispatching any item:
@@ -572,10 +587,10 @@ before any registry upload.
 
 The product is a library plus CLI; it has no server or cloud component. The package separates
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
-versioned schemas, bounded I/O, authoring diagnostics, regression testing, rule coverage, policy
-impact comparison, layered composition, application context contracts, exact deployment locks,
-single-file policy deployments, value-minimized policy explanations, baseline-authoritative
-shadow rollout, atomic live policy activation, and
+versioned trusted tool catalogs, versioned schemas, bounded I/O, authoring diagnostics, regression
+testing, rule coverage, policy impact comparison, layered composition, application context
+contracts, exact deployment locks, single-file policy deployments, value-minimized policy
+explanations, baseline-authoritative shadow rollout, atomic live policy activation, and
 presentation/exit codes.
 See [architecture](docs/ARCHITECTURE.md).
 

@@ -30,6 +30,12 @@ def get_context_contract_schema() -> dict[str, Any]:
     return _load_schema("context-contract-v1.schema.json")
 
 
+def get_tool_catalog_schema() -> dict[str, Any]:
+    """Return a fresh copy of the tool-catalog version 1 JSON Schema."""
+
+    return _load_schema("tool-catalog-v1.schema.json")
+
+
 def get_deployment_lock_schema() -> dict[str, Any]:
     """Return a fresh copy of the deployment-lock version 1 JSON Schema."""
 

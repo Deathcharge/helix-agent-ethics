@@ -68,6 +68,20 @@ Keep the binding registry on the trusted side of the application. MCP annotation
 untrusted server directly into authorization capabilities. Direct `ToolGate` methods remain
 available for framework adapters whose own trusted registry already owns this metadata.
 
+For a complete registry, prefer a versioned catalog over independently constructed bindings:
+
+```python
+catalog = load_tool_catalog("policy/tool-catalog.json")
+bindings = gate.bind_catalog(catalog, registered_tools=registry.list_tools().keys())
+send_email = bindings["send_email"]
+```
+
+Setup fails if either name set has an unmatched tool. The immutable `BoundToolCatalog` carries the
+canonical catalog fingerprint and returns only catalog-derived `BoundToolGate`s. This prevents
+configuration drift from leaving a registered tool outside the reviewed capability map. See
+[trusted tool catalogs](TOOL_CATALOGS.md) for Samsarix Core, Agent Framework, and MCP integration
+patterns.
+
 ## Synchronous enforcement
 
 ```python

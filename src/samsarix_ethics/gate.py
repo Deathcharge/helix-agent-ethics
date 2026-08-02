@@ -8,19 +8,22 @@ from __future__ import annotations
 import hmac
 import inspect
 import re
-from collections.abc import Awaitable, Callable, Iterable, Mapping
+from collections.abc import Awaitable, Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Generic, TypeVar, cast
 
 from .approval import ToolCallApproval, _fingerprint_prepared_tool_call
 from .audit import AuditSink, JsonlAuditSink, _emit_audit_record, _validated_sink
+from .catalog import ToolCatalog, validate_tool_catalog_registration
 from .contracts import ContextContract
 from .deployment import DeploymentLock
 from .engine import MAX_BATCH_ITEMS, PolicyEngine
 from .errors import InputValidationError, ToolCallDeniedError, ToolCallReviewRequiredError
 from .explanation import PolicyExplanation
 from .models import Decision, Outcome, Policy
+from .provenance import fingerprint_tool_catalog
 from .runtime import PolicyRuntime, PolicyRuntimeStatus
 from .validation import freeze_json_value, thaw_json_value, validate_context
 
@@ -302,6 +305,17 @@ class ToolGate:
         """Bind trusted tool identity and capabilities once at registration time."""
 
         return BoundToolGate(self, tool_name, capabilities)
+
+    def bind_catalog(
+        self,
+        catalog: ToolCatalog,
+        *,
+        registered_tools: Iterable[str],
+    ) -> BoundToolCatalog:
+        """Bind a catalog after exact comparison with a trusted registry name snapshot."""
+
+        validate_tool_catalog_registration(catalog, registered_tools)
+        return BoundToolCatalog._create(self, catalog)
 
     def prepare(
         self,
@@ -800,3 +814,75 @@ class BoundToolGate:
             tool_call_id=tool_call_id,
             approval=approval,
         )
+
+
+@dataclass(frozen=True, slots=True, init=False, eq=False, repr=False)
+class BoundToolCatalog(Mapping[str, BoundToolGate]):
+    """Immutable gate-specific bindings created from one verified tool catalog."""
+
+    _gate: ToolGate
+    _catalog: ToolCatalog
+    _catalog_fingerprint: str
+    _bindings: Mapping[str, BoundToolGate]
+
+    def __init__(self) -> None:
+        raise TypeError("BoundToolCatalog objects are created by ToolGate.bind_catalog")
+
+    def __repr__(self) -> str:
+        """Return catalog identity metadata without capability or call values."""
+
+        return (
+            f"BoundToolCatalog(catalog_id={self.catalog.id!r}, "
+            f"catalog_version={self.catalog.version!r}, tool_count={len(self)})"
+        )
+
+    @classmethod
+    def _create(cls, gate: ToolGate, catalog: ToolCatalog) -> BoundToolCatalog:
+        bound = object.__new__(cls)
+        object.__setattr__(bound, "_gate", gate)
+        object.__setattr__(bound, "_catalog", catalog)
+        object.__setattr__(bound, "_catalog_fingerprint", fingerprint_tool_catalog(catalog))
+        object.__setattr__(
+            bound,
+            "_bindings",
+            MappingProxyType(
+                {
+                    tool.name: gate.bind(tool.name, capabilities=tool.capabilities)
+                    for tool in catalog.tools
+                }
+            ),
+        )
+        return bound
+
+    @property
+    def gate(self) -> ToolGate:
+        """Return the enforcing gate used for every catalog binding."""
+
+        return self._gate
+
+    @property
+    def catalog(self) -> ToolCatalog:
+        """Return the immutable catalog used to create these bindings."""
+
+        return self._catalog
+
+    @property
+    def catalog_fingerprint(self) -> str:
+        """Return the exact catalog fingerprint bound to this mapping."""
+
+        return self._catalog_fingerprint
+
+    @property
+    def tool_names(self) -> tuple[str, ...]:
+        """Return canonical registered names in this binding map."""
+
+        return self.catalog.tool_names
+
+    def __getitem__(self, tool_name: str) -> BoundToolGate:
+        return self._bindings[tool_name]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.tool_names)
+
+    def __len__(self) -> int:
+        return len(self._bindings)

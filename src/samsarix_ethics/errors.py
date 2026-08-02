@@ -39,6 +39,10 @@ class PolicyCompositionError(SamsarixEthicsError):
     """Raised when validated policy sources cannot be composed safely."""
 
 
+class ToolCatalogValidationError(SamsarixEthicsError):
+    """Raised when a trusted tool catalog or registry snapshot is invalid."""
+
+
 class InputValidationError(SamsarixEthicsError):
     """Raised when an evaluation input cannot be safely parsed or validated."""
 

@@ -11,6 +11,7 @@ from samsarix_ethics import (
     ToolCallBlockedError,
     ToolGate,
     load_policy_deployment,
+    load_tool_catalog,
 )
 
 ROOT = Path(__file__).parent
@@ -19,11 +20,22 @@ ROOT = Path(__file__).parent
 def main() -> None:
     deployment = load_policy_deployment(ROOT / "deployment/coding-agent-baseline.deployment.json")
     gate = ToolGate(PolicyRuntime.from_deployment(deployment))
-    read_file = gate.bind("read_file", capabilities=["workspace:read"])
-    run_command = gate.bind(
+    catalog = load_tool_catalog(ROOT / "catalogs/coding-agent-tools.json")
+    registered_tool_names = {
+        "delete_file",
+        "fetch_url",
+        "read_file",
+        "read_secret",
         "run_command",
-        capabilities=["process:execute", "risk:elevated"],
+        "send_message",
+        "write_file",
+    }
+    bindings = gate.bind_catalog(
+        catalog,
+        registered_tools=registered_tool_names,
     )
+    read_file = bindings["read_file"]
+    run_command = bindings["run_command"]
     actor = {"id": "coding-agent"}
     trusted_context = {"workspace_contained": True}
     read_call = read_file.prepare(
