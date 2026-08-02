@@ -9,11 +9,20 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, BinaryIO, TextIO
 
 from . import __version__
 from .audit_chain import MAX_AUDIT_CHAIN_KEY_BYTES, verify_audit_chain
+from .authenticated_deployment import (
+    MAX_DEPLOYMENT_AUTH_CLOCK_SKEW_SECONDS,
+    MAX_DEPLOYMENT_AUTH_KEY_BYTES,
+    ToolGateDeploymentEnvelope,
+    VerifiedToolGateDeployment,
+    authenticate_tool_gate_deployment,
+    verify_tool_gate_deployment_envelope,
+)
 from .comparison import (
     PolicyComparisonChange,
     PolicyComparisonReport,
@@ -28,6 +37,7 @@ from .diagnostics import PolicyLintReport, PolicyLintSeverity, lint_policy
 from .engine import PolicyEngine
 from .errors import (
     AuditChainError,
+    DeploymentAuthenticationError,
     InputValidationError,
     PolicyCompositionError,
     SamsarixEthicsError,
@@ -42,14 +52,20 @@ from .io import (
     load_policy_deployment,
     load_tool_catalog,
     load_tool_gate_deployment,
+    load_tool_gate_deployment_envelope,
     write_policy,
     write_policy_deployment,
     write_sample_policy,
     write_tool_gate_deployment,
+    write_tool_gate_deployment_envelope,
 )
 from .models import Decision, Outcome
 from .policy_deployment import PolicyDeployment, create_policy_deployment
-from .provenance import fingerprint_policy, fingerprint_tool_catalog
+from .provenance import (
+    fingerprint_policy,
+    fingerprint_tool_catalog,
+    fingerprint_tool_gate_deployment,
+)
 from .schema import (
     get_audit_chain_entry_schema,
     get_audit_chain_verification_schema,
@@ -69,6 +85,7 @@ from .schema import (
     get_tool_approval_schema,
     get_tool_catalog_schema,
     get_tool_context_schema,
+    get_tool_gate_deployment_envelope_schema,
     get_tool_gate_deployment_schema,
 )
 from .shadow import PolicyShadowEvaluation, PolicyShadowEvaluator
@@ -104,6 +121,59 @@ def _load_audit_chain_key(path: str | Path) -> bytes:
             f"audit-chain key file exceeds the limit of {MAX_AUDIT_CHAIN_KEY_BYTES} bytes"
         )
     return key
+
+
+def _load_deployment_auth_key(path: str | Path) -> bytes:
+    target = Path(path)
+    try:
+        with target.open("rb") as source:
+            key = source.read(MAX_DEPLOYMENT_AUTH_KEY_BYTES + 1)
+    except OSError as exc:
+        raise DeploymentAuthenticationError(
+            f"cannot read deployment authentication key file {target}: {exc}"
+        ) from exc
+    if len(key) > MAX_DEPLOYMENT_AUTH_KEY_BYTES:
+        raise DeploymentAuthenticationError(
+            "deployment authentication key file exceeds the limit of "
+            f"{MAX_DEPLOYMENT_AUTH_KEY_BYTES} bytes"
+        )
+    return key
+
+
+def _positive_sequence(value: str) -> int:
+    try:
+        sequence = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a positive integer") from exc
+    if sequence < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return sequence
+
+
+def _clock_skew_seconds(value: str) -> int:
+    try:
+        seconds = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"must be an integer from 0 to {MAX_DEPLOYMENT_AUTH_CLOCK_SKEW_SECONDS}"
+        ) from exc
+    if not 0 <= seconds <= MAX_DEPLOYMENT_AUTH_CLOCK_SKEW_SECONDS:
+        raise argparse.ArgumentTypeError(
+            f"must be an integer from 0 to {MAX_DEPLOYMENT_AUTH_CLOCK_SKEW_SECONDS}"
+        )
+    return seconds
+
+
+def _utc_timestamp(value: str) -> datetime:
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "must be an RFC 3339 UTC timestamp with whole seconds"
+        ) from exc
+    if parsed.strftime("%Y-%m-%dT%H:%M:%SZ") != value:
+        raise argparse.ArgumentTypeError("must be an RFC 3339 UTC timestamp with whole seconds")
+    return parsed
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -288,6 +358,69 @@ def _parser() -> argparse.ArgumentParser:
     )
     gate_deployment_verify.add_argument("deployment", help="path to a tool-gate deployment")
     gate_deployment_verify.add_argument("--format", choices=("json", "text"), default="text")
+    gate_deployment_authenticate = gate_deployment_subparsers.add_parser(
+        "authenticate", help="create a freshness-aware HMAC deployment envelope"
+    )
+    gate_deployment_authenticate.add_argument("deployment", help="path to a tool-gate deployment")
+    gate_deployment_authenticate.add_argument(
+        "--key-file", required=True, help="path to the raw 32-4096 byte HMAC key"
+    )
+    gate_deployment_authenticate.add_argument(
+        "--key-id", required=True, help="out-of-band keyring identifier"
+    )
+    gate_deployment_authenticate.add_argument(
+        "--audience", required=True, help="exact deployment target audience"
+    )
+    gate_deployment_authenticate.add_argument(
+        "--sequence", required=True, type=_positive_sequence, help="monotonic release sequence"
+    )
+    gate_deployment_authenticate.add_argument(
+        "--issued-at", required=True, help="UTC timestamp such as 2026-08-02T12:00:00Z"
+    )
+    gate_deployment_authenticate.add_argument(
+        "--expires-at", required=True, help="UTC timestamp no more than 30 days after issuance"
+    )
+    gate_deployment_authenticate.add_argument(
+        "--output", required=True, help="output authenticated envelope path"
+    )
+    gate_deployment_authenticate.add_argument(
+        "--force", action="store_true", help="explicitly replace an existing output file"
+    )
+    gate_deployment_authenticate.add_argument("--format", choices=("json", "text"), default="text")
+    gate_deployment_verify_auth = gate_deployment_subparsers.add_parser(
+        "verify-authentication",
+        help="authenticate a deployment envelope and enforce freshness claims",
+    )
+    gate_deployment_verify_auth.add_argument(
+        "envelope", help="path to an authenticated tool-gate deployment envelope"
+    )
+    gate_deployment_verify_auth.add_argument(
+        "--key-file", required=True, help="path to the raw 32-4096 byte trusted HMAC key"
+    )
+    gate_deployment_verify_auth.add_argument(
+        "--key-id", required=True, help="trusted keyring identifier for the key file"
+    )
+    gate_deployment_verify_auth.add_argument(
+        "--audience", required=True, help="required authenticated target audience"
+    )
+    gate_deployment_verify_auth.add_argument(
+        "--minimum-sequence",
+        type=_positive_sequence,
+        default=1,
+        help="lowest trusted release sequence; default: 1",
+    )
+    gate_deployment_verify_auth.add_argument(
+        "--at",
+        type=_utc_timestamp,
+        help="verification time for deterministic checks; default: current UTC time",
+    )
+    gate_deployment_verify_auth.add_argument(
+        "--clock-skew-seconds",
+        type=_clock_skew_seconds,
+        default=0,
+        help="allowed clock skew from 0 to 3600 seconds; default: 0",
+    )
+    gate_deployment_verify_auth.add_argument("--format", choices=("json", "text"), default="text")
 
     catalog = subparsers.add_parser(
         "catalog", help="validate and identify a trusted tool-capability catalog"
@@ -347,6 +480,7 @@ def _parser() -> argparse.ArgumentParser:
             "tool-approval",
             "tool-catalog",
             "tool-gate-deployment",
+            "tool-gate-deployment-envelope",
             "audit-record",
             "audit-chain-entry",
             "audit-chain-verification",
@@ -658,6 +792,7 @@ def _tool_gate_deployment_summary(
                 "tool_count": len(deployment.tool_catalog.tools),
             },
             "tool_gate_deployment_version": deployment.tool_gate_deployment_version,
+            "tool_gate_deployment_fingerprint": fingerprint_tool_gate_deployment(deployment),
             "output": None if output_path is None else str(output_path),
         }
     )
@@ -679,6 +814,46 @@ def _render_tool_gate_deployment(
         f"catalog={catalog.id}@{catalog.version} "
         f"({deployment.tool_catalog_fingerprint}), tools={len(catalog.tools)}, verified"
         f"{output_label}"
+    )
+
+
+def _deployment_envelope_summary(
+    envelope: ToolGateDeploymentEnvelope,
+    *,
+    output_path: Path | None = None,
+    verified: VerifiedToolGateDeployment | None = None,
+) -> dict[str, Any]:
+    """Return value-minimized authenticated deployment identity metadata."""
+
+    return {
+        "authentication_verified": verified is not None,
+        "tool_gate_deployment_auth_version": envelope.tool_gate_deployment_auth_version,
+        "algorithm": envelope.algorithm,
+        "key_id": envelope.key_id,
+        "audience": envelope.audience,
+        "sequence": envelope.sequence,
+        "issued_at": envelope.issued_at,
+        "expires_at": envelope.expires_at,
+        "deployment_fingerprint": envelope.deployment_fingerprint,
+        "verified_at": None if verified is None else verified.verified_at,
+        "output": None if output_path is None else str(output_path),
+    }
+
+
+def _render_deployment_envelope(
+    envelope: ToolGateDeploymentEnvelope,
+    *,
+    action: str,
+    output_path: Path | None = None,
+    verified: VerifiedToolGateDeployment | None = None,
+) -> str:
+    output_label = "" if output_path is None else f"\nOutput: {output_path}"
+    verified_label = "" if verified is None else f", verified_at={verified.verified_at}"
+    return (
+        f"{action} authenticated tool gate deployment: "
+        f"audience={envelope.audience}, sequence={envelope.sequence}, "
+        f"key_id={envelope.key_id}, deployment={envelope.deployment_fingerprint}, "
+        f"expires_at={envelope.expires_at}{verified_label}{output_label}"
     )
 
 
@@ -737,6 +912,7 @@ def main(
                 "tool-approval": get_tool_approval_schema,
                 "tool-catalog": get_tool_catalog_schema,
                 "tool-gate-deployment": get_tool_gate_deployment_schema,
+                "tool-gate-deployment-envelope": (get_tool_gate_deployment_envelope_schema),
                 "audit-record": get_audit_record_schema,
                 "audit-chain-entry": get_audit_chain_entry_schema,
                 "audit-chain-verification": get_audit_chain_verification_schema,
@@ -856,10 +1032,68 @@ def main(
                     force=arguments.force,
                 )
                 action = "Created"
-            else:
+            elif arguments.gate_deployment_command == "verify":
                 gate_deployment = load_tool_gate_deployment(arguments.deployment)
                 gate_target = None
                 action = "Verified"
+            elif arguments.gate_deployment_command == "authenticate":
+                envelope = authenticate_tool_gate_deployment(
+                    load_tool_gate_deployment(arguments.deployment),
+                    _load_deployment_auth_key(arguments.key_file),
+                    key_id=arguments.key_id,
+                    audience=arguments.audience,
+                    sequence=arguments.sequence,
+                    issued_at=arguments.issued_at,
+                    expires_at=arguments.expires_at,
+                )
+                envelope_target = write_tool_gate_deployment_envelope(
+                    arguments.output,
+                    envelope,
+                    force=arguments.force,
+                )
+                rendered = (
+                    json.dumps(
+                        _deployment_envelope_summary(
+                            envelope,
+                            output_path=envelope_target,
+                        ),
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    if arguments.format == "json"
+                    else _render_deployment_envelope(
+                        envelope,
+                        action="Created",
+                        output_path=envelope_target,
+                    )
+                )
+                print(rendered, file=output)
+                return EXIT_ALLOWED
+            else:
+                envelope = load_tool_gate_deployment_envelope(arguments.envelope)
+                verified = verify_tool_gate_deployment_envelope(
+                    envelope,
+                    {arguments.key_id: _load_deployment_auth_key(arguments.key_file)},
+                    expected_audience=arguments.audience,
+                    minimum_sequence=arguments.minimum_sequence,
+                    now=arguments.at,
+                    clock_skew_seconds=arguments.clock_skew_seconds,
+                )
+                rendered = (
+                    json.dumps(
+                        _deployment_envelope_summary(envelope, verified=verified),
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    if arguments.format == "json"
+                    else _render_deployment_envelope(
+                        envelope,
+                        action="Verified",
+                        verified=verified,
+                    )
+                )
+                print(rendered, file=output)
+                return EXIT_ALLOWED
             rendered = (
                 json.dumps(
                     _tool_gate_deployment_summary(gate_deployment, output_path=gate_target),

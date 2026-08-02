@@ -8,12 +8,17 @@ from __future__ import annotations
 import inspect
 from collections.abc import Awaitable, Callable, Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
 from .approval import ToolCallApproval
 from .audit import AuditSink
+from .authenticated_deployment import (
+    ToolGateDeploymentEnvelope,
+    verify_tool_gate_deployment_envelope,
+)
 from .catalog import MAX_TOOL_CATALOG_TOOLS, ToolCatalog, validate_tool_catalog_registration
 from .errors import InputValidationError, ToolCatalogValidationError
 from .gate import (
@@ -95,7 +100,10 @@ class ToolDispatcher:
     _callbacks: Mapping[str, ToolCallback]
 
     def __init__(self) -> None:
-        raise TypeError("ToolDispatcher objects are created by bind_catalog or bind_deployment")
+        raise TypeError(
+            "ToolDispatcher objects are created by bind_catalog, bind_deployment, "
+            "or bind_authenticated_deployment"
+        )
 
     def __repr__(self) -> str:
         """Return catalog identity without callback or capability details."""
@@ -152,6 +160,37 @@ class ToolDispatcher:
             audit_sink=audit_sink,
         )
         return cls._create(bindings, callbacks)
+
+    @classmethod
+    def bind_authenticated_deployment(
+        cls,
+        envelope: ToolGateDeploymentEnvelope,
+        *,
+        authentication_keys: Mapping[str, bytes | bytearray | memoryview],
+        expected_audience: str,
+        registered_tools: Mapping[str, ToolCallback],
+        minimum_sequence: int = 1,
+        now: datetime | None = None,
+        clock_skew_seconds: int = 0,
+        audit_log: str | Path | None = None,
+        audit_sink: AuditSink | None = None,
+    ) -> ToolDispatcher:
+        """Authenticate an envelope immediately before freezing its callbacks."""
+
+        verified = verify_tool_gate_deployment_envelope(
+            envelope,
+            authentication_keys,
+            expected_audience=expected_audience,
+            minimum_sequence=minimum_sequence,
+            now=now,
+            clock_skew_seconds=clock_skew_seconds,
+        )
+        return cls.bind_deployment(
+            verified.deployment,
+            registered_tools=registered_tools,
+            audit_log=audit_log,
+            audit_sink=audit_sink,
+        )
 
     @property
     def bindings(self) -> BoundToolCatalog:

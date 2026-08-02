@@ -111,6 +111,68 @@ def get_tool_gate_deployment_schema() -> dict[str, Any]:
     }
 
 
+def get_tool_gate_deployment_envelope_schema() -> dict[str, Any]:
+    """Return a self-contained authenticated deployment-envelope v1 JSON Schema."""
+
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": ("https://schemas.samsarix.com/agent-ethics/tool-gate-deployment-envelope/v1.json"),
+        "title": "Samsarix Agent Ethics authenticated tool gate deployment envelope v1",
+        "description": (
+            "A complete tool-gate deployment with HMAC-authenticated audience and freshness claims."
+        ),
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "tool_gate_deployment_auth_version",
+            "algorithm",
+            "key_id",
+            "audience",
+            "sequence",
+            "issued_at",
+            "expires_at",
+            "deployment_fingerprint",
+            "deployment",
+            "mac",
+        ],
+        "properties": {
+            "tool_gate_deployment_auth_version": {"type": "integer", "const": 1},
+            "algorithm": {"type": "string", "const": "hmac-sha256"},
+            "key_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            },
+            "audience": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$",
+            },
+            "sequence": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9_223_372_036_854_775_807,
+            },
+            "issued_at": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            },
+            "expires_at": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            },
+            "deployment_fingerprint": {
+                "type": "string",
+                "pattern": "^v1:sha256:[0-9a-f]{64}$",
+            },
+            "deployment": {"$ref": "#/$defs/tool_gate_deployment"},
+            "mac": {
+                "type": "string",
+                "pattern": "^v1:hmac-sha256:[0-9a-f]{64}$",
+            },
+        },
+        "$defs": {"tool_gate_deployment": get_tool_gate_deployment_schema()},
+    }
+
+
 def get_audit_record_schema() -> dict[str, Any]:
     """Return a fresh copy of the audit-record version 1 JSON Schema."""
 

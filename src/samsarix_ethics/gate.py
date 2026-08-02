@@ -10,12 +10,17 @@ import inspect
 import re
 from collections.abc import Awaitable, Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Generic, TypeVar, cast
 
 from .approval import ToolCallApproval, _fingerprint_prepared_tool_call
 from .audit import AuditSink, JsonlAuditSink, _emit_audit_record, _validated_sink
+from .authenticated_deployment import (
+    ToolGateDeploymentEnvelope,
+    verify_tool_gate_deployment_envelope,
+)
 from .catalog import ToolCatalog, validate_tool_catalog_registration
 from .contracts import ContextContract
 from .deployment import DeploymentLock
@@ -329,6 +334,37 @@ class ToolGate:
             audit_sink=audit_sink,
         )
         return gate.bind_catalog(deployment.tool_catalog, registered_tools=registered_tools)
+
+    @classmethod
+    def bind_authenticated_deployment(
+        cls,
+        envelope: ToolGateDeploymentEnvelope,
+        *,
+        authentication_keys: Mapping[str, bytes | bytearray | memoryview],
+        expected_audience: str,
+        registered_tools: Iterable[str],
+        minimum_sequence: int = 1,
+        now: datetime | None = None,
+        clock_skew_seconds: int = 0,
+        audit_log: str | Path | None = None,
+        audit_sink: AuditSink | None = None,
+    ) -> BoundToolCatalog:
+        """Authenticate a current envelope immediately before gate construction."""
+
+        verified = verify_tool_gate_deployment_envelope(
+            envelope,
+            authentication_keys,
+            expected_audience=expected_audience,
+            minimum_sequence=minimum_sequence,
+            now=now,
+            clock_skew_seconds=clock_skew_seconds,
+        )
+        return cls.bind_deployment(
+            verified.deployment,
+            registered_tools=registered_tools,
+            audit_log=audit_log,
+            audit_sink=audit_sink,
+        )
 
     def bind_catalog(
         self,

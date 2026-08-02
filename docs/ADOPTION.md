@@ -326,3 +326,29 @@ The bundled support-agent case composes organization tool guardrails with applic
 into the existing twelve-rule baseline; its fourteen-case suite reaches 100% rule coverage across
 allow, deny, and review. This proves deterministic build-time layering, not remote distribution,
 policy signing, tenant selection, author authentication, hot reload, or source migration.
+
+## Implemented gap: authenticated deployment freshness
+
+Coherent tool-gate deployments prevent mixed policy/catalog reads but do not authenticate bytes
+received through storage or delivery. Current primary-source guidance separates those concerns:
+
+- [OPA signed bundles](https://www.openpolicyagent.org/docs/management-bundles) verify configured
+  key identity/scope and complete bundle content before activation, retaining the existing bundle
+  when verification fails.
+- [The Update Framework specification](https://theupdateframework.github.io/specification/)
+  requires both monotonic version checks and expiration to detect rollback and freeze attacks.
+- [Sigstore blob verification](https://docs.sigstore.dev/cosign/verifying/verify/) binds an exact
+  blob to an expected certificate identity and issuer when public identity is required.
+
+Agent Ethics now provides a narrower zero-dependency symmetric option:
+`ToolGateDeploymentEnvelope` authenticates the complete deployment fingerprint and bytes together
+with a key ID, exact target audience, positive sequence, and at most 30-day issuance/expiry window.
+A bounded caller-owned keyring supports rotation. Verification rejects a stale caller-supplied
+minimum sequence, future issuance, expiry, audience mismatch, untrusted key, or any MAC/content
+change. `ToolGate` and `ToolDispatcher` authenticate again immediately before binding so a cached
+verification is not silently reused as current authorization.
+
+This is not a generic signing or distribution service. Every HMAC verifier can mint envelopes;
+trusted clock, durable highest-sequence state, out-of-band key delivery/revocation, asymmetric
+author identity, transport, and multi-host convergence remain application or release-system
+responsibilities.

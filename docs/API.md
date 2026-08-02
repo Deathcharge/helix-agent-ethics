@@ -428,6 +428,50 @@ not be reused after those facts can become stale. A batch rejects repeated objec
 repeated approval `tool_call_id` values; applications still enforce replay protection across
 batches. `MAX_TOOL_BATCH_ITEMS` is 1,000.
 
+## Authenticated deployment envelopes
+
+### `fingerprint_tool_gate_deployment(deployment) -> str`
+
+Returns the domain-separated `v1:sha256` fingerprint of the complete coherent policy, contract,
+lock, and tool catalog deployment. It is exact-content identity, not authentication by itself.
+
+### `authenticate_tool_gate_deployment(deployment, key, *, key_id, audience, sequence, issued_at, expires_at)`
+
+Returns an untrusted-when-received `ToolGateDeploymentEnvelope` containing the full deployment and
+an HMAC-SHA-256 over every envelope field. Keys are copied from 32-4096 byte bytes-like values.
+Timestamps use strict whole-second UTC RFC 3339 form; expiry must follow issuance and the lifetime
+cannot exceed 30 days. Creation proves only that the supplied key produced the envelope.
+`generate_deployment_auth_key()` returns a fresh 32-byte key suitable for this API; secret storage,
+permissions, and rotation remain caller responsibilities.
+
+### `ToolGateDeploymentEnvelope.from_dict(value)` and `ToolGateDeploymentEnvelope.to_dict()`
+
+Strictly parse or detach the version 1 envelope. Parsing validates structure, timestamps, nested
+deployment consistency, and exact fingerprint equality but deliberately does not trust the MAC,
+audience, sequence, or current time. `unsigned_dict()` returns the exact fields covered by the MAC.
+
+### `verify_tool_gate_deployment_envelope(envelope, keys, *, expected_audience, minimum_sequence=1, now=None, clock_skew_seconds=0)`
+
+Selects `envelope.key_id` from a bounded caller-owned keyring, verifies the MAC in constant time,
+then enforces the exact audience, caller-protected minimum sequence, issuance, and expiry. `now`
+must be timezone-aware when supplied; clock skew is explicitly bounded to 0-3600 seconds. It
+returns `VerifiedToolGateDeployment`, including value-minimized verification metadata and the
+authenticated deployment. Failures raise `DeploymentAuthenticationError`.
+
+### `load_tool_gate_deployment_envelope(path)` and `write_tool_gate_deployment_envelope(path, envelope, *, force=False)`
+
+Parse or atomically write the strict bounded 5 MiB envelope document. Loading is not
+authentication. Output refuses implicit or concurrently won overwrite unless `force=True`.
+
+### `ToolGate.bind_authenticated_deployment(...)` and `ToolDispatcher.bind_authenticated_deployment(...)`
+
+Authenticate a current envelope immediately before constructing the gate or freezing callback
+references. Both require a keyring, expected audience, complete registry, and optional minimum
+sequence/time/skew inputs. The same catalog exact-match and fail-closed enforcement behavior then
+applies. These methods avoid treating a cached historical verification as current authorization.
+
+See [authenticated deployments](AUTHENTICATED_DEPLOYMENTS.md) for rotation and threat boundaries.
+
 ## Models
 
 - `Policy.from_dict(value)` and `Policy.to_dict()`
@@ -455,7 +499,8 @@ coherent tool-gate deployments. The other accessors are
 `get_policy_coverage_schema`, `get_policy_explanation_schema`, `get_policy_lint_schema`,
 `get_policy_runtime_status_schema`, `get_policy_shadow_schema`, `get_deployment_lock_schema`,
 `get_policy_deployment_schema`, `get_tool_context_schema`, `get_tool_approval_schema`,
-`get_tool_catalog_schema`, `get_tool_gate_deployment_schema`, `get_audit_record_schema`,
+`get_tool_catalog_schema`, `get_tool_gate_deployment_schema`,
+`get_tool_gate_deployment_envelope_schema`, `get_audit_record_schema`,
 `get_audit_chain_entry_schema`, and `get_audit_chain_verification_schema`. These calls perform no
 network access and callers may mutate a returned
 value without changing future calls.

@@ -57,6 +57,9 @@ adoption remain separate evidence-based decisions.
 - [x] Add a bounded keyed metadata-only audit chain and strict verifier for single-writer local
   evidence, including externally anchored valid-prefix rollback detection without claiming a
   cross-process ledger or hosted log service.
+- [x] Add authenticated complete tool-gate deployment envelopes with exact audience, bounded
+  validity, key rotation, and caller-anchored monotonic sequence enforcement while keeping
+  asymmetric identity and distributed desired state outside the library.
 
 ## Release candidate
 
@@ -80,8 +83,9 @@ Current hardening backlog:
   storage, retention, or a hosted audit service.
 - Atomic runtime generations are process-local; durable desired state, artifact distribution,
   authenticated deployment, restart recovery, and multi-host convergence remain caller-owned.
-- Single-file deployments prevent mixed local reads but remain unsigned; OCI/repository identity,
-  immutable transport digests, signature policy, and promotion authorization remain caller-owned.
+- Single-file deployments can now be wrapped in a freshness-aware symmetric HMAC envelope. Public
+  signer identity, immutable OCI/repository transport, threshold authorization, trusted clock and
+  sequence persistence, Sigstore/TUF policy, and multi-host promotion remain caller-owned.
 - Tool catalogs now have deployment-level pinning and immutable callback-reference snapshots;
   authenticated distribution, freshness, approval, callable code identity, mutable callback state,
   and semantic correctness remain caller-owned.

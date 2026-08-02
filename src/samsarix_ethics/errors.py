@@ -47,6 +47,10 @@ class ToolGateDeploymentValidationError(SamsarixEthicsError):
     """Raised when a coherent tool-gate deployment is malformed or inconsistent."""
 
 
+class DeploymentAuthenticationError(SamsarixEthicsError):
+    """Raised when a deployment envelope or its authenticated claims are invalid."""
+
+
 class InputValidationError(SamsarixEthicsError):
     """Raised when an evaluation input cannot be safely parsed or validated."""
 
