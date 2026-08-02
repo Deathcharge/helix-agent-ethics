@@ -109,6 +109,8 @@ def test_real_sdk_function_tool_is_protected_before_pydantic_coercion() -> None:
         )
         blocked = await protected.tool_input_guardrails[-1].run(coercible_data)
         assert blocked.behavior == {"type": "raise_exception"}
+        # The SDK runner enforces the guardrail result. Calling the callback
+        # directly bypasses that runner boundary by design.
         assert await protected.on_invoke_tool(coercible_context, '{"amount":"1"}') == 1
 
         review_call_id = "call-review"

@@ -472,6 +472,8 @@ jobs:
           python -m pip install --no-build-isolation --no-deps -e .
       - name: Test exact OpenAI Agents SDK contract
         run: python -m pytest --no-cov integration_tests/test_openai_agents_sdk.py
+      - name: Smoke-test the OpenAI Agents example
+        run: python examples/openai_agents_guardrail_demo.py
 
   attest:
     name: Attest distributions

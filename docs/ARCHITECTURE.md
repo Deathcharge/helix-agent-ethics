@@ -252,7 +252,9 @@ Its preflight explanation routes only `review` into the SDK interruption workflo
 `BoundToolGate.enforce` remains authoritative after approval and emits the audit record. A bounded
 thread-safe default or application-owned first-write store retains the pre-interruption exact-call
 fingerprint, so same-ID mutation, reconstructed missing state, sticky approval, or unrelated SDK
-approval logic cannot mint Samsarix approval evidence. The SDK
+approval logic cannot mint Samsarix approval evidence. Resolved approvals are removed from the
+store, and approval-routing storage failures propagate instead of silently disabling the
+interruption workflow. The SDK
 passes raw JSON to guardrails before Pydantic callback conversion, so the adapter applies the core
 bounded duplicate-safe parser and policy types to raw values. It deliberately rejects namespaces
 and agent-as-tool wrappers and cannot intercept hosted, built-in, MCP-hosted, or handoff paths.

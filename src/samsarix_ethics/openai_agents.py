@@ -46,6 +46,14 @@ class OpenAIAgentsApprovalStore(Protocol):
     ) -> str | None:
         """Return the retained fingerprint without creating or replacing it."""
 
+    def forget(
+        self,
+        application_context: Any,
+        tool_name: str,
+        tool_call_id: str,
+    ) -> None:
+        """Remove retained state after the SDK resolves the approval."""
+
 
 class _InMemoryApprovalStore:
     def __init__(self) -> None:
@@ -77,6 +85,15 @@ class _InMemoryApprovalStore:
     ) -> str | None:
         with self._lock:
             return self._fingerprints.get((tool_name, tool_call_id))
+
+    def forget(
+        self,
+        _application_context: Any,
+        tool_name: str,
+        tool_call_id: str,
+    ) -> None:
+        with self._lock:
+            self._fingerprints.pop((tool_name, tool_call_id), None)
 
 
 class OpenAIAgentsIntegrationError(SamsarixEthicsError):
@@ -166,20 +183,20 @@ class OpenAIAgentsToolPolicy:
             if explanation.outcome is not Outcome.REVIEW:
                 return False
             fingerprint = self._binding.fingerprint(tool_call_id, arguments, actor=actor)
-            remembered = self._approval_store.remember(
-                _application_context(run_context),
-                self._binding.tool_name,
-                tool_call_id,
-                fingerprint,
-            )
         except SamsarixEthicsError:
             return False
+        remembered = self._approval_store.remember(
+            _application_context(run_context),
+            self._binding.tool_name,
+            tool_call_id,
+            fingerprint,
+        )
         return remembered == fingerprint
 
     def _sdk_approval(
         self,
         tool_context: Any,
-    ) -> ToolCallApproval | None:
+    ) -> tuple[ToolCallApproval | None, bool | None]:
         call_id = _tool_call_id(tool_context)
         get_status = getattr(tool_context, "get_approval_status", None)
         if not callable(get_status):
@@ -188,28 +205,32 @@ class OpenAIAgentsToolPolicy:
             )
         status = get_status(self._binding.tool_name, call_id)
         if status is None:
-            return None
+            return None, None
         if not isinstance(status, bool):
             raise OpenAIAgentsIntegrationError(
                 "OpenAI Agents approval status must be true, false, or null"
             )
         if not status:
-            raise OpenAIAgentsIntegrationError("OpenAI Agents approval status is rejected")
+            return None, False
         stored_fingerprint = self._approval_store.get(
             _application_context(tool_context),
             self._binding.tool_name,
             call_id,
         )
         if stored_fingerprint is None:
-            return None
-        return ToolCallApproval(
-            tool_call_id=call_id,
-            approved=True,
-            tool_call_fingerprint=stored_fingerprint,
+            return None, True
+        return (
+            ToolCallApproval(
+                tool_call_id=call_id,
+                approved=True,
+                tool_call_fingerprint=stored_fingerprint,
+            ),
+            True,
         )
 
     async def _guardrail(self, data: Any) -> Any:
         tool_context = getattr(data, "context", None)
+        resolved_approval: tuple[Any, str] | None = None
         try:
             if tool_context is None:
                 raise OpenAIAgentsIntegrationError(
@@ -226,19 +247,36 @@ class OpenAIAgentsToolPolicy:
                 )
             arguments = _raw_arguments(tool_context)
             actor, context = self._facts(tool_context)
-            approval = self._sdk_approval(tool_context)
+            call_id = _tool_call_id(tool_context)
+            approval, approval_status = self._sdk_approval(tool_context)
+            if approval_status is not None:
+                resolved_approval = (_application_context(tool_context), call_id)
+            if approval_status is False:
+                raise OpenAIAgentsIntegrationError("OpenAI Agents approval status is rejected")
             self._binding.enforce(
                 arguments,
                 actor=actor,
                 context=context,
-                tool_call_id=_tool_call_id(tool_context) if approval is not None else None,
+                tool_call_id=call_id if approval is not None else None,
                 approval=approval,
             )
         except SamsarixEthicsError:
-            return self._output_type.raise_exception(
+            output = self._output_type.raise_exception(
                 {"adapter": "samsarix-agent-ethics", "status": "blocked"}
             )
-        return self._output_type.allow({"adapter": "samsarix-agent-ethics", "status": "allowed"})
+        else:
+            output = self._output_type.allow(
+                {"adapter": "samsarix-agent-ethics", "status": "allowed"}
+            )
+        finally:
+            if resolved_approval is not None:
+                application_context, call_id = resolved_approval
+                self._approval_store.forget(
+                    application_context,
+                    self._binding.tool_name,
+                    call_id,
+                )
+        return output
 
     async def _combined_needs_approval(
         self,
@@ -320,13 +358,16 @@ def create_openai_agents_tool_policy(
     selected_store = _InMemoryApprovalStore() if approval_store is None else approval_store
     remember = getattr(selected_store, "remember", None)
     get = getattr(selected_store, "get", None)
+    forget = getattr(selected_store, "forget", None)
     if (
         not callable(remember)
         or not callable(get)
+        or not callable(forget)
         or inspect.iscoroutinefunction(remember)
         or inspect.iscoroutinefunction(get)
+        or inspect.iscoroutinefunction(forget)
     ):
-        raise TypeError("approval_store must provide synchronous remember and get methods")
+        raise TypeError("approval_store must provide synchronous remember, get, and forget methods")
     try:
         agents_module = import_module("agents")
         guardrails_module = import_module("agents.tool_guardrails")

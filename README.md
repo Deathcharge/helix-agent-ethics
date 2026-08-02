@@ -550,7 +550,8 @@ approval flow; the final input guardrail re-reads application-owned actor/contex
 approval to a fingerprint stored before interruption, emits the configured audit record, and
 blocks every non-allow outcome immediately before the callback. Existing tool guardrails and
 approval rules are preserved. Durable resumes supply an application-owned first-write approval
-store; the bounded in-memory default fails closed after reconstruction.
+store; resolved approvals are removed, storage failures stay visible, and the bounded in-memory
+default fails closed after reconstruction.
 
 The integration is pinned to a real `openai-agents==0.18.3` CI contract while the base install
 remains dependency-free. Hosted/built-in tools, MCP-hosted tools, handoffs, namespaces, and

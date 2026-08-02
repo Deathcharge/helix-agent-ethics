@@ -12,9 +12,10 @@ python -m pip install -e '.[openai-agents]'
 python examples/openai_agents_guardrail_demo.py
 ```
 
-The optional extra supports `openai-agents>=0.18.3,<0.19`. CI separately installs the exact
-`0.18.3` dependency graph from `requirements-openai-agents.lock` and runs the real SDK contract
-test. Ordinary imports and the default test matrix do not install the SDK.
+The optional extra supports exactly `openai-agents==0.18.3`. CI installs its hash-locked dependency
+graph from `requirements-openai-agents.lock`, runs the real SDK contract test, and executes the
+example. Ordinary imports and the default test matrix do not install the SDK. Broaden this pin only
+after adding a real-SDK contract lane for each newly supported version.
 
 ## Protect a function tool
 
@@ -55,14 +56,18 @@ synchronous and must derive authenticated actor and current policy facts from ap
 state, never from model arguments. They run again at the final guardrail so a resumed call is
 checked against fresh facts.
 
-`approval_store` implements `OpenAIAgentsApprovalStore.remember(...)` and `.get(...)`.
+`approval_store` implements `OpenAIAgentsApprovalStore.remember(...)`, `.get(...)`, and
+`.forget(...)`.
 `remember` must atomically retain and return the first fingerprint for one application/tool/call-ID
-key without replacing it; `get` must return that value without creating it. Protect this state with
-the pending run and apply reviewer authentication, expiry, one-time consumption, and retention in
-the surrounding application. Omitting the store selects a thread-safe in-memory implementation
-bounded to `MAX_PENDING_OPENAI_APPROVALS` (4,096). That default is convenient for one live process
-but deliberately fails closed after adapter/process reconstruction; use an application-owned store
-for serialized or durable SDK run state.
+key without replacing it; `get` returns that value without creating it; and `forget` removes it
+after the SDK reports approval or rejection and the final guardrail resolves the call. Storage
+failures during approval routing propagate so an exhausted or unavailable store is operationally
+visible instead of silently disabling interruptions. Protect this state with the pending run and
+apply reviewer authentication, expiry, one-time consumption, and retention in the surrounding
+application. Omitting the store selects a thread-safe in-memory implementation bounded to
+`MAX_PENDING_OPENAI_APPROVALS` (4,096). That default is convenient for one live process but
+deliberately fails closed after adapter/process reconstruction; use an application-owned store for
+serialized or durable SDK run state.
 
 ## Review and resume
 

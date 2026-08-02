@@ -170,7 +170,7 @@ def test_factory_is_optional_and_validates_inputs(
 
     with pytest.raises(TypeError, match="synchronous callable"):
         create_openai_agents_tool_policy(binding, actor_provider=async_provider)
-    with pytest.raises(TypeError, match="remember and get"):
+    with pytest.raises(TypeError, match="remember, get, and forget"):
         create_openai_agents_tool_policy(binding, approval_store=object())
 
     def missing_sdk(_name: str) -> Any:
@@ -282,6 +282,7 @@ def test_application_store_supports_fail_closed_adapter_reconstruction(
     class Store:
         def __init__(self) -> None:
             self.values: dict[tuple[str, str], str] = {}
+            self.forgotten: list[tuple[str, str]] = []
 
         def remember(
             self,
@@ -300,6 +301,16 @@ def test_application_store_supports_fail_closed_adapter_reconstruction(
         ) -> str | None:
             return self.values.get((tool_name, tool_call_id))
 
+        def forget(
+            self,
+            _application_context: Any,
+            tool_name: str,
+            tool_call_id: str,
+        ) -> None:
+            key = (tool_name, tool_call_id)
+            self.forgotten.append(key)
+            self.values.pop(key, None)
+
     store = Store()
     first = create_openai_agents_tool_policy(binding, approval_store=store).protect(
         _FunctionTool("send_message")
@@ -313,9 +324,24 @@ def test_application_store_supports_fail_closed_adapter_reconstruction(
         resumed,
         _ToolContext({}, '{"mode":"send"}', approval_status=True),
     ).behavior == {"type": "allow"}
+    assert store.values == {}
+    assert store.forgotten == [("send_message", "call-1")]
+
+    assert asyncio.run(first.needs_approval(_RunContext({}), {"mode": "send"}, "call-2"))
+    assert _run_guardrail(
+        resumed,
+        _ToolContext(
+            {},
+            '{"mode":"send"}',
+            tool_call_id="call-2",
+            approval_status=False,
+        ),
+    ).behavior == {"type": "raise_exception"}
+    assert store.values == {}
+    assert store.forgotten[-1] == ("send_message", "call-2")
 
 
-def test_default_approval_store_is_bounded_and_never_evicts(
+def test_default_approval_store_reports_exhaustion_and_reuses_resolved_capacity(
     fake_sdk: None,
     binding: Any,
     monkeypatch: pytest.MonkeyPatch,
@@ -324,7 +350,14 @@ def test_default_approval_store_is_bounded_and_never_evicts(
     _adapter, protected = _protected(binding)
 
     assert asyncio.run(protected.needs_approval(_RunContext({}), {"mode": "send"}, "call-1"))
-    assert not asyncio.run(protected.needs_approval(_RunContext({}), {"mode": "send"}, "call-2"))
+    with pytest.raises(OpenAIAgentsIntegrationError, match="store is full"):
+        asyncio.run(protected.needs_approval(_RunContext({}), {"mode": "send"}, "call-2"))
+
+    assert _run_guardrail(
+        protected,
+        _ToolContext({}, '{"mode":"send"}', approval_status=True),
+    ).behavior == {"type": "allow"}
+    assert asyncio.run(protected.needs_approval(_RunContext({}), {"mode": "send"}, "call-2"))
 
 
 @pytest.mark.parametrize(

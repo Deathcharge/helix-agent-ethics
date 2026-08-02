@@ -96,8 +96,9 @@ All notable product changes are recorded here.
   adversarial integrity tests, and an end-to-end gate example.
 - An optional fail-closed OpenAI Agents SDK adapter for strict top-level `FunctionTool` objects,
   with native review interruptions, fresh post-approval enforcement, exact-call approval binding,
-  bounded duplicate-safe raw argument parsing, preserved existing controls, a no-network example,
-  and an exact `openai-agents==0.18.3` hashed CI contract.
+  resolved-call store cleanup, fail-visible storage exhaustion, bounded duplicate-safe raw argument
+  parsing, preserved existing controls, a CI-executed no-network example, and an exact
+  `openai-agents==0.18.3` hashed CI contract.
 
 ### Changed
 
