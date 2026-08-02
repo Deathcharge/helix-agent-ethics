@@ -63,6 +63,8 @@ the legacy `helix-unified` repository.
 - `explanation.py`: input- and value-free rule/condition evaluation explanations.
 - `gate.py`: normalized tool-call contexts, immutable registration bindings, and fail-closed
   sync/async callback enforcement.
+- `openai_agents.py`: optional strict `FunctionTool` protection and native approval-flow routing
+  without importing the SDK at core package import time.
 - `cli.py`: non-interactive commands, rendering, stderr discipline, and exit codes.
 - `__init__.py`: deliberate public Python API.
 
@@ -243,6 +245,19 @@ policy evaluation, audit delivery, or callback execution, then re-evaluates fres
 The fingerprint binds the framework call ID, context-contract version, tool name, arguments,
 canonical capabilities, and actor. It intentionally excludes general runtime context so current
 authorization and risk facts can be re-read.
+
+The optional OpenAI Agents adapter copies one strict top-level `FunctionTool`, combines existing
+approval logic, preserves prior input guardrails, and appends Samsarix as the final input guardrail.
+Its preflight explanation routes only `review` into the SDK interruption workflow; final
+`BoundToolGate.enforce` remains authoritative after approval and emits the audit record. A bounded
+thread-safe default or application-owned first-write store retains the pre-interruption exact-call
+fingerprint, so same-ID mutation, reconstructed missing state, sticky approval, or unrelated SDK
+approval logic cannot mint Samsarix approval evidence. Resolved approvals are removed from the
+store, and approval-routing storage failures propagate instead of silently disabling the
+interruption workflow. The SDK
+passes raw JSON to guardrails before Pydantic callback conversion, so the adapter applies the core
+bounded duplicate-safe parser and policy types to raw values. It deliberately rejects namespaces
+and agent-as-tool wrappers and cannot intercept hosted, built-in, MCP-hosted, or handoff paths.
 
 ## Trust boundaries
 

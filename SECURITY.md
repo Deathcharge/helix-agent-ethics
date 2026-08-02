@@ -41,6 +41,13 @@ are bounded and type-checked. The embedding application remains responsible for:
 - controlling audit destination credentials, network egress, idempotency, access, rotation,
   retention, integrity, and deletion.
 
+When using the optional OpenAI Agents SDK adapter, applications must also keep actor/context
+providers application-owned, use strict top-level `FunctionTool` objects, leave pre-approval input
+guardrails disabled for review flows, and treat SDK “always approve” as a broad future-call grant
+rather than per-call reviewer evidence. Durable runs must persist the adapter's first-write call
+fingerprint alongside protected SDK state; the bounded in-memory default fails closed after
+reconstruction.
+
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
 code, loads no plugins, and stores no raw evaluation input in its built-in audit record.
@@ -99,6 +106,22 @@ output, and enforce replay protection in the application.
 cannot downgrade those labels per call. The application still owns the registry used to select the
 binding. Treat MCP and other remote tool annotations as untrusted hints unless their source and
 meaning are independently trusted.
+
+`OpenAIAgentsToolPolicy.protect(...)` covers only the SDK's top-level Python `FunctionTool`
+input-guardrail path. It rejects namespaces and `Agent.as_tool()` wrappers and does not intercept
+hosted tools, built-in computer/shell/apply-patch tools, MCP-hosted tools, or handoffs. The SDK runs
+the guardrail over raw JSON before Pydantic callback conversion. Samsarix therefore authorizes the
+bounded raw object and blocks coercion-sensitive policy type mismatches; applications should still
+use precise annotations and avoid safety semantics that exist only after callback coercion. The
+adapter's trace output is limited to its identity plus allowed/blocked status, while the normal
+Samsarix audit contract remains metadata-only.
+
+The adapter records a fingerprint before it requests Samsarix review and translates an SDK approval
+only when that stored exact-call evidence already exists. Its application-owned store is trusted
+security state: `remember` must atomically preserve the first value for a key, and `get` must never
+create or replace one. A missing record, changed fingerprint, unrelated SDK approval requirement,
+or future call covered only by sticky approval fails closed. The default store is process-local,
+bounded, and intentionally has no persistence or eviction-based reuse.
 
 Prepared-call batches are an immediate authorization boundary, not durable capabilities.
 `evaluate_many`/`enforce_many` pin one in-process runtime generation and validate the full batch

@@ -7,8 +7,9 @@ review?**
 It is for Python developers who need a small policy-as-code boundary in front of tool calls,
 workflows, or other consequential operations. Policies and inputs are JSON, decisions are
 explainable, and the optional audit log excludes raw input by design. The package makes no
-network calls and has no runtime dependencies. Other Samsarix repositories can embed it, but none
-is required; the package and its release lifecycle stand on their own.
+network calls and its core has no runtime dependencies. An optional OpenAI Agents SDK adapter is
+isolated behind an install extra. Other Samsarix repositories can embed the core, but none is
+required; the package and its release lifecycle stand on their own.
 
 Within the Samsarix portfolio, this repository owns agent-action safety policy, human-review
 outcomes, exact-call enforcement, privacy-minimized decision evidence, and the policy lifecycle.
@@ -534,6 +535,30 @@ Key custody, external checkpoints, cross-process locking, retention, and callbac
 remain application responsibilities. See the [keyed audit-chain guide](docs/AUDIT_CHAINS.md) and
 run `python examples/audit_chain_demo.py` for the complete temporary journey.
 
+## OpenAI Agents SDK integration
+
+Install the optional adapter and run its no-network configuration example:
+
+```bash
+python -m pip install -e '.[openai-agents]'
+python examples/openai_agents_guardrail_demo.py
+```
+
+`create_openai_agents_tool_policy(binding).protect(function_tool)` returns a protected copy of a
+strict top-level SDK `FunctionTool`. Samsarix policy `review` outcomes use the SDK's resumable
+approval flow; the final input guardrail re-reads application-owned actor/context facts, binds any
+approval to a fingerprint stored before interruption, emits the configured audit record, and
+blocks every non-allow outcome immediately before the callback. Existing tool guardrails and
+approval rules are preserved. Durable resumes supply an application-owned first-write approval
+store; resolved approvals are removed, storage failures stay visible, and the bounded in-memory
+default fails closed after reconstruction.
+
+The integration is pinned to a real `openai-agents==0.18.3` CI contract while the base install
+remains dependency-free. Hosted/built-in tools, MCP-hosted tools, handoffs, namespaces, and
+`Agent.as_tool()` do not traverse this adapter. See the
+[OpenAI Agents SDK integration guide](docs/OPENAI_AGENTS.md) for the supported boundary, approval
+semantics, Pydantic-coercion caveat, and production checklist.
+
 ## Downstream adoption
 
 Samsarix Agent Framework is the first verified downstream consumer. Its optional policy registry
@@ -542,10 +567,11 @@ capabilities outside model arguments, re-reads authentication/approval facts for
 blocks execution on every non-allow outcome or gate failure. The consumer contract runs on Python
 3.11-3.14 while the framework's dependency-free core retains Python 3.10 support.
 
-The consumer repository is private as of 2026-08-01, so this is Samsarix-owned integration
-evidence rather than a public third-party case study or production deployment. Exact commits,
-compatibility, rollback, support level, and evidence limits are recorded in
-[adoption and compatibility evidence](docs/ADOPTION.md).
+The repository also carries a public, reproducible OpenAI Agents SDK adapter and exact-version
+contract test. The consumer repository remains private as of 2026-08-01, so neither item is a
+public third-party case study or production deployment. Exact commits, compatibility, rollback,
+support level, and evidence limits are recorded in [adoption and compatibility
+evidence](docs/ADOPTION.md).
 
 ## Decision semantics
 

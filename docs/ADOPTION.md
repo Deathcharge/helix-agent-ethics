@@ -3,6 +3,16 @@
 This record distinguishes a verified library consumer from a public release or production
 deployment. It is intentionally specific enough for maintainers to reproduce and update.
 
+## Public runtime contract
+
+The repository now includes an optional adapter for strict top-level OpenAI Agents SDK
+`FunctionTool` objects. Its dedicated CI job installs the hashed dependency graph for
+`openai-agents==0.18.3` and verifies real SDK types, guardrail execution, callback compatibility,
+and fail-closed handling of a value that Pydantic would otherwise coerce after the guardrail. The
+no-network example and [integration guide](OPENAI_AGENTS.md) make this evidence reproducible from a
+public checkout. It is a maintained compatibility contract, not evidence of a third-party adopter,
+live model call, production traffic, or hosted deployment.
+
 ## Samsarix Agent Framework
 
 Samsarix Agent Framework is the first consumer-owned integration. Its optional

@@ -404,6 +404,25 @@ properties, the gate's `policy_fingerprint`, plus
 Use a trusted application registry to select a binding. This prevents model or protocol payloads
 from downgrading capability labels, but it does not establish that remote tool metadata is honest.
 
+### `create_openai_agents_tool_policy(binding, *, actor_provider=None, context_provider=None, approval_store=None)`
+
+Creates an optional `OpenAIAgentsToolPolicy` for one `BoundToolGate`. Construction imports the
+OpenAI Agents SDK only when called; otherwise the core package retains zero runtime dependencies.
+`actor_provider` and `context_provider` are synchronous callbacks from the SDK application context
+to current application-owned JSON facts.
+
+`approval_store` satisfies `OpenAIAgentsApprovalStore`: synchronous `remember` atomically retains
+and returns the first exact-call fingerprint, `get` returns it without creation, and `forget`
+removes it after the SDK resolves the call. The bounded thread-safe in-memory default reports
+exhaustion at `MAX_PENDING_OPENAI_APPROVALS` (4,096), reclaims resolved entries, and fails closed
+after reconstruction. Durable SDK run state requires a protected application-owned implementation.
+
+`adapter.protect(tool)` returns a copied strict, top-level SDK `FunctionTool`, preserves its existing
+input guardrails and approval logic, and appends Samsarix enforcement. It raises
+`OpenAIAgentsIntegrationError` for unsupported or incompatible tool shapes. The adapter version is
+`OPENAI_AGENTS_ADAPTER_VERSION`. See [OPENAI_AGENTS.md](OPENAI_AGENTS.md) for the exact execution
+boundary and approval workflow.
+
 ### `BoundToolCatalog`
 
 The immutable mapping returned by `ToolGate.bind_catalog(...)`. It exposes `gate`, `catalog`,
