@@ -62,7 +62,13 @@ jobs:
             --format json >/tmp/policy-composition.json
           python - <<'PY'
           import json
-          from samsarix_ethics import fingerprint_policy, load_policy
+          from samsarix_ethics import (
+              fingerprint_context_contract,
+              fingerprint_policy,
+              load_context_contract,
+              load_policy,
+              load_policy_deployment,
+          )
 
           report = json.load(open("/tmp/policy-composition.json"))
           composed = load_policy("/tmp/composed-tool-policy.json")
@@ -72,6 +78,23 @@ jobs:
           assert report["total_rules"] == 12
           assert report["policy_fingerprint"] == fingerprint_policy(expected)
           assert "conditions" not in json.dumps(report)
+          coding_policy = load_policy("examples/policies/coding-agent-baseline.json")
+          coding_contract = load_context_contract(
+              "examples/contracts/coding-agent-tool-context.json"
+          )
+          coding_deployment = load_policy_deployment(
+              "examples/deployment/coding-agent-baseline.deployment.json"
+          )
+          assert coding_deployment.policy == coding_policy
+          assert coding_deployment.context_contract == coding_contract
+          assert coding_deployment.deployment_lock.policy.fingerprint == fingerprint_policy(
+              coding_policy
+          )
+          assert coding_deployment.deployment_lock.context_contract is not None
+          assert (
+              coding_deployment.deployment_lock.context_contract.fingerprint
+              == fingerprint_context_contract(coding_contract)
+          )
           PY
           samsarix-ethics test \
             --policy examples/policies/safe-agent-actions.json \
@@ -79,6 +102,10 @@ jobs:
           samsarix-ethics test \
             --policy /tmp/composed-tool-policy.json \
             examples/tests/tool-call-baseline.tests.json
+          samsarix-ethics test \
+            --policy examples/policies/coding-agent-baseline.json \
+            --context-contract examples/contracts/coding-agent-tool-context.json \
+            examples/tests/coding-agent-baseline.tests.json
           samsarix-ethics schema policy-comparison >/dev/null
           samsarix-ethics schema policy-composition >/dev/null
           samsarix-ethics schema policy-coverage >/dev/null
@@ -88,6 +115,8 @@ jobs:
           samsarix-ethics schema policy-deployment >/dev/null
           samsarix-ethics deployment verify \
             examples/deployment/tool-call-baseline.deployment.json
+          samsarix-ethics deployment verify \
+            examples/deployment/coding-agent-baseline.deployment.json
           for policy in examples/policies/*.json; do
             samsarix-ethics lint "$policy" --fail-on suggestion
           done
@@ -96,6 +125,11 @@ jobs:
             examples/tests/tool-call-baseline.tests.json \
             --threshold 100 \
             --format json >/tmp/policy-coverage.json
+          samsarix-ethics coverage \
+            --policy examples/policies/coding-agent-baseline.json \
+            --context-contract examples/contracts/coding-agent-tool-context.json \
+            examples/tests/coding-agent-baseline.tests.json \
+            --threshold 100 >/dev/null
           python -c 'import json; value=json.load(open("/tmp/policy-coverage.json")); assert value["complete"] is True'
           set +e
           samsarix-ethics compare \
@@ -115,6 +149,7 @@ jobs:
           python -c 'import json; value=json.load(open("/tmp/policy-shadow.json")); assert value["status"] == "changed"; assert value["authoritative"]["outcome"] == "allow"; assert value["candidate"]["outcome"] == "review"'
           python examples/tool_gate_demo.py
           python examples/policy_runtime_demo.py
+          python examples/coding_agent_batch_demo.py
       - name: Build distributions
         if: matrix.python-version == '3.11'
         run: python -m build --no-isolation
@@ -155,6 +190,7 @@ jobs:
               AuditRecord,
               Policy,
               PolicyLintSeverity,
+              PreparedToolCall,
               PolicyRuntime,
               PolicyShadowEvaluator,
               PolicyTestSuite,
@@ -237,6 +273,10 @@ jobs:
           assert len(records) == 1
           assert records[0].audit_record_version == AUDIT_RECORD_VERSION == 1
           assert records[0].policy_fingerprint == result.decision.policy_fingerprint
+          prepared = read_ticket.prepare({"ticket_id": "T-101"})
+          assert isinstance(prepared, PreparedToolCall)
+          assert prepared.arguments == {"ticket_id": "T-101"}
+          assert gate.enforce_many([prepared])[0].allowed is True
           runtime = PolicyRuntime.from_deployment(create_policy_deployment(policy))
           runtime_gate = ToolGate(runtime).bind("read_ticket", capabilities=["resource:read"])
           assert runtime_gate.evaluate({"ticket_id": "T-200"}).allowed is True

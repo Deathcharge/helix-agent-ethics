@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "name": "coding-agent baseline",
+  "cases": [
+    {
+      "name": "missing context version is denied",
+      "input": {
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "read_file", "capabilities": ["workspace:read"], "arguments": {"path": "README.md"}},
+        "context": {"workspace_contained": true}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-missing-tool-context-version", "allow-contained-workspace-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "unsupported context version is denied",
+      "input": {
+        "tool_context_version": 2,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "read_file", "capabilities": ["workspace:read"], "arguments": {"path": "README.md"}},
+        "context": {"workspace_contained": true}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-unsupported-tool-context-version", "allow-contained-workspace-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "missing tool kind is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"operation": "read_file", "capabilities": ["workspace:read"], "arguments": {"path": "README.md"}},
+        "context": {"workspace_contained": true}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-missing-tool-kind", "allow-contained-workspace-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "unsupported tool kind is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "workflow", "operation": "read_file", "capabilities": ["workspace:read"], "arguments": {"path": "README.md"}},
+        "context": {"workspace_contained": true}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-unsupported-tool-kind", "allow-contained-workspace-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "missing workspace containment is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "read_file", "capabilities": ["workspace:read"], "arguments": {"path": "README.md"}},
+        "context": {}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-missing-workspace-containment"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "contained workspace read is allowed",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "read_file", "capabilities": ["workspace:read"], "arguments": {"path": "README.md"}},
+        "context": {"workspace_contained": true}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-contained-workspace-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "uncontained workspace read is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "read_file", "capabilities": ["workspace:read"], "arguments": {"path": "../outside.txt"}},
+        "context": {"workspace_contained": false}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-uncontained-workspace-read"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "uncontained workspace write is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "write_file", "capabilities": ["risk:elevated", "workspace:write"], "arguments": {"path": "../outside.txt"}},
+        "context": {"workspace_contained": false}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-uncontained-workspace-write", "review-elevated-without-approval"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "unapproved destructive call is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "delete_file", "capabilities": ["destructive", "risk:elevated", "workspace:write"], "arguments": {"path": "old.log"}},
+        "context": {"workspace_contained": true}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-destructive-without-approval", "review-elevated-without-approval"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "rejected destructive call is denied",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "delete_file", "capabilities": ["destructive", "risk:elevated", "workspace:write"], "arguments": {"path": "old.log"}},
+        "context": {"workspace_contained": true, "approval": {"approval_version": 1, "tool_call_id": "delete-1", "approved": false, "tool_call_fingerprint": "v1:sha256:2881db4f53ed789408aabc997cdddce6341cabd5811bb38e439b84caba62873d"}}
+      },
+      "expected_outcome": "deny",
+      "expected_matched_rules": ["deny-destructive-after-rejection", "deny-elevated-after-rejection"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "unapproved process execution requires review",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "run_command", "capabilities": ["process:execute", "risk:elevated"], "arguments": {"command": "pytest"}},
+        "context": {"workspace_contained": true}
+      },
+      "expected_outcome": "review",
+      "expected_matched_rules": ["review-elevated-without-approval"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "approved process execution is allowed",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "run_command", "capabilities": ["process:execute", "risk:elevated"], "arguments": {"command": "pytest"}},
+        "context": {"workspace_contained": true, "approval": {"approval_version": 1, "tool_call_id": "run-1", "approved": true, "tool_call_fingerprint": "v1:sha256:b1a5915fcb8239cc0ed101e0a27e2e46dfab4699cddce072dccafd3185f92e9f"}}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-approved-elevated-capabilities"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "approved network access is allowed with a warning",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "fetch_url", "capabilities": ["network:access", "risk:elevated"], "arguments": {"url": "https://example.com"}},
+        "context": {"workspace_contained": true, "approval": {"approval_version": 1, "tool_call_id": "fetch-1", "approved": true, "tool_call_fingerprint": "v1:sha256:c5c81d13743695f82361220a879a3b2593a754d0eb81e67cfad72af870c2d9c8"}}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-approved-elevated-capabilities", "warn-network-access"],
+      "expected_warning_count": 1
+    },
+    {
+      "name": "approved sensitive access is allowed with a warning",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "read_secret", "capabilities": ["data:sensitive", "risk:elevated", "workspace:read"], "arguments": {"name": "TOKEN"}},
+        "context": {"workspace_contained": true, "approval": {"approval_version": 1, "tool_call_id": "secret-1", "approved": true, "tool_call_fingerprint": "v1:sha256:40d1882695729bd63a528dadcc518af960f7f3a8f76a350fa4f33293629f7a12"}}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-approved-elevated-capabilities", "warn-sensitive-data"],
+      "expected_warning_count": 1
+    },
+    {
+      "name": "approved external write is allowed",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "create_issue", "capabilities": ["external:write", "risk:elevated"], "arguments": {"title": "bug"}},
+        "context": {"workspace_contained": true, "approval": {"approval_version": 1, "tool_call_id": "issue-1", "approved": true, "tool_call_fingerprint": "v1:sha256:61715a920e0c1ff7be0d78bbfbe88d123099484311b684bf2a43c79ef835e548"}}
+      },
+      "expected_outcome": "allow",
+      "expected_matched_rules": ["allow-approved-elevated-capabilities"],
+      "expected_warning_count": 0
+    },
+    {
+      "name": "unknown capability defaults to review",
+      "input": {
+        "tool_context_version": 1,
+        "actor": {"id": "coding-agent"},
+        "action": {"kind": "tool_call", "operation": "unknown_tool", "capabilities": ["custom:unknown"], "arguments": {}},
+        "context": {"workspace_contained": true}
+      },
+      "expected_outcome": "review",
+      "expected_matched_rules": [],
+      "expected_warning_count": 0
+    }
+  ]
+}

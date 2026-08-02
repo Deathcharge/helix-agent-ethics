@@ -18,6 +18,7 @@ def test_public_api_is_importable() -> None:
     assert "validate_policy_context_contract" in samsarix_ethics.__all__
     assert "ToolGate" in samsarix_ethics.__all__
     assert "BoundToolGate" in samsarix_ethics.__all__
+    assert "PreparedToolCall" in samsarix_ethics.__all__
     assert "ToolCallBlockedError" in samsarix_ethics.__all__
     assert "get_tool_context_schema" in samsarix_ethics.__all__
     assert "get_tool_approval_schema" in samsarix_ethics.__all__
@@ -67,6 +68,7 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.MAX_BATCH_ITEMS == 1_000
     assert samsarix_ethics.MAX_POLICY_RULES == 1_000
     assert samsarix_ethics.MAX_TOOL_CAPABILITIES == 64
+    assert samsarix_ethics.MAX_TOOL_BATCH_ITEMS == 1_000
     assert samsarix_ethics.MAX_TOOL_CALL_FINGERPRINT_BYTES == 1_048_576
     assert samsarix_ethics.POLICY_FINGERPRINT_VERSION == 1
     assert samsarix_ethics.POLICY_COMPARISON_VERSION == 1

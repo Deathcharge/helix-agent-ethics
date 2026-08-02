@@ -70,6 +70,13 @@ All notable product changes are recorded here.
   contract, and mandatory matching lock; bounded single-read loading, atomic exclusive/forced
   output, CLI create/verify, self-contained schema, runtime activation, and a drift-checked real
   deployment fixture.
+- Immutable gate-specific `PreparedToolCall` objects plus bounded `ToolGate.evaluate_many` and
+  `enforce_many` preflight, with full-batch validation before audit delivery, one-generation runtime
+  consistency, exact approval preservation, within-batch duplicate object/approval-ID rejection,
+  streaming context thaw, and no package-owned callback scheduling.
+- A 100%-rule-covered coding-agent policy, context contract, verified single-file deployment, and
+  runnable batch demo for contained workspace reads and approval-bound process/network/write risk;
+  missing containment fails closed even when the raw policy is used without its contract.
 
 ### Changed
 

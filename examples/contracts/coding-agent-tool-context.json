@@ -1,0 +1,19 @@
+{
+  "context_contract_version": 1,
+  "id": "coding-agent-tool-context",
+  "version": "1.0.0",
+  "description": "Application-owned facts required by the coding-agent enforcement boundary.",
+  "fields": {
+    "tool_context_version": {"type": "integer", "required": false},
+    "actor": {"type": "object", "required": true},
+    "action": {"type": "object", "required": true},
+    "action.kind": {"type": "string", "required": false},
+    "action.operation": {"type": "string", "required": true},
+    "action.capabilities": {"type": "array", "items": "string", "required": true},
+    "action.arguments": {"type": "object", "required": true},
+    "context": {"type": "object", "required": true},
+    "context.workspace_contained": {"type": "boolean", "required": false},
+    "context.approval": {"type": "object", "required": false},
+    "context.approval.approved": {"type": "boolean", "required": false}
+  }
+}

@@ -45,6 +45,9 @@ adoption remain separate evidence-based decisions.
   compare-and-swap conflict detection, whole-batch consistency, and live `ToolGate` integration.
 - [x] Package a policy, optional contract, and mandatory matching lock as one strict bounded
   deployment unit for coherent transport, restart, atomic output, and runtime activation.
+- [x] Add immutable prepared tool calls and all-calls-before-dispatch batch enforcement, with one
+  checked coding-agent deployment covering workspace, process, network, destructive, and sensitive
+  capabilities under conservative MCP trust defaults.
 
 ## Release candidate
 

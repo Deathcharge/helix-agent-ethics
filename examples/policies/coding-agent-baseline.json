@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "id": "coding-agent-baseline",
+  "version": "1.0.0",
+  "description": "Fail-closed baseline for workspace, process, network, destructive, and sensitive coding-agent tools.",
+  "default_effect": "review",
+  "rules": [
+    {
+      "id": "deny-missing-tool-context-version",
+      "effect": "deny",
+      "priority": 0,
+      "message": "The tool-call context version is required.",
+      "conditions": [
+        {"field": "tool_context_version", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-unsupported-tool-context-version",
+      "effect": "deny",
+      "priority": 0,
+      "message": "The tool-call context version is unsupported.",
+      "conditions": [
+        {"field": "tool_context_version", "operator": "neq", "value": 1}
+      ]
+    },
+    {
+      "id": "deny-missing-tool-kind",
+      "effect": "deny",
+      "priority": 0,
+      "message": "The tool-call kind is required.",
+      "conditions": [
+        {"field": "action.kind", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-unsupported-tool-kind",
+      "effect": "deny",
+      "priority": 0,
+      "message": "Only normalized tool-call actions are supported.",
+      "conditions": [
+        {"field": "action.kind", "operator": "neq", "value": "tool_call"}
+      ]
+    },
+    {
+      "id": "deny-missing-workspace-containment",
+      "effect": "deny",
+      "priority": 10,
+      "message": "The application must supply the workspace containment fact.",
+      "conditions": [
+        {"field": "context.workspace_contained", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-uncontained-workspace-read",
+      "effect": "deny",
+      "priority": 10,
+      "message": "Workspace reads must remain inside the application-verified workspace.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "workspace:read"},
+        {"field": "context.workspace_contained", "operator": "eq", "value": false}
+      ]
+    },
+    {
+      "id": "deny-uncontained-workspace-write",
+      "effect": "deny",
+      "priority": 10,
+      "message": "Workspace writes must remain inside the application-verified workspace.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "workspace:write"},
+        {"field": "context.workspace_contained", "operator": "eq", "value": false}
+      ]
+    },
+    {
+      "id": "deny-destructive-without-approval",
+      "effect": "deny",
+      "priority": 20,
+      "message": "Destructive coding-agent calls require exact-call approval.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "destructive"},
+        {"field": "context.approval.approved", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-destructive-after-rejection",
+      "effect": "deny",
+      "priority": 20,
+      "message": "The destructive coding-agent call was rejected.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "destructive"},
+        {"field": "context.approval.approved", "operator": "eq", "value": false}
+      ]
+    },
+    {
+      "id": "review-elevated-without-approval",
+      "effect": "review",
+      "priority": 30,
+      "message": "Elevated coding-agent capabilities require exact-call human review.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "risk:elevated"},
+        {"field": "context.approval.approved", "operator": "not_exists"}
+      ]
+    },
+    {
+      "id": "deny-elevated-after-rejection",
+      "effect": "deny",
+      "priority": 30,
+      "message": "The elevated coding-agent call was rejected.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "risk:elevated"},
+        {"field": "context.approval.approved", "operator": "eq", "value": false}
+      ]
+    },
+    {
+      "id": "allow-approved-elevated-capabilities",
+      "effect": "allow",
+      "priority": 100,
+      "message": "The registered elevated call has exact-call approval.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "risk:elevated"},
+        {
+          "field": "action.capabilities",
+          "operator": "subset_of",
+          "value": [
+            "workspace:read",
+            "workspace:write",
+            "process:execute",
+            "network:access",
+            "external:write",
+            "destructive",
+            "data:sensitive",
+            "risk:elevated"
+          ]
+        },
+        {"field": "context.approval.approved", "operator": "eq", "value": true}
+      ]
+    },
+    {
+      "id": "allow-contained-workspace-read",
+      "effect": "allow",
+      "priority": 100,
+      "message": "Read-only access inside the verified workspace is allowed.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "workspace:read"},
+        {
+          "field": "action.capabilities",
+          "operator": "subset_of",
+          "value": ["workspace:read"]
+        },
+        {"field": "context.workspace_contained", "operator": "eq", "value": true}
+      ]
+    },
+    {
+      "id": "warn-sensitive-data",
+      "effect": "warn",
+      "priority": 200,
+      "message": "The coding-agent call may access sensitive data.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "data:sensitive"}
+      ]
+    },
+    {
+      "id": "warn-network-access",
+      "effect": "warn",
+      "priority": 200,
+      "message": "The coding-agent call can communicate outside the local workspace.",
+      "conditions": [
+        {"field": "action.capabilities", "operator": "contains", "value": "network:access"}
+      ]
+    }
+  ]
+}

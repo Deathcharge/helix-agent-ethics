@@ -81,9 +81,11 @@ from .explanation import (
     RuleExplanation,
 )
 from .gate import (
+    MAX_TOOL_BATCH_ITEMS,
     MAX_TOOL_CAPABILITIES,
     TOOL_CONTEXT_VERSION,
     BoundToolGate,
+    PreparedToolCall,
     ToolExecutionResult,
     ToolGate,
     build_tool_context,
@@ -167,6 +169,7 @@ __all__ = [
     "MAX_POLICY_DEPLOYMENT_BYTES",
     "MAX_POLICY_RULES",
     "MAX_POLICY_TEST_BYTES",
+    "MAX_TOOL_BATCH_ITEMS",
     "MAX_TOOL_CALL_FINGERPRINT_BYTES",
     "MAX_TOOL_CAPABILITIES",
     "POLICY_COMPARISON_VERSION",
@@ -236,6 +239,7 @@ __all__ = [
     "PolicyTestSuite",
     "PolicyTestValidationError",
     "PolicyValidationError",
+    "PreparedToolCall",
     "RuleExplanation",
     "SamsarixEthicsError",
     "ToolCallApproval",

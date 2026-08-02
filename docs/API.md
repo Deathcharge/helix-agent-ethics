@@ -303,8 +303,14 @@ uses its immutable registered tool name and capabilities.
 
 - `bind(tool_name, *, capabilities=()) -> BoundToolGate` validates and freezes trusted
   registration metadata once;
+- `prepare(...) -> PreparedToolCall` validates, detaches, and recursively freezes one call for
+  immediate single-generation batch authorization;
 - `evaluate(...) -> Decision` evaluates the normalized call and optionally appends audit metadata;
+- `evaluate_many(calls) -> tuple[Decision, ...]` validates a bounded gate-specific prepared batch,
+  pins one runtime generation, then emits audit records in input order;
 - `enforce(...) -> Decision` returns only an allow decision, otherwise raising a typed block;
+- `enforce_many(calls) -> tuple[Decision, ...]` returns only when every prepared call is allowed,
+  otherwise raising the first input-ordered typed block after the full batch was evaluated/audited;
 - `execute(..., executor, ...) -> ToolExecutionResult[T]` invokes a callback with the detached,
   evaluated argument dictionary only after allow; it rejects coroutine functions and async
   callable objects, which must use `execute_async`;
@@ -330,12 +336,23 @@ The frozen object returned by `ToolGate.bind(...)`. Its `tool_name` and canonica
 `capabilities` tuple cannot be supplied or changed per invocation. It exposes `gate` and `policy`
 properties, the gate's `policy_fingerprint`, plus
 `runtime_status`,
-`fingerprint(tool_call_id, arguments, *, actor=None)`, `evaluate`, `enforce`, `explain`, `execute`,
-and `execute_async`. The latter five accept the same actor, context, call-ID, and approval keywords as
+`fingerprint(tool_call_id, arguments, *, actor=None)`, `prepare`, `evaluate`, `enforce`, `explain`,
+`execute`, and `execute_async`. The latter six accept the same actor, context, call-ID, and approval keywords as
 `ToolGate`, but take only arguments (and an executor where applicable).
 
 Use a trusted application registry to select a binding. This prevents model or protocol payloads
 from downgrading capability labels, but it does not establish that remote tool metadata is honest.
+
+### `PreparedToolCall`
+
+The frozen gate-specific object returned by `ToolGate.prepare(...)` or
+`BoundToolGate.prepare(...)`. `tool_name` and `capabilities` expose immutable normalized metadata;
+`arguments` returns a fresh detached dictionary on every access. Its constructor is intentionally
+unavailable. A prepared call retains normalized actor/context/approval facts internally for
+immediate `evaluate_many` or `enforce_many` use; it is not a durable authorization token and must
+not be reused after those facts can become stale. A batch rejects repeated object identities and
+repeated approval `tool_call_id` values; applications still enforce replay protection across
+batches. `MAX_TOOL_BATCH_ITEMS` is 1,000.
 
 ## Models
 

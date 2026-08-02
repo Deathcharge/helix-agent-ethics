@@ -10,6 +10,12 @@ explainable, and the optional audit log excludes raw input by design. The packag
 network calls and has no runtime dependencies. Other Samsarix repositories can embed it, but none
 is required; the package and its release lifecycle stand on their own.
 
+Within the Samsarix portfolio, this repository owns agent-action safety policy, human-review
+outcomes, exact-call enforcement, privacy-minimized decision evidence, and the policy lifecycle.
+It does not replace the generic principal/action/resource authorization in `policy-engine`, the
+tool transport/runtime in `samsarix-core`, or durable workflow coordination in
+`samsarix-agent-orchestration`. See the [portfolio boundary](docs/PORTFOLIO_POSITIONING.md).
+
 > Status: **0.1.0 release candidate.** The core CLI and library journey is implemented and
 > tested. It is not a general moral-reasoning system, a compliance certification product, or a
 > substitute for application authorization and human judgment.
@@ -417,12 +423,31 @@ expiration, atomic one-time consumption, and protected pending-call storage. A p
 `gate.bind(...)` also freezes the application-owned tool name and capability labels once at
 registration, so untrusted invocation data cannot downgrade them per call.
 
+When a model turn proposes several calls, prepare them from trusted bindings and authorize the
+complete batch before dispatching any item:
+
+```python
+calls = [
+    read_file.prepare({"path": "README.md"}, context={"workspace_contained": True}),
+    run_tests.prepare({"command": "pytest"}, context={"workspace_contained": True}),
+]
+decisions = gate.enforce_many(calls)
+# Only now may the embedding framework schedule call.arguments.
+```
+
+The batch is bounded at `MAX_TOOL_BATCH_ITEMS` (1,000), fully normalized before evaluation,
+evaluated in order against one runtime generation, and fully audited before `enforce_many` returns
+or raises. It never schedules callbacks: the caller owns concurrency, cancellation, partial side
+effects, and the requirement to dispatch immediately from each prepared call's fresh detached
+`arguments`. See the [coding-agent policy pack](docs/CODING_AGENT_POLICY.md) and run
+`python examples/coding_agent_batch_demo.py` for a read-plus-command review and approval flow.
+
 `execute_async` provides the same fail-closed boundary for async callbacks. Denials raise
 `ToolCallDeniedError`; review outcomes raise `ToolCallReviewRequiredError`; neither invokes the
 tool. See the [tool-call integration guide](docs/TOOL_CALLS.md), [API reference](docs/API.md), and
 [policy format](docs/POLICY_FORMAT.md).
 
-Run the dependency-free demonstration with `python examples/tool_gate_demo.py`.
+Run the dependency-free single-call demonstration with `python examples/tool_gate_demo.py`.
 
 Applications can route the same versioned metadata-only record to their own durable store or
 telemetry pipeline with a synchronous sink:
