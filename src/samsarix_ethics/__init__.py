@@ -161,6 +161,13 @@ from .io import (
     write_tool_gate_deployment,
     write_tool_gate_deployment_envelope,
 )
+from .langchain import (
+    LANGCHAIN_ADAPTER_VERSION,
+    LANGCHAIN_REVIEW_INTERRUPT_TYPE,
+    LangChainIntegrationError,
+    LangChainToolPolicy,
+    create_langchain_tool_policy,
+)
 from .models import MAX_POLICY_RULES, Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
 from .openai_agents import (
     MAX_PENDING_OPENAI_APPROVALS,
@@ -248,6 +255,8 @@ __all__ = [
     "CONTEXT_CONTRACT_FINGERPRINT_VERSION",
     "CONTEXT_CONTRACT_VERSION",
     "DEPLOYMENT_LOCK_VERSION",
+    "LANGCHAIN_ADAPTER_VERSION",
+    "LANGCHAIN_REVIEW_INTERRUPT_TYPE",
     "MAX_AUDIT_CHAIN_BYTES",
     "MAX_AUDIT_CHAIN_ENTRIES",
     "MAX_AUDIT_CHAIN_ENTRY_BYTES",
@@ -322,6 +331,8 @@ __all__ = [
     "HmacAuditChainSink",
     "InputValidationError",
     "JsonlAuditSink",
+    "LangChainIntegrationError",
+    "LangChainToolPolicy",
     "OpenAIAgentsApprovalStore",
     "OpenAIAgentsIntegrationError",
     "OpenAIAgentsToolPolicy",
@@ -388,6 +399,7 @@ __all__ = [
     "compare_policies",
     "compose_policies",
     "create_deployment_lock",
+    "create_langchain_tool_policy",
     "create_openai_agents_tool_policy",
     "create_policy_deployment",
     "create_tool_gate_deployment",

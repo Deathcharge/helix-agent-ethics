@@ -1,0 +1,2 @@
+# Exact framework contract tested by the dedicated optional-integration CI job.
+langchain==1.3.14

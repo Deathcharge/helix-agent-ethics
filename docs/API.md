@@ -423,6 +423,25 @@ input guardrails and approval logic, and appends Samsarix enforcement. It raises
 `OPENAI_AGENTS_ADAPTER_VERSION`. See [OPENAI_AGENTS.md](OPENAI_AGENTS.md) for the exact execution
 boundary and approval workflow.
 
+### `create_langchain_tool_policy(bindings, *, actor_provider=None, context_provider=None)`
+
+Creates an optional `LangChainToolPolicy` for one exact `BoundToolCatalog`. Construction imports
+LangChain only when called. `validate_tools(tools)` requires real `BaseTool` instances whose names
+exactly match the catalog. `middleware` is the sync/async `AgentMiddleware` instance and must be
+last in LangChain's middleware list so it sees the final request after outer transformations.
+
+The providers are synchronous callbacks from `request.runtime.context` to current application-
+owned JSON facts. `explain(request)` performs an unaudited policy explanation and
+`approval_for(request, approved=...)` creates unsigned exact-call evidence for a caller-owned
+review system; neither method authenticates a reviewer or authorizes execution.
+
+Allow invokes the original handler once after an audited enforcement. Deny raises the ordinary
+typed gate error. Review calls LangGraph `interrupt()` with
+`LANGCHAIN_REVIEW_INTERRUPT_TYPE = "samsarix.tool_call.review"`; an approved resume must be a
+strict `ToolCallApproval` dictionary matching the current call fingerprint before final
+enforcement. Rejection returns a generic error `ToolMessage` without invoking the tool. The adapter
+contract version is `LANGCHAIN_ADAPTER_VERSION = 1`. See [LANGCHAIN.md](LANGCHAIN.md).
+
 ### `BoundToolCatalog`
 
 The immutable mapping returned by `ToolGate.bind_catalog(...)`. It exposes `gate`, `catalog`,
@@ -696,7 +715,8 @@ records. See [AUDIT_CHAINS.md](AUDIT_CHAINS.md) for the format and complete thre
 
 `PolicyValidationError`, `PolicyDeploymentValidationError`, `PolicyActivationError`,
 `PolicyCompositionError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
-`AuditLogError`, `AuditChainError`, and the tool-call enforcement errors derive from
+`AuditLogError`, `AuditChainError`, `OpenAIAgentsIntegrationError`, `LangChainIntegrationError`,
+and the tool-call enforcement errors derive from
 `SamsarixEthicsError`. `AuditChainError` also derives from `AuditLogError`, preserving fail-closed
 gate handling. The base
 class and specialized errors are exported from `samsarix_ethics` and defined in

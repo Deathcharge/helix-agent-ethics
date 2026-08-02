@@ -27,9 +27,9 @@ tool inside the hash-verified dependency boundary.
 
 Optional integrations have separate exact contract inputs and locks. Regenerate them with the same
 universal Python 3.11 flags and run their dedicated integration tests and examples in environments
-that install `requirements-openai-agents.lock` or `requirements-opentelemetry.lock` together with
-the development lock. Keep optional packages out of the base development environment so the
-dependency-free import contract remains testable.
+that install exactly one of `requirements-openai-agents.lock`, `requirements-langchain.lock`, or
+`requirements-opentelemetry.lock` together with the development lock. Keep optional packages out
+of the base development environment so the dependency-free import contract remains testable.
 
 ## Required checks
 

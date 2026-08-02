@@ -103,6 +103,10 @@ Bounded review used current primary sources:
 - [OpenAI Agents SDK tools](https://openai.github.io/openai-agents-python/tools/) and
   [LangChain middleware](https://docs.langchain.com/oss/python/langchain/middleware/custom) attach
   execution interception to registered tool objects rather than trusting model-supplied metadata.
+- LangChain documents `wrap_tool_call` as the hook around each tool execution, its first configured
+  middleware as outermost, and LangGraph interrupts as checkpointed pause/resume. A Samsarix
+  adapter can therefore use only public runtime contracts, but it must run last to authorize final
+  arguments and bind the resume response to the exact interrupted call.
 - [OpenAI Agents SDK runner configuration](https://openai.github.io/openai-agents-python/running_agents/)
   documents concurrent function-tool calls by default, while its tool documentation says hosted
   and built-in tools do not use the function-tool guardrail pipeline. A portable gate therefore
@@ -260,6 +264,8 @@ certification or ethics truth.
 - [x] Add a public optional OpenAI Agents SDK adapter with native review routing, final
   post-approval enforcement, bounded raw-argument parsing, an exact-version hashed dependency
   contract, and explicit unsupported execution paths.
+- [x] Add exact-registry LangChain sync/async middleware with final raw-argument authorization,
+  fingerprint-bound native LangGraph interrupt/resume, and an exact-version real-agent CI contract.
 - [ ] Add policy-format version migration only after a second format and adopter need exist.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
 
@@ -297,9 +303,10 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 523 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 523
-  passed and 95.80% total branch-aware coverage under the configured `--cov-branch` gate. A
-  separate real-SDK contract test runs against the exact hashed `openai-agents==0.18.3` graph.
+- Added 540 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 540
+  passed and 95.76% total branch-aware coverage under the configured `--cov-branch` gate. Separate
+  real-SDK contract tests run against exact hashed `openai-agents==0.18.3`, `langchain==1.3.14`,
+  and OpenTelemetry 1.44.0 dependency graphs.
 - Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an
   isolated no-dependency environment: install/import/version/schema/deployment verification and a
   deployed allow decision all succeeded, and runtime construction used the packaged API.
@@ -379,6 +386,10 @@ certification or ethics truth.
   fresh application facts immediately before execution. A public no-network example, focused
   guide, adversarial core suite, and exact real-SDK CI lane cover the integration without changing
   the base package dependency boundary.
+- Added optional LangChain middleware that exact-matches a complete `BaseTool` registry, authorizes
+  final raw arguments after outer middleware, and binds native LangGraph resume to the interrupted
+  call. A real checkpointed-agent contract, no-network example, focused guide, and adversarial
+  sync/async suite preserve the dependency-free base package boundary.
 - Added a versioned metadata-only OpenTelemetry event sink, bounded ordered audit-sink composition,
   exact API/SDK contract test, and an in-memory no-network example. The application retains SDK,
   exporter, sampling, collector, trace access, durable audit, and partial-delivery recovery.
@@ -447,6 +458,10 @@ External validation gates:
   validate label correctness; or establish freshness.
 - Approval binding does not authenticate reviewers or prevent replay; embedding applications own
   protected pending-call storage, expiry, and atomic one-time consumption.
+- LangChain review checkpoints contain proposed tool arguments and require application-owned
+  encryption, access control, retention, reviewer/thread authorization, CSRF protection, expiry,
+  and one-time resume. Direct tool invocation, server-side tools, and pre-handler side effects can
+  bypass or precede middleware, while parallel calls remain non-transactional.
 - File permissions and retention vary by operating system and are caller responsibilities.
 - Python dependency tooling resolves transitive development dependencies; exact direct pins reduce
   drift but do not constitute a fully hashed supply-chain lock.
