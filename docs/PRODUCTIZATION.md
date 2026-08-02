@@ -303,8 +303,8 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 531 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 531
-  passed and 95.72% total branch-aware coverage under the configured `--cov-branch` gate. Separate
+- Added 540 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 540
+  passed and 95.76% total branch-aware coverage under the configured `--cov-branch` gate. Separate
   real-SDK contract tests run against exact hashed `openai-agents==0.18.3`, `langchain==1.3.14`,
   and OpenTelemetry 1.44.0 dependency graphs.
 - Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an

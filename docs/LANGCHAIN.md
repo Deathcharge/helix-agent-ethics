@@ -24,7 +24,7 @@ Create a trusted catalog and bind it to the gate before passing tools to LangCha
 
 ```python
 from langchain.agents import create_agent
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.memory import InMemorySaver
 from samsarix_ethics import ToolGate, create_langchain_tool_policy
 
 bindings = ToolGate(policy, audit_sink=audit_sink).bind_catalog(
@@ -43,7 +43,7 @@ agent = create_agent(
     tools=tools,
     middleware=[other_middleware, tool_policy.middleware],  # Samsarix is last
     context_schema=ApplicationContext,
-    checkpointer=PostgresSaver.from_conn_string(database_url),
+    checkpointer=InMemorySaver(),  # Demo/test only; replace in production
 )
 ```
 
@@ -108,10 +108,11 @@ The pre-interrupt explanation and a rejection do not emit an authorization audit
 approved resume emits the final allow record, while a deny emits its deny record. Persist reviewer
 identity and rejection evidence in the application's review system when that evidence is required.
 
-`InMemorySaver` is only for tests and the demo. Production review requires a durable LangGraph
-checkpointer, authenticated and authorized reviewer UI/API, CSRF/replay protection where relevant,
-approval expiry, protected thread IDs, retention, and atomic one-time workflow resume. Samsarix
-approval objects authenticate neither the reviewer nor the checkpoint transport.
+`InMemorySaver` is included through LangChain and is only for tests and the demo. Production review
+requires installing and configuring a durable LangGraph checkpointer separately, plus an
+authenticated and authorized reviewer UI/API, CSRF/replay protection where relevant, approval
+expiry, protected thread IDs, retention, and atomic one-time workflow resume. Samsarix approval
+objects authenticate neither the reviewer nor the checkpoint transport.
 
 ## Security and execution boundary
 

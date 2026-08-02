@@ -288,19 +288,21 @@ def test_review_interrupt_approval_and_rejection_are_exact_call_bound(
         adapter.middleware.wrap_tool_call(request, lambda value: calls.append(value))
 
     payload = fake_langchain.payloads[-1]
+    expected_arguments = {"mode": "send", "recipient": "person@example.com"}
     assert payload == {
         "type": "samsarix.tool_call.review",
         "adapter_version": 1,
         "approval_binding": {
             "approval_version": 1,
             "tool_call_id": "call-1",
-            "tool_call_fingerprint": adapter.approval_for(
-                request, approved=True
-            ).tool_call_fingerprint,
+            "tool_call_fingerprint": bindings["send_message"].fingerprint(
+                "call-1",
+                expected_arguments,
+            ),
         },
         "tool": {
             "name": "send_message",
-            "arguments": {"mode": "send", "recipient": "person@example.com"},
+            "arguments": expected_arguments,
         },
         "policy": {
             "id": "langchain-test",
@@ -365,7 +367,7 @@ def test_review_resume_cannot_authorize_mutated_arguments_or_actor(
         adapter.middleware.wrap_tool_call(original, lambda _request: pytest.fail("executed"))
 
 
-def test_review_response_and_request_shapes_fail_closed(
+def test_review_response_shape_fails_closed(
     fake_langchain: _InterruptController,
     bindings: BoundToolCatalog,
 ) -> None:
@@ -375,25 +377,56 @@ def test_review_response_and_request_shapes_fail_closed(
     with pytest.raises(InputValidationError, match="missing"):
         adapter.middleware.wrap_tool_call(request, lambda _request: pytest.fail("executed"))
 
-    invalid_requests = [
-        object(),
-        _ToolCallRequest([], _BaseTool("send_message"), {}, SimpleNamespace(context=None)),
-        _request(name="other"),
-        _request(call_id=object()),
-        _request(arguments=[]),
-        _request(tool=object()),
-        _request(tool=_BaseTool("read_file")),
-        _ToolCallRequest(
-            {"name": "send_message", "args": {"mode": "read"}, "id": "call-1"},
-            _BaseTool("send_message"),
-            {},
-            object(),
+
+@pytest.mark.parametrize(
+    ("invalid_request", "expected_error"),
+    [
+        (object(), TypeError),
+        (
+            _ToolCallRequest([], _BaseTool("send_message"), {}, SimpleNamespace(context=None)),
+            LangChainIntegrationError,
         ),
-        _request(arguments={"mode": object()}),
-    ]
-    for invalid in invalid_requests:
-        with pytest.raises((TypeError, LangChainIntegrationError, InputValidationError)):
-            adapter.middleware.wrap_tool_call(invalid, lambda _request: pytest.fail("executed"))
+        (_request(name="other"), LangChainIntegrationError),
+        (_request(call_id=object()), LangChainIntegrationError),
+        (_request(arguments=[]), LangChainIntegrationError),
+        (_request(tool=object()), LangChainIntegrationError),
+        (_request(tool=_BaseTool("read_file")), LangChainIntegrationError),
+        (
+            _ToolCallRequest(
+                {"name": "send_message", "args": {"mode": "read"}, "id": "call-1"},
+                _BaseTool("send_message"),
+                {},
+                object(),
+            ),
+            LangChainIntegrationError,
+        ),
+        (_request(arguments={"mode": object()}), InputValidationError),
+    ],
+    ids=[
+        "not-tool-call-request",
+        "tool-call-not-mapping",
+        "tool-not-in-catalog",
+        "call-id-not-string",
+        "arguments-not-mapping",
+        "resolved-tool-not-base-tool",
+        "resolved-tool-name-mismatch",
+        "runtime-without-context",
+        "arguments-not-json",
+    ],
+)
+def test_request_shapes_fail_closed(
+    fake_langchain: _InterruptController,
+    bindings: BoundToolCatalog,
+    invalid_request: Any,
+    expected_error: type[Exception],
+) -> None:
+    adapter = create_langchain_tool_policy(bindings)
+
+    with pytest.raises(expected_error):
+        adapter.middleware.wrap_tool_call(
+            invalid_request,
+            lambda _request: pytest.fail("executed"),
+        )
 
 
 def test_facts_are_fresh_and_provider_errors_are_not_hidden(
@@ -446,4 +479,15 @@ def test_async_middleware_authorizes_before_awaiting_handler(
     review = _request(arguments={"mode": "send"})
     fake_langchain.responses.append(adapter.approval_for(review, approved=True).to_dict())
     assert asyncio.run(adapter.middleware.awrap_tool_call(review, handler)) == "done"
+    assert calls == [request, review]
+
+    rejected_review = _request(arguments={"mode": "send"}, call_id="call-async-reject")
+    fake_langchain.responses.append(adapter.approval_for(rejected_review, approved=False).to_dict())
+    rejected = asyncio.run(adapter.middleware.awrap_tool_call(rejected_review, handler))
+    assert rejected == _ToolMessage(
+        content="Tool call rejected by human review.",
+        tool_call_id="call-async-reject",
+        name="send_message",
+        status="error",
+    )
     assert calls == [request, review]

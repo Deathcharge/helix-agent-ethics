@@ -234,8 +234,11 @@ class LangChainToolPolicy:
     ) -> ToolCallApproval:
         approval = ToolCallApproval.from_dict(response)
         if not hmac.compare_digest(
-            value.tool_call_id, approval.tool_call_id
-        ) or not hmac.compare_digest(value.fingerprint, approval.tool_call_fingerprint):
+            value.tool_call_id.encode("utf-8"), approval.tool_call_id.encode("utf-8")
+        ) or not hmac.compare_digest(
+            value.fingerprint.encode("utf-8"),
+            approval.tool_call_fingerprint.encode("utf-8"),
+        ):
             raise LangChainIntegrationError(
                 "LangChain review response does not match the interrupted tool call"
             )
