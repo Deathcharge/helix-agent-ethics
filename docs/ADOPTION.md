@@ -109,9 +109,11 @@ complete bounded batch before evaluating it.
 
 The runtime batch primitive pins one active policy generation. Contract-invalid late items produce
 no batch audit delivery; successful decisions are audited in input order; and `enforce_many` returns
-only if every item allows. This is a pre-dispatch authorization contract, not a transaction or task
-scheduler. Adapters must dispatch immediately from each prepared call's detached arguments and own
-concurrency, cancellation, callback failure, and partial side effects.
+only if every item allows. A typed block exposes every metadata-only decision plus the first blocked
+index from that same evaluation, which is enough to populate an ordered multi-call review surface
+without duplicate decisions or audits. This is a pre-dispatch authorization contract, not a
+transaction or task scheduler. Adapters must dispatch immediately from each prepared call's detached
+arguments and own concurrency, cancellation, callback failure, and partial side effects.
 
 The checked coding-agent deployment makes the integration reproducible without adding a framework
 dependency. Its trusted binding taxonomy treats unknown tools and under-labeled elevated tools as

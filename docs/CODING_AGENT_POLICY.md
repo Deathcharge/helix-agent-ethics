@@ -68,6 +68,8 @@ human-in-the-loop review all expose interception points, but their scheduling an
 differ. Keep the Samsarix adapter at the last common application-controlled boundary. Prepare every
 proposed call, call `enforce_many`, and dispatch immediately only if it returns. Built-in or hosted
 tools that bypass a framework's function-tool guardrail need their own protected execution seam.
+When a batch blocks, use the exception's ordered metadata-only `decisions` and `blocking_index` to
+render the review queue; do not call `evaluate_many` again and mint a second set of decision IDs.
 
 ## Limits
 

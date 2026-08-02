@@ -175,7 +175,7 @@ rejected. A batch contains at most
 `MAX_TOOL_BATCH_ITEMS` (1,000) calls.
 
 `evaluate_many` and `enforce_many` first collect every prepared context, then delegate to the
-engine's bounded batch primitive. This has four deliberate properties:
+engine's bounded batch primitive. This has five deliberate properties:
 
 1. type, ownership, size, and within-batch replay checks finish before contexts are thawed;
 2. contexts are thawed and contract-validated one at a time, and a malformed late item produces no
@@ -184,6 +184,13 @@ engine's bounded batch primitive. This has four deliberate properties:
 4. successful decisions are returned and audited in input order; and
 5. `enforce_many` evaluates and audits every item, then raises the first deny or review in input
    order, so no call in that batch is authorized for dispatch.
+
+The raised `ToolCallDeniedError` or `ToolCallReviewRequiredError` preserves that full ordered result
+as the metadata-only `decisions` tuple. `blocking_index` identifies the first input-ordered block,
+and `decision` is that exact tuple item. This lets an adapter render every allow, deny, and review
+outcome from one evaluation without retaining tool inputs, minting different decision IDs, or
+duplicating audit delivery. Single-call enforcement exposes the same interface with one decision at
+index zero.
 
 Audit sinks remain non-transactional. A sink failure can occur after earlier records were delivered,
 but fails closed before the caller receives batch authorization. The package deliberately does not

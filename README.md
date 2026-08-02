@@ -437,7 +437,9 @@ decisions = gate.enforce_many(calls)
 
 The batch is bounded at `MAX_TOOL_BATCH_ITEMS` (1,000), fully normalized before evaluation,
 evaluated in order against one runtime generation, and fully audited before `enforce_many` returns
-or raises. It never schedules callbacks: the caller owns concurrency, cancellation, partial side
+or raises. A typed block retains the complete metadata-only decision tuple and its first blocked
+index, so an adapter can render the whole review queue without re-evaluating or duplicating audit
+records. It never schedules callbacks: the caller owns concurrency, cancellation, partial side
 effects, and the requirement to dispatch immediately from each prepared call's fresh detached
 `arguments`. See the [coding-agent policy pack](docs/CODING_AGENT_POLICY.md) and run
 `python examples/coding_agent_batch_demo.py` for a read-plus-command review and approval flow.

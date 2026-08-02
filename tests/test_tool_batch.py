@@ -17,6 +17,7 @@ from samsarix_ethics import (
     PreparedToolCall,
     ToolCallApproval,
     ToolCallDeniedError,
+    ToolCallReviewRequiredError,
     ToolGate,
     load_context_contract,
     load_policy,
@@ -105,7 +106,40 @@ def test_enforce_many_authorizes_only_an_all_allow_batch() -> None:
         )
 
     assert captured.value.decision.outcome is Outcome.DENY
+    assert captured.value.blocking_index == 1
+    assert tuple(decision.outcome for decision in captured.value.decisions) == (
+        Outcome.ALLOW,
+        Outcome.DENY,
+    )
+    assert captured.value.decision is captured.value.decisions[captured.value.blocking_index]
     assert len(records) == 4
+
+
+def test_enforce_many_exposes_every_decision_while_raising_first_block() -> None:
+    gate = _gate()
+    read = gate.bind("read_file", capabilities=["resource:read"])
+    send = gate.bind("send_message", capabilities=["external:write"])
+    delete = gate.bind("delete_file", capabilities=["destructive"])
+    sensitive_argument = "never-report-batch-input"
+
+    with pytest.raises(ToolCallReviewRequiredError) as captured:
+        gate.enforce_many(
+            [
+                read.prepare({"path": "README.md"}),
+                send.prepare({"channel": sensitive_argument}),
+                delete.prepare({"path": "old.log"}),
+            ]
+        )
+
+    assert captured.value.blocking_index == 1
+    assert tuple(decision.outcome for decision in captured.value.decisions) == (
+        Outcome.ALLOW,
+        Outcome.REVIEW,
+        Outcome.DENY,
+    )
+    assert captured.value.decision is captured.value.decisions[1]
+    assert sensitive_argument not in str(captured.value)
+    assert sensitive_argument not in repr(captured.value.decisions)
 
 
 def test_batch_rejects_invalid_or_foreign_prepared_calls_before_evaluation() -> None:

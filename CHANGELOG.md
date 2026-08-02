@@ -77,6 +77,9 @@ All notable product changes are recorded here.
 - A 100%-rule-covered coding-agent policy, context contract, verified single-file deployment, and
   runnable batch demo for contained workspace reads and approval-bound process/network/write risk;
   missing containment fails closed even when the raw policy is used without its contract.
+- Backward-compatible complete batch diagnostics on typed tool-call block exceptions, retaining
+  every metadata-only decision and the first blocked index from one evaluation for multi-call
+  review surfaces without duplicate decision IDs or audit delivery.
 
 ### Changed
 

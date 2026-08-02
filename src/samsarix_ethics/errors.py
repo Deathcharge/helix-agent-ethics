@@ -56,29 +56,54 @@ class AuditLogError(SamsarixEthicsError):
 
 
 class ToolCallBlockedError(SamsarixEthicsError):
-    """Base error for a valid tool call that policy did not authorize."""
+    """A typed block with its selected decision and complete evaluation set."""
 
-    def __init__(self, message: str, decision: Decision) -> None:
+    def __init__(
+        self,
+        message: str,
+        decision: Decision,
+        *,
+        decisions: tuple[Decision, ...] | None = None,
+        blocking_index: int = 0,
+    ) -> None:
         super().__init__(message)
         self.decision = decision
+        self.decisions = (decision,) if decisions is None else decisions
+        self.blocking_index = blocking_index
 
 
 class ToolCallDeniedError(ToolCallBlockedError):
     """Raised when policy denies a proposed tool call."""
 
-    def __init__(self, decision: Decision) -> None:
+    def __init__(
+        self,
+        decision: Decision,
+        *,
+        decisions: tuple[Decision, ...] | None = None,
+        blocking_index: int = 0,
+    ) -> None:
         super().__init__(
             f"tool call denied by policy {decision.policy_id!r} (decision {decision.decision_id})",
             decision,
+            decisions=decisions,
+            blocking_index=blocking_index,
         )
 
 
 class ToolCallReviewRequiredError(ToolCallBlockedError):
     """Raised when a proposed tool call requires human review."""
 
-    def __init__(self, decision: Decision) -> None:
+    def __init__(
+        self,
+        decision: Decision,
+        *,
+        decisions: tuple[Decision, ...] | None = None,
+        blocking_index: int = 0,
+    ) -> None:
         super().__init__(
             f"tool call requires review under policy {decision.policy_id!r} "
             f"(decision {decision.decision_id})",
             decision,
+            decisions=decisions,
+            blocking_index=blocking_index,
         )
