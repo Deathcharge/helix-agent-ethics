@@ -24,6 +24,10 @@ def test_public_api_is_importable() -> None:
     assert "ToolCatalogValidationError" in samsarix_ethics.__all__
     assert "ToolCallback" in samsarix_ethics.__all__
     assert "ToolDispatcher" in samsarix_ethics.__all__
+    assert "OpenAIAgentsApprovalStore" in samsarix_ethics.__all__
+    assert "OpenAIAgentsIntegrationError" in samsarix_ethics.__all__
+    assert "OpenAIAgentsToolPolicy" in samsarix_ethics.__all__
+    assert "create_openai_agents_tool_policy" in samsarix_ethics.__all__
     assert "load_tool_catalog" in samsarix_ethics.__all__
     assert "fingerprint_tool_catalog" in samsarix_ethics.__all__
     assert "validate_tool_catalog_registration" in samsarix_ethics.__all__
@@ -104,6 +108,8 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.MAX_TOOL_CAPABILITIES == 64
     assert samsarix_ethics.MAX_TOOL_BATCH_ITEMS == 1_000
     assert samsarix_ethics.MAX_TOOL_CALL_FINGERPRINT_BYTES == 1_048_576
+    assert samsarix_ethics.MAX_PENDING_OPENAI_APPROVALS == 4_096
+    assert samsarix_ethics.OPENAI_AGENTS_ADAPTER_VERSION == 1
     assert samsarix_ethics.POLICY_FINGERPRINT_VERSION == 1
     assert samsarix_ethics.POLICY_COMPARISON_VERSION == 1
     assert samsarix_ethics.POLICY_COMPOSITION_VERSION == 1

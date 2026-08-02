@@ -19,6 +19,9 @@ adoption remain separate evidence-based decisions.
 - [x] Add one fail-closed downstream integration with a consumer-owned contract test.
 - A fail-closed in-process tool gate and baseline tool-capability policy pack are integrated into
   Samsarix Agent Framework at an exact Agent Ethics commit.
+- [x] Add one public, reproducible OpenAI Agents SDK `FunctionTool` adapter with native approval
+  routing, exact-version dependency locking, a real SDK contract test, and explicit unsupported
+  execution paths.
 - [x] Expose one immutable metadata-only audit record to a caller-supplied sink while preserving
   the existing JSONL API and fail-closed behavior.
 - [x] Bind decisions and audit evidence to the exact canonical policy body, independent of
@@ -70,8 +73,8 @@ adoption remain separate evidence-based decisions.
 Current hardening backlog:
 
 - No published package/release, public third-party adopter, or production deployment evidence.
-- The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible,
-  not a publicly reproducible external case study.
+- The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible.
+  The public SDK adapter is reproducible integration evidence, not an external adopter case study.
 - Installed-wheel smoke coverage, retained CI distributions, and GitHub build-provenance
   attestations exist. PyPI project ownership, Trusted Publishing, protected release approval, and
   durable registry publication evidence are not yet configured.

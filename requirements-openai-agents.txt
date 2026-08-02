@@ -1,0 +1,2 @@
+# Exact SDK contract tested by the dedicated optional-integration CI job.
+openai-agents==0.18.3

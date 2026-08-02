@@ -155,6 +155,14 @@ from .io import (
     write_tool_gate_deployment_envelope,
 )
 from .models import MAX_POLICY_RULES, Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
+from .openai_agents import (
+    MAX_PENDING_OPENAI_APPROVALS,
+    OPENAI_AGENTS_ADAPTER_VERSION,
+    OpenAIAgentsApprovalStore,
+    OpenAIAgentsIntegrationError,
+    OpenAIAgentsToolPolicy,
+    create_openai_agents_tool_policy,
+)
 from .policy_deployment import (
     POLICY_DEPLOYMENT_VERSION,
     PolicyDeployment,
@@ -241,6 +249,7 @@ __all__ = [
     "MAX_DEPLOYMENT_AUTH_LIFETIME_SECONDS",
     "MAX_DEPLOYMENT_AUTH_SEQUENCE",
     "MAX_DEPLOYMENT_LOCK_BYTES",
+    "MAX_PENDING_OPENAI_APPROVALS",
     "MAX_POLICY_DEPLOYMENT_BYTES",
     "MAX_POLICY_RULES",
     "MAX_POLICY_TEST_BYTES",
@@ -254,6 +263,7 @@ __all__ = [
     "MAX_TOOL_GATE_DEPLOYMENT_ENVELOPE_BYTES",
     "MIN_AUDIT_CHAIN_KEY_BYTES",
     "MIN_DEPLOYMENT_AUTH_KEY_BYTES",
+    "OPENAI_AGENTS_ADAPTER_VERSION",
     "POLICY_COMPARISON_VERSION",
     "POLICY_COMPOSITION_VERSION",
     "POLICY_COVERAGE_VERSION",
@@ -295,6 +305,9 @@ __all__ = [
     "HmacAuditChainSink",
     "InputValidationError",
     "JsonlAuditSink",
+    "OpenAIAgentsApprovalStore",
+    "OpenAIAgentsIntegrationError",
+    "OpenAIAgentsToolPolicy",
     "Outcome",
     "Policy",
     "PolicyActivationError",
@@ -356,6 +369,7 @@ __all__ = [
     "compare_policies",
     "compose_policies",
     "create_deployment_lock",
+    "create_openai_agents_tool_policy",
     "create_policy_deployment",
     "create_tool_gate_deployment",
     "fingerprint_context_contract",

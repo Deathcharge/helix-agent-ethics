@@ -251,6 +251,9 @@ certification or ethics truth.
   coherent status, and live tool-gate integration.
 - [x] Add one bounded deterministic deployment document for policy, optional contract, and
   mandatory lock, with atomic output and direct runtime activation.
+- [x] Add a public optional OpenAI Agents SDK adapter with native review routing, final
+  post-approval enforcement, bounded raw-argument parsing, an exact-version hashed dependency
+  contract, and explicit unsupported execution paths.
 - [ ] Add policy-format version migration only after a second format and adopter need exist.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
 
@@ -288,8 +291,9 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 491 real tests; latest pinned local `python -m pytest` pytest-cov terminal report: 491
-  passed and 95.71% total branch-aware coverage under the configured `--cov-branch` gate.
+- Added 517 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 517
+  passed and 95.75% total branch-aware coverage under the configured `--cov-branch` gate. A
+  separate real-SDK contract test runs against the exact hashed `openai-agents==0.18.3` graph.
 - Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an
   isolated no-dependency environment: install/import/version/schema/deployment verification and a
   deployed allow decision all succeeded, and runtime construction used the packaged API.
@@ -364,6 +368,11 @@ certification or ethics truth.
   final callback references, keeps authorization and dispatch on one object, supports sync/async
   calls, and preflights full batches before sequential execution. It deliberately does not claim
   code identity, immutable callback internals, or transactional side effects.
+- Added an optional OpenAI Agents SDK adapter that protects copied strict top-level function tools,
+  preserves existing controls, routes policy review into native interruptions, and re-enforces with
+  fresh application facts immediately before execution. A public no-network example, focused
+  guide, adversarial core suite, and exact real-SDK CI lane cover the integration without changing
+  the base package dependency boundary.
 - Added a bounded HMAC-SHA-256 `AuditSink`, strict verifier/CLI, external-head rollback check,
   versioned entry/report schemas, adversarial mutation/reordering/truncation tests, and a runnable
   gate example. The design stays metadata-only and explicitly leaves key custody, external

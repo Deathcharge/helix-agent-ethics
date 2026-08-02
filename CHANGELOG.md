@@ -94,6 +94,10 @@ All notable product changes are recorded here.
 - Keyed metadata-only HMAC-SHA-256 audit chains with strict bounded verification, single-instance
   thread serialization, restart checkpoints, valid-prefix rollback detection, CLI/schema support,
   adversarial integrity tests, and an end-to-end gate example.
+- An optional fail-closed OpenAI Agents SDK adapter for strict top-level `FunctionTool` objects,
+  with native review interruptions, fresh post-approval enforcement, exact-call approval binding,
+  bounded duplicate-safe raw argument parsing, preserved existing controls, a no-network example,
+  and an exact `openai-agents==0.18.3` hashed CI contract.
 
 ### Changed
 
