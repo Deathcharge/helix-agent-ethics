@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import json
 from collections.abc import Iterator, Mapping
 from datetime import UTC, datetime
@@ -229,6 +228,15 @@ def test_keyring_and_verifier_parameter_limits() -> None:
             expected_audience=_AUDIENCE,
             now=_NOW,
         )
+    assert (
+        verify_tool_gate_deployment_envelope(
+            envelope,
+            {_KEY_ID: _KEY, "unused": "malformed"},  # type: ignore[dict-item]
+            expected_audience=_AUDIENCE,
+            now=_NOW,
+        ).key_id
+        == _KEY_ID
+    )
     with pytest.raises(TypeError, match="timezone-aware"):
         _verify(envelope, now=datetime(2026, 8, 2, 18))
     with pytest.raises(ValueError, match="clock_skew_seconds"):
@@ -287,8 +295,7 @@ def test_atomic_bounded_file_round_trip_duplicate_keys_and_schema(tmp_path: Path
     schema = get_tool_gate_deployment_envelope_schema()
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(envelope.to_dict())
-    changed = copy.deepcopy(schema)
-    changed["$defs"]["tool_gate_deployment"]["title"] = "changed"
+    schema["$defs"]["tool_gate_deployment"]["title"] = "changed"
     assert (
         get_tool_gate_deployment_envelope_schema()["$defs"]["tool_gate_deployment"]["title"]
         != "changed"
@@ -305,6 +312,13 @@ def test_gate_and_dispatcher_authenticate_immediately_before_binding() -> None:
         minimum_sequence=42,
         now=_NOW,
         registered_tools=registered,
+    )
+    assert bindings.authenticated_deployment is not None
+    assert bindings.authenticated_deployment.key_id == _KEY_ID
+    assert bindings.authenticated_deployment.sequence == 42
+    assert bindings.authenticated_deployment.verified_at == "2026-08-02T18:00:00Z"
+    assert (
+        bindings.authenticated_deployment.deployment_fingerprint == envelope.deployment_fingerprint
     )
     assert (
         bindings["read_file"]
@@ -325,6 +339,14 @@ def test_gate_and_dispatcher_authenticate_immediately_before_binding() -> None:
         minimum_sequence=42,
         now=_NOW,
         registered_tools=callbacks,
+    )
+    assert dispatcher.authenticated_deployment is not None
+    assert dispatcher.authenticated_deployment.key_id == _KEY_ID
+    assert dispatcher.authenticated_deployment.sequence == 42
+    assert dispatcher.authenticated_deployment.verified_at == "2026-08-02T18:00:00Z"
+    assert (
+        dispatcher.authenticated_deployment.deployment_fingerprint
+        == envelope.deployment_fingerprint
     )
     result = dispatcher.execute(
         "read_file",

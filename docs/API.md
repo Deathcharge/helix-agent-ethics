@@ -438,7 +438,8 @@ lock, and tool catalog deployment. It is exact-content identity, not authenticat
 ### `authenticate_tool_gate_deployment(deployment, key, *, key_id, audience, sequence, issued_at, expires_at)`
 
 Returns an untrusted-when-received `ToolGateDeploymentEnvelope` containing the full deployment and
-an HMAC-SHA-256 over every envelope field. Keys are copied from 32-4096 byte bytes-like values.
+an HMAC-SHA-256 over `unsigned_dict()`, which contains every non-MAC envelope field. Keys are copied
+from 32-4096 byte bytes-like values.
 Timestamps use strict whole-second UTC RFC 3339 form; expiry must follow issuance and the lifetime
 cannot exceed 30 days. Creation proves only that the supplied key produced the envelope.
 `generate_deployment_auth_key()` returns a fresh 32-byte key suitable for this API; secret storage,
@@ -468,7 +469,10 @@ authentication. Output refuses implicit or concurrently won overwrite unless `fo
 Authenticate a current envelope immediately before constructing the gate or freezing callback
 references. Both require a keyring, expected audience, complete registry, and optional minimum
 sequence/time/skew inputs. The same catalog exact-match and fail-closed enforcement behavior then
-applies. These methods avoid treating a cached historical verification as current authorization.
+applies. The returned binding or dispatcher retains the immutable `VerifiedToolGateDeployment` on
+its read-only `authenticated_deployment` property so operators can inspect the authorizing key ID,
+sequence, verification time, and deployment fingerprint. These methods avoid treating a cached
+historical verification as current authorization.
 
 See [authenticated deployments](AUTHENTICATED_DEPLOYMENTS.md) for rotation and threat boundaries.
 

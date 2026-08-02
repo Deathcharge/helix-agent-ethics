@@ -9,7 +9,10 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .tool_gate_deployment import ToolGateDeployment
 
 from .catalog import ToolCatalog
 from .contracts import ContextContract
@@ -102,13 +105,13 @@ def fingerprint_tool_catalog(catalog: ToolCatalog) -> str:
     return f"v{TOOL_CATALOG_FINGERPRINT_VERSION}:sha256:{digest}"
 
 
-def fingerprint_tool_gate_deployment(deployment: object) -> str:
+def fingerprint_tool_gate_deployment(deployment: ToolGateDeployment) -> str:
     """Return a versioned SHA-256 fingerprint of one complete tool-gate deployment."""
 
     # Local import avoids the provenance/deployment module cycle.
-    from .tool_gate_deployment import ToolGateDeployment
+    from .tool_gate_deployment import ToolGateDeployment as _ToolGateDeployment
 
-    if not isinstance(deployment, ToolGateDeployment):
+    if not isinstance(deployment, _ToolGateDeployment):
         raise TypeError("deployment must be a ToolGateDeployment")
     payload = {
         "tool_gate_deployment_fingerprint_version": (TOOL_GATE_DEPLOYMENT_FINGERPRINT_VERSION),

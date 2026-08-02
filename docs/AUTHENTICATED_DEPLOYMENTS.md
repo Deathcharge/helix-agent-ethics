@@ -70,7 +70,8 @@ samsarix-ethics gate-deployment verify-authentication \
   --key-file deployment-auth.key \
   --key-id prod-2026-q3 \
   --audience coding-agent:production \
-  --minimum-sequence 42
+  --minimum-sequence 42 \
+  --at 2026-08-02T12:00:00Z
 ```
 
 `authenticate` creates an envelope; it does not claim that the target currently trusts the key,
@@ -106,7 +107,8 @@ dispatcher = ToolDispatcher.bind_authenticated_deployment(
 
 `ToolGate.bind_authenticated_deployment` provides the same immediate check when the application
 owns scheduling. Both paths authenticate first, exact-match the complete registry, and only then
-construct bindings or freeze callback references.
+construct bindings or freeze callback references. Their returned object exposes the immutable
+verification as `authenticated_deployment` for operational provenance.
 
 `verify_tool_gate_deployment_envelope` is available for inspection workflows and returns a
 `VerifiedToolGateDeployment` with the exact deployment and value-minimized verification metadata.

@@ -209,7 +209,8 @@ samsarix-ethics gate-deployment verify-authentication \
   --key-file deployment-auth.key \
   --key-id prod-2026-q3 \
   --audience coding-agent:production \
-  --minimum-sequence 42
+  --minimum-sequence 42 \
+  --at 2026-08-02T12:00:00Z
 ```
 
 Keep the key and highest accepted sequence outside the envelope in protected target state. HMAC
@@ -264,6 +265,7 @@ samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema tool-catalog > tool-catalog-v1.schema.json
 samsarix-ethics schema tool-gate-deployment > tool-gate-deployment-v1.schema.json
+samsarix-ethics schema tool-gate-deployment-envelope > tool-gate-deployment-envelope-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 samsarix-ethics schema audit-chain-entry > audit-chain-entry-v1.schema.json
 samsarix-ethics schema audit-chain-verification > audit-chain-verification-v1.schema.json

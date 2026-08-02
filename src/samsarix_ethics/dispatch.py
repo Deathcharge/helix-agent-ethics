@@ -17,6 +17,7 @@ from .approval import ToolCallApproval
 from .audit import AuditSink
 from .authenticated_deployment import (
     ToolGateDeploymentEnvelope,
+    VerifiedToolGateDeployment,
     verify_tool_gate_deployment_envelope,
 )
 from .catalog import MAX_TOOL_CATALOG_TOOLS, ToolCatalog, validate_tool_catalog_registration
@@ -98,6 +99,7 @@ class ToolDispatcher:
 
     _bindings: BoundToolCatalog
     _callbacks: Mapping[str, ToolCallback]
+    _authenticated_deployment: VerifiedToolGateDeployment | None
 
     def __init__(self) -> None:
         raise TypeError(
@@ -118,10 +120,17 @@ class ToolDispatcher:
         cls,
         bindings: BoundToolCatalog,
         callbacks: Mapping[str, ToolCallback],
+        *,
+        authenticated_deployment: VerifiedToolGateDeployment | None = None,
     ) -> ToolDispatcher:
         dispatcher = object.__new__(cls)
         object.__setattr__(dispatcher, "_bindings", bindings)
         object.__setattr__(dispatcher, "_callbacks", callbacks)
+        object.__setattr__(
+            dispatcher,
+            "_authenticated_deployment",
+            authenticated_deployment,
+        )
         return dispatcher
 
     @classmethod
@@ -185,11 +194,17 @@ class ToolDispatcher:
             now=now,
             clock_skew_seconds=clock_skew_seconds,
         )
-        return cls.bind_deployment(
+        callbacks = _snapshot_callbacks(registered_tools)
+        bindings = ToolGate.bind_deployment(
             verified.deployment,
-            registered_tools=registered_tools,
+            registered_tools=callbacks,
             audit_log=audit_log,
             audit_sink=audit_sink,
+        )
+        return cls._create(
+            bindings,
+            callbacks,
+            authenticated_deployment=verified,
         )
 
     @property
@@ -209,6 +224,12 @@ class ToolDispatcher:
         """Return the exact catalog fingerprint used at registration."""
 
         return self.bindings.catalog_fingerprint
+
+    @property
+    def authenticated_deployment(self) -> VerifiedToolGateDeployment | None:
+        """Return the verification that authorized this dispatcher, when authenticated."""
+
+        return self._authenticated_deployment
 
     @property
     def tool_names(self) -> tuple[str, ...]:

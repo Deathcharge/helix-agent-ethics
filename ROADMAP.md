@@ -83,9 +83,9 @@ Current hardening backlog:
   storage, retention, or a hosted audit service.
 - Atomic runtime generations are process-local; durable desired state, artifact distribution,
   authenticated deployment, restart recovery, and multi-host convergence remain caller-owned.
-- Single-file deployments can now be wrapped in a freshness-aware symmetric HMAC envelope. Public
-  signer identity, immutable OCI/repository transport, threshold authorization, trusted clock and
-  sequence persistence, Sigstore/TUF policy, and multi-host promotion remain caller-owned.
+- Complete tool-gate deployments can now be wrapped in a freshness-aware symmetric HMAC envelope.
+  Public signer identity, immutable OCI/repository transport, threshold authorization, trusted
+  clock and sequence persistence, Sigstore/TUF policy, and multi-host promotion remain caller-owned.
 - Tool catalogs now have deployment-level pinning and immutable callback-reference snapshots;
   authenticated distribution, freshness, approval, callable code identity, mutable callback state,
   and semantic correctness remain caller-owned.

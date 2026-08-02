@@ -40,7 +40,8 @@ _DOMAIN = b"samsarix-agent-ethics:tool-gate-deployment-auth:v1\x00"
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _AUDIENCE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$")
 _TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-_MAC = re.compile(r"^v1:hmac-sha256:[0-9a-f]{64}$")
+_MAC_PREFIX = f"v{TOOL_GATE_DEPLOYMENT_AUTH_VERSION}:{_ALGORITHM}"
+_MAC = re.compile(rf"^{re.escape(_MAC_PREFIX)}:[0-9a-f]{{64}}$")
 
 
 def _key(value: object, *, label: str = "deployment authentication key") -> bytes:
@@ -152,7 +153,7 @@ def _canonical_bytes(value: Mapping[str, Any]) -> bytes:
 
 def _mac(key: bytes, unsigned: Mapping[str, Any]) -> str:
     digest = hmac.new(key, _DOMAIN + _canonical_bytes(unsigned), hashlib.sha256).hexdigest()
-    return f"v1:hmac-sha256:{digest}"
+    return f"{_MAC_PREFIX}:{digest}"
 
 
 def generate_deployment_auth_key() -> bytes:
@@ -421,18 +422,17 @@ def verify_tool_gate_deployment_envelope(
         raise DeploymentAuthenticationError(
             f"deployment authentication keyring exceeds {MAX_DEPLOYMENT_AUTH_KEYS} keys"
         )
-    trusted_keys: dict[str, bytes] = {}
-    for raw_key_id, raw_key in keys.items():
-        trusted_key_id = _identifier(raw_key_id, label="authentication key ID")
-        trusted_keys[trusted_key_id] = _key(
-            raw_key,
-            label=f"deployment authentication key {trusted_key_id!r}",
-        )
-    selected_key = trusted_keys.get(envelope.key_id)
-    if selected_key is None:
+    trusted_key_id = _identifier(envelope.key_id, label="authentication key ID")
+    try:
+        raw_selected_key = keys[trusted_key_id]
+    except KeyError:
         raise DeploymentAuthenticationError(
             f"deployment authentication key {envelope.key_id!r} is not trusted"
-        )
+        ) from None
+    selected_key = _key(
+        raw_selected_key,
+        label=f"deployment authentication key {trusted_key_id!r}",
+    )
     expected_mac = _mac(selected_key, envelope.unsigned_dict())
     if not hmac.compare_digest(envelope.mac, expected_mac):
         raise DeploymentAuthenticationError("deployment envelope MAC verification failed")

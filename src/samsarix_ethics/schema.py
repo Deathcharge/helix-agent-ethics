@@ -9,6 +9,15 @@ import json
 from importlib.resources import files
 from typing import Any
 
+from .authenticated_deployment import (
+    _ALGORITHM,
+    _AUDIENCE,
+    _IDENTIFIER,
+    _MAC,
+    MAX_DEPLOYMENT_AUTH_SEQUENCE,
+    TOOL_GATE_DEPLOYMENT_AUTH_VERSION,
+)
+
 
 def _load_schema(filename: str) -> dict[str, Any]:
     resource = files("samsarix_ethics").joinpath("schemas", filename)
@@ -136,20 +145,23 @@ def get_tool_gate_deployment_envelope_schema() -> dict[str, Any]:
             "mac",
         ],
         "properties": {
-            "tool_gate_deployment_auth_version": {"type": "integer", "const": 1},
-            "algorithm": {"type": "string", "const": "hmac-sha256"},
+            "tool_gate_deployment_auth_version": {
+                "type": "integer",
+                "const": TOOL_GATE_DEPLOYMENT_AUTH_VERSION,
+            },
+            "algorithm": {"type": "string", "const": _ALGORITHM},
             "key_id": {
                 "type": "string",
-                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+                "pattern": _IDENTIFIER.pattern,
             },
             "audience": {
                 "type": "string",
-                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$",
+                "pattern": _AUDIENCE.pattern,
             },
             "sequence": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 9_223_372_036_854_775_807,
+                "maximum": MAX_DEPLOYMENT_AUTH_SEQUENCE,
             },
             "issued_at": {
                 "type": "string",
@@ -166,7 +178,7 @@ def get_tool_gate_deployment_envelope_schema() -> dict[str, Any]:
             "deployment": {"$ref": "#/$defs/tool_gate_deployment"},
             "mac": {
                 "type": "string",
-                "pattern": "^v1:hmac-sha256:[0-9a-f]{64}$",
+                "pattern": _MAC.pattern,
             },
         },
         "$defs": {"tool_gate_deployment": get_tool_gate_deployment_schema()},
