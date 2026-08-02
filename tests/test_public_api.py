@@ -26,6 +26,12 @@ def test_public_api_is_importable() -> None:
     assert "fingerprint_tool_catalog" in samsarix_ethics.__all__
     assert "validate_tool_catalog_registration" in samsarix_ethics.__all__
     assert "get_tool_catalog_schema" in samsarix_ethics.__all__
+    assert "ToolGateDeployment" in samsarix_ethics.__all__
+    assert "ToolGateDeploymentValidationError" in samsarix_ethics.__all__
+    assert "create_tool_gate_deployment" in samsarix_ethics.__all__
+    assert "load_tool_gate_deployment" in samsarix_ethics.__all__
+    assert "write_tool_gate_deployment" in samsarix_ethics.__all__
+    assert "get_tool_gate_deployment_schema" in samsarix_ethics.__all__
     assert "PreparedToolCall" in samsarix_ethics.__all__
     assert "ToolCallBlockedError" in samsarix_ethics.__all__
     assert "get_tool_context_schema" in samsarix_ethics.__all__
@@ -91,6 +97,7 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.TOOL_CONTEXT_VERSION == 1
     assert samsarix_ethics.TOOL_CATALOG_VERSION == 1
     assert samsarix_ethics.TOOL_CATALOG_FINGERPRINT_VERSION == 1
+    assert samsarix_ethics.TOOL_GATE_DEPLOYMENT_VERSION == 1
     assert samsarix_ethics.AUDIT_RECORD_VERSION == 1
     assert samsarix_ethics.CONTEXT_CONTRACT_VERSION == 1
     assert samsarix_ethics.CONTEXT_CONTRACT_FINGERPRINT_VERSION == 1
@@ -102,3 +109,4 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.MAX_TOOL_CATALOG_BYTES == 262_144
     assert samsarix_ethics.MAX_TOOL_CATALOG_CAPABILITIES == 64
     assert samsarix_ethics.MAX_TOOL_CATALOG_TOOLS == 256
+    assert samsarix_ethics.MAX_TOOL_GATE_DEPLOYMENT_BYTES == 4_718_592

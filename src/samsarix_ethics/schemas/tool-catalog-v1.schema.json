@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["tool_catalog_version", "id", "version", "tools"],
   "properties": {
-    "tool_catalog_version": {"const": 1},
+    "tool_catalog_version": {"type": "integer", "const": 1},
     "id": {"$ref": "#/$defs/identifier"},
     "version": {"$ref": "#/$defs/identifier"},
     "description": {"type": "string", "maxLength": 1000},

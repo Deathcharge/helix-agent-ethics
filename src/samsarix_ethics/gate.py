@@ -25,6 +25,7 @@ from .explanation import PolicyExplanation
 from .models import Decision, Outcome, Policy
 from .provenance import fingerprint_tool_catalog
 from .runtime import PolicyRuntime, PolicyRuntimeStatus
+from .tool_gate_deployment import ToolGateDeployment
 from .validation import freeze_json_value, thaw_json_value, validate_context
 
 MAX_TOOL_CAPABILITIES = 64
@@ -305,6 +306,29 @@ class ToolGate:
         """Bind trusted tool identity and capabilities once at registration time."""
 
         return BoundToolGate(self, tool_name, capabilities)
+
+    @classmethod
+    def bind_deployment(
+        cls,
+        deployment: ToolGateDeployment,
+        *,
+        registered_tools: Iterable[str],
+        audit_log: str | Path | None = None,
+        audit_sink: AuditSink | None = None,
+    ) -> BoundToolCatalog:
+        """Construct and bind one coherent deployment after exact registry matching."""
+
+        if not isinstance(deployment, ToolGateDeployment):
+            raise TypeError("deployment must be a ToolGateDeployment")
+        policy_deployment = deployment.policy_deployment
+        gate = cls(
+            policy_deployment.policy,
+            context_contract=policy_deployment.context_contract,
+            deployment_lock=policy_deployment.deployment_lock,
+            audit_log=audit_log,
+            audit_sink=audit_sink,
+        )
+        return gate.bind_catalog(deployment.tool_catalog, registered_tools=registered_tools)
 
     def bind_catalog(
         self,

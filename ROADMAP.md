@@ -50,6 +50,8 @@ adoption remain separate evidence-based decisions.
   capabilities under conservative MCP trust defaults.
 - [x] Add a standalone versioned tool-capability catalog with exact-content provenance and strict
   full-registry matching before immutable gate bindings are created.
+- [x] Package a verified policy deployment and exact trusted catalog into one bounded coherent
+  tool-gate deployment with atomic output and fail-closed registry binding.
 
 ## Release candidate
 
@@ -73,8 +75,8 @@ Current hardening backlog:
   authenticated deployment, restart recovery, and multi-host convergence remain caller-owned.
 - Single-file deployments prevent mixed local reads but remain unsigned; OCI/repository identity,
   immutable transport digests, signature policy, and promotion authorization remain caller-owned.
-- Tool catalog fingerprints are not yet embedded in policy deployment v1; authenticated catalog
-  distribution, freshness, approval, and deployment-level pinning remain caller-owned.
+- Tool catalogs now have deployment-level pinning in a separate coherent gate artifact;
+  authenticated distribution, freshness, approval, and callable identity remain caller-owned.
 - Migration from any surviving `helix_ethics` callers is destructive; old compatibility imports are not retained.
 
 ## Samsarix adoption

@@ -127,7 +127,13 @@ jobs:
           samsarix-ethics schema policy-runtime-status >/dev/null
           samsarix-ethics schema policy-deployment >/dev/null
           samsarix-ethics schema tool-catalog >/dev/null
+          samsarix-ethics schema tool-gate-deployment >/dev/null
           samsarix-ethics catalog examples/catalogs/coding-agent-tools.json >/dev/null
+          samsarix-ethics gate-deployment create \
+            --policy-deployment examples/deployment/coding-agent-baseline.deployment.json \
+            --tool-catalog examples/catalogs/coding-agent-tools.json \
+            --output /tmp/coding-agent.gate-deployment.json
+          samsarix-ethics gate-deployment verify /tmp/coding-agent.gate-deployment.json
           samsarix-ethics deployment verify \
             examples/deployment/tool-call-baseline.deployment.json
           samsarix-ethics deployment verify \
@@ -190,6 +196,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-runtime-status >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-deployment >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-catalog >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-gate-deployment >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
@@ -198,6 +205,10 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics check \
             --deployment examples/deployment/tool-call-baseline.deployment.json \
             --input examples/actions/tool-read-config.json >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics gate-deployment create \
+            --policy-deployment examples/deployment/coding-agent-baseline.deployment.json \
+            --tool-catalog examples/catalogs/coding-agent-tools.json \
+            --output /tmp/wheel-coding-agent.gate-deployment.json
           /tmp/samsarix-wheel/bin/python - <<'PY'
           import json
 
@@ -218,6 +229,7 @@ jobs:
               fingerprint_policy,
               lint_policy,
               load_tool_catalog,
+              load_tool_gate_deployment,
               measure_policy_coverage,
           )
 
@@ -313,6 +325,16 @@ jobs:
           assert catalog_bindings["run_command"].capabilities == (
               "process:execute",
               "risk:elevated",
+          )
+          gate_deployment = load_tool_gate_deployment(
+              "/tmp/wheel-coding-agent.gate-deployment.json"
+          )
+          deployed_bindings = ToolGate.bind_deployment(
+              gate_deployment,
+              registered_tools=registered_tools,
+          )
+          assert deployed_bindings.catalog_fingerprint == (
+              gate_deployment.tool_catalog_fingerprint
           )
           delete_ticket = gate.bind("delete_ticket", capabilities=["destructive"])
           blocked_batch = [prepared, delete_ticket.prepare({"ticket_id": "T-101"})]

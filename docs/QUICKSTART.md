@@ -236,5 +236,6 @@ samsarix-ethics schema policy-deployment > policy-deployment-v1.schema.json
 samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema tool-catalog > tool-catalog-v1.schema.json
+samsarix-ethics schema tool-gate-deployment > tool-gate-deployment-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 ```

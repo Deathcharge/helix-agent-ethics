@@ -155,6 +155,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     context_contract = _run_cli("schema", "context-contract")
     deployment_lock = _run_cli("schema", "deployment-lock")
     policy_deployment = _run_cli("schema", "policy-deployment")
+    tool_gate_deployment = _run_cli("schema", "tool-gate-deployment")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     tool_catalog = _run_cli("schema", "tool-catalog")
@@ -186,6 +187,8 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(deployment_lock.stdout)["$id"].endswith("/deployment-lock/v1.json")
     assert policy_deployment.returncode == 0
     assert json.loads(policy_deployment.stdout)["$id"].endswith("/policy-deployment/v1.json")
+    assert tool_gate_deployment.returncode == 0
+    assert json.loads(tool_gate_deployment.stdout)["$id"].endswith("/tool-gate-deployment/v1.json")
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
@@ -194,6 +197,41 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(tool_catalog.stdout)["$id"].endswith("/tool-catalog/v1.json")
     assert audit_record.returncode == 0
     assert json.loads(audit_record.stdout)["$id"].endswith("/audit-record/v1.json")
+
+
+def test_gate_deployment_create_verify_and_minimize_output(tmp_path: Path) -> None:
+    root = Path(__file__).parents[1]
+    output_path = tmp_path / "coding-agent.gate-deployment.json"
+    created = _run_cli(
+        "gate-deployment",
+        "create",
+        "--policy-deployment",
+        str(root / "examples/deployment/coding-agent-baseline.deployment.json"),
+        "--tool-catalog",
+        str(root / "examples/catalogs/coding-agent-tools.json"),
+        "--output",
+        str(output_path),
+        "--format",
+        "json",
+    )
+    verified = _run_cli(
+        "gate-deployment",
+        "verify",
+        str(output_path),
+        "--format",
+        "json",
+    )
+
+    assert created.returncode == 0
+    assert verified.returncode == 0
+    created_report = json.loads(created.stdout)
+    verified_report = json.loads(verified.stdout)
+    assert created_report["tool_gate_deployment_version"] == 1
+    assert created_report["tool_catalog"]["tool_count"] == 7
+    assert created_report["tool_catalog"]["fingerprint"].startswith("v1:sha256:")
+    assert verified_report["tool_catalog"] == created_report["tool_catalog"]
+    assert "capabilities" not in created.stdout
+    assert "rules" not in verified.stdout
 
 
 def test_deployment_lock_create_verify_and_enforce(

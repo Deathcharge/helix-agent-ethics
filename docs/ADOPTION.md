@@ -114,6 +114,14 @@ identity report, and checked coding-agent example. Samsarix Core callers pass
 never by trusting remote behavioral annotations. The catalog proves content equality, not
 authorship, freshness, callable identity, or correctness of the assigned labels.
 
+## Implemented gap: coherent gate deployment
+
+`ToolGateDeployment` packages one verified policy deployment with one exact catalog and its
+canonical fingerprint. Bounded duplicate-safe loading and atomic output prevent mixed local reads;
+`ToolGate.bind_deployment(...)` returns no binding until the complete application registry matches.
+The artifact is intentionally separate from policy-deployment v1 and does not authenticate its
+producer, registry callables, catalog labels, freshness, or promotion authority.
+
 ## Implemented gap: all-calls-before-dispatch authorization
 
 Current agent runtimes may propose more than one tool call in a turn and schedule them concurrently.

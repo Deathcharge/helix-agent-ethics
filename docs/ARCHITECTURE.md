@@ -16,6 +16,7 @@ untrusted action JSON ─> bounded parser ─> context object ──────
                                                                                └─> ToolGate ─> callback or typed block
 
 trusted tool catalog + complete local registry names ─> exact match ─> immutable gate bindings
+locked policy deployment + fingerprinted catalog ─> ToolGateDeployment ─> verified bindings
 
 validated policy + optional contract/lock ─> PolicyRuntime generation N ─> live gates
 validated complete candidate ─> compare-and-swap atomic activation ──────┘
@@ -41,6 +42,7 @@ the legacy `helix-unified` repository.
 - `provenance.py`: canonical, domain-separated policy, contract, and catalog fingerprints.
 - `deployment.py`: strict immutable deployment locks and exact artifact verification.
 - `policy_deployment.py`: complete single-file enforcement units and internal lock verification.
+- `tool_gate_deployment.py`: coherent policy-and-catalog units with exact catalog pinning.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `contracts.py`: immutable application fact declarations, policy compatibility, and runtime type
   enforcement.

@@ -34,6 +34,8 @@ All notable product changes are recorded here.
   fail-closed binding in every `ToolGate` path, and an exportable Draft 2020-12 approval schema.
 - Frozen `BoundToolGate` registration profiles that keep application-owned tool names and canonical
   capability labels out of untrusted per-call payloads across sync, async, and approval flows.
+- Coherent tool-gate deployments that package one verified policy deployment with one exactly
+  fingerprinted trusted catalog before complete registry matching and enforcement.
 - Node 24-native artifact upload/download actions, an installed-wheel bound-profile smoke test, and
   monthly GitHub Actions dependency update proposals.
 - Current exact-SHA checkout/setup actions and direct `actions/attest` v4 build provenance,
