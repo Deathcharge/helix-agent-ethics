@@ -325,7 +325,12 @@ approvals; applications own those stateful responsibilities.
 `ToolExecutionResult` contains the authorizing `decision` and callback `value`. A deny raises
 `ToolCallDeniedError`; review raises `ToolCallReviewRequiredError`. Both derive from
 `ToolCallBlockedError`, retain the metadata-only `decision`, and omit tool arguments from their
-messages. If configured audit persistence fails, `AuditLogError` propagates before execution.
+messages. Every blocked-call exception also exposes an ordered metadata-only `decisions` tuple and
+the `blocking_index` whose item is available as `decision`. Single-call enforcement uses a
+one-item tuple at index zero. Batch enforcement retains every result from its one evaluation, so a
+framework can populate a complete review surface without re-evaluating, changing decision IDs, or
+re-emitting audit records. If configured audit persistence fails, `AuditLogError` propagates before
+execution.
 `audit_log` and `audit_sink` are mutually exclusive. A custom sink must be a synchronous callable
 that accepts one `AuditRecord` and returns `None`; any other return or raised exception prevents the
 decision from authorizing a callback. The package invokes the sink exactly once and never retries.

@@ -336,11 +336,24 @@ class ToolGate:
         return decision
 
     @staticmethod
-    def _require_allow(decision: Decision) -> Decision:
+    def _require_allow(
+        decision: Decision,
+        *,
+        decisions: tuple[Decision, ...] | None = None,
+        blocking_index: int = 0,
+    ) -> Decision:
         if decision.outcome is Outcome.DENY:
-            raise ToolCallDeniedError(decision)
+            raise ToolCallDeniedError(
+                decision,
+                decisions=decisions,
+                blocking_index=blocking_index,
+            )
         if decision.outcome is Outcome.REVIEW:
-            raise ToolCallReviewRequiredError(decision)
+            raise ToolCallReviewRequiredError(
+                decision,
+                decisions=decisions,
+                blocking_index=blocking_index,
+            )
         return decision
 
     def evaluate(
@@ -466,8 +479,12 @@ class ToolGate:
         """Require every prepared call to be allowed before caller-owned dispatch."""
 
         decisions = self.evaluate_many(calls)
-        for decision in decisions:
-            self._require_allow(decision)
+        for index, decision in enumerate(decisions):
+            self._require_allow(
+                decision,
+                decisions=decisions,
+                blocking_index=index,
+            )
         return decisions
 
     def _authorize(

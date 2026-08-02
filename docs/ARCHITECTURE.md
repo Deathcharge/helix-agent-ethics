@@ -199,8 +199,10 @@ For multi-call turns, a gate can recursively freeze normalized contexts as gate-
 invalid size/type boundaries, then calls the engine/runtime batch primitive once. Contract errors
 therefore occur before batch audit delivery, and a runtime captures one generation for all items.
 `enforce_many` audits the complete successful evaluation set in order and returns only when every
-outcome is allow. It does not execute callbacks or make their side effects transactional; framework
-scheduling remains outside the package boundary.
+outcome is allow. Its first typed block retains all metadata-only decisions and the blocked index,
+so an adapter does not need to repeat evaluation to build a multi-call review surface. It does not
+execute callbacks or make their side effects transactional; framework scheduling remains outside
+the package boundary.
 Applications with durable approval workflows store an exact-call fingerprint with pending-call
 state. On resume, `ToolGate` verifies a structured approval against the normalized call before
 policy evaluation, audit delivery, or callback execution, then re-evaluates fresh trusted facts.

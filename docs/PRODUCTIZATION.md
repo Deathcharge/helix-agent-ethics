@@ -96,9 +96,12 @@ Bounded review used current primary sources:
   one framework adapter.
 - [Claude Code CLI permissions](https://docs.anthropic.com/en/docs/claude-code/cli-usage) expose
   allowed/disallowed tools and interactive permission modes, while
-  [LangGraph tool review](https://langchain-ai.github.io/langgraph/how-tos/human_in_the_loop/review-tool-calls/)
-  supports approve, modify, and feedback decisions. These reinforce separating deterministic local
-  authorization, exact-call approval evidence, and framework-owned scheduling.
+  [LangChain human-in-the-loop middleware](https://docs.langchain.com/oss/python/langchain/human-in-the-loop)
+  supports ordered decisions for every simultaneously paused action. The
+  [OpenAI Agents SDK approval flow](https://openai.github.io/openai-agents-python/human_in_the_loop/)
+  likewise exposes multiple run-wide interruptions that can be resolved individually. These
+  reinforce separating deterministic local authorization, exact-call approval evidence,
+  framework-owned scheduling, and a complete ordered batch decision surface.
 - The [MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema) explicitly says
   tool annotations are hints and must not drive decisions when their server is untrusted.
 - [OPA decision logs](https://www.openpolicyagent.org/docs/management-decision-logs) carry the
@@ -324,6 +327,10 @@ certification or ethics truth.
   precede audit delivery, and dispatch remains framework-owned. A fifteen-rule coding-agent pack,
   matching context contract, 100%-covered suite, verified deployment, and runnable review/approval
   demo cover workspace, process, network, destructive, and sensitive capabilities.
+- Added complete metadata-only batch diagnostics to the existing typed tool-call block exceptions.
+  Integrations receive every ordered decision and the first blocked index from the original
+  evaluation, preserving existing catch behavior while avoiding a second evaluation, new decision
+  IDs, or duplicate audit records when populating multi-call review queues.
 - Added retained exact-commit wheel/source CI artifacts, main-branch build-provenance attestations,
   and an operator checklist that keeps artifact verification separate from registry publication.
 - Merged a consumer-owned Agent Framework contract at consumer commit

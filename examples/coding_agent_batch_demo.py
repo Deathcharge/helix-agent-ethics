@@ -43,7 +43,11 @@ def main() -> None:
     except ToolCallBlockedError as exc:
         if exc.decision.outcome is not Outcome.REVIEW:
             raise AssertionError("the unapproved elevated call must require review") from exc
-        print(f"batch blocked before dispatch: {exc.decision.outcome.value}")
+        outcomes = [decision.outcome.value for decision in exc.decisions]
+        print(
+            "batch blocked before dispatch: "
+            f"call {exc.blocking_index} requires review; outcomes={outcomes}"
+        )
     else:
         raise AssertionError("the unapproved elevated call must block the batch")
 

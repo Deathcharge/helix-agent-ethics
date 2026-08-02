@@ -194,6 +194,7 @@ jobs:
               PolicyRuntime,
               PolicyShadowEvaluator,
               PolicyTestSuite,
+              ToolCallDeniedError,
               ToolGate,
               compare_policies,
               compose_policies,
@@ -277,6 +278,16 @@ jobs:
           assert isinstance(prepared, PreparedToolCall)
           assert prepared.arguments == {"ticket_id": "T-101"}
           assert gate.enforce_many([prepared])[0].allowed is True
+          delete_ticket = gate.bind("delete_ticket", capabilities=["destructive"])
+          blocked_batch = [prepared, delete_ticket.prepare({"ticket_id": "T-101"})]
+          try:
+              gate.enforce_many(blocked_batch)
+          except ToolCallDeniedError as exc:
+              assert exc.blocking_index == 1
+              assert exc.decision is exc.decisions[1]
+              assert [decision.outcome.value for decision in exc.decisions] == ["allow", "deny"]
+          else:
+              raise AssertionError("the destructive batch must be denied")
           runtime = PolicyRuntime.from_deployment(create_policy_deployment(policy))
           runtime_gate = ToolGate(runtime).bind("read_ticket", capabilities=["resource:read"])
           assert runtime_gate.evaluate({"ticket_id": "T-200"}).allowed is True
