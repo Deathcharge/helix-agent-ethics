@@ -81,6 +81,27 @@ tamper-evident storage therefore stay with the embedding application until a con
 validates a narrower requirement. The built-in JSONL path remains the local sink and retains its
 current fail-closed behavior.
 
+## Implemented gap: trace-correlated decisions
+
+Production policy engines expose decision identifiers and trace correlation, while agent runtimes
+increasingly emit tool and guardrail spans. OPA's
+[decision logs](https://www.openpolicyagent.org/docs/management-decision-logs) include decision,
+trace, and span IDs, and its [monitoring guide](https://www.openpolicyagent.org/docs/monitoring)
+adds `opa.decision_id` to evaluation spans. OpenTelemetry recommends API-only dependencies for
+instrumentation libraries and application-owned SDK/exporter configuration.
+
+Agent Ethics now converts its existing metadata-only `AuditRecord` into one versioned
+`samsarix.policy.decision` event on the caller's current recording span. The event adds no action
+input, tool arguments/results, actor/context facts, policy literals/messages, or approval data.
+An exact OpenTelemetry 1.44.0 API/SDK contract uses a real in-memory exporter, and a no-network
+example verifies correlation. `CompositeAuditSink` permits an authoritative durable sink followed
+by the trace event, with bounded ordered delivery and explicit non-transactional partial failure.
+
+This is operational correlation, not a trace backend or audit ledger. Sampling or an absent SDK
+makes a span non-recording; later exporter/collector failures occur after local event acceptance.
+The application owns propagation, sampling, exporters, credentials, redaction of other spans,
+retention, backend access, and recovery.
+
 ## Implemented gap: approval-bound resume
 
 The same framework research exposed a narrower authorization gap: a plain approved boolean can be

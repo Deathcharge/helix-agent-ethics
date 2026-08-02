@@ -21,6 +21,7 @@ from .provenance import _is_policy_fingerprint
 from .validation import validate_json_shape
 
 AUDIT_RECORD_VERSION = 1
+MAX_COMPOSITE_AUDIT_SINKS = 32
 _AUDIT_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
 _DECISION_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 _EVALUATED_AT = re.compile(
@@ -230,8 +231,7 @@ def _validated_sink(sink: AuditSink) -> AuditSink:
     return sink
 
 
-def _emit_audit_record(sink: AuditSink, decision: Decision) -> None:
-    record = AuditRecord.from_decision(decision)
+def _deliver_audit_record(sink: AuditSink, record: AuditRecord) -> None:
     try:
         result = cast(Any, sink(record))
     except AuditLogError:
@@ -242,3 +242,30 @@ def _emit_audit_record(sink: AuditSink, decision: Decision) -> None:
         result.close()
     if result is not None:
         raise AuditLogError("audit sink must return None")
+
+
+class CompositeAuditSink:
+    """Deliver one record to a bounded ordered set of synchronous sinks."""
+
+    def __init__(self, *sinks: AuditSink) -> None:
+        if not 1 <= len(sinks) <= MAX_COMPOSITE_AUDIT_SINKS:
+            raise ValueError(f"composite audit sink requires 1-{MAX_COMPOSITE_AUDIT_SINKS} sinks")
+        if len({id(sink) for sink in sinks}) != len(sinks):
+            raise ValueError("composite audit sink must not contain duplicate sink objects")
+        self._sinks = tuple(_validated_sink(sink) for sink in sinks)
+
+    @property
+    def sinks(self) -> tuple[AuditSink, ...]:
+        """Return the immutable delivery order."""
+
+        return self._sinks
+
+    def __call__(self, record: AuditRecord, /) -> None:
+        if not isinstance(record, AuditRecord):
+            raise TypeError("record must be an AuditRecord")
+        for sink in self._sinks:
+            _deliver_audit_record(sink, record)
+
+
+def _emit_audit_record(sink: AuditSink, decision: Decision) -> None:
+    _deliver_audit_record(sink, AuditRecord.from_decision(decision))

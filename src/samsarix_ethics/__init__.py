@@ -9,7 +9,14 @@ from .approval import (
     TOOL_CALL_FINGERPRINT_VERSION,
     ToolCallApproval,
 )
-from .audit import AUDIT_RECORD_VERSION, AuditRecord, AuditSink, JsonlAuditSink
+from .audit import (
+    AUDIT_RECORD_VERSION,
+    MAX_COMPOSITE_AUDIT_SINKS,
+    AuditRecord,
+    AuditSink,
+    CompositeAuditSink,
+    JsonlAuditSink,
+)
 from .audit_chain import (
     AUDIT_CHAIN_VERIFICATION_VERSION,
     AUDIT_CHAIN_VERSION,
@@ -163,6 +170,12 @@ from .openai_agents import (
     OpenAIAgentsToolPolicy,
     create_openai_agents_tool_policy,
 )
+from .otel import (
+    OPENTELEMETRY_DECISION_EVENT_NAME,
+    OPENTELEMETRY_DECISION_EVENT_VERSION,
+    OpenTelemetryDecisionEventSink,
+    OpenTelemetryIntegrationError,
+)
 from .policy_deployment import (
     POLICY_DEPLOYMENT_VERSION,
     PolicyDeployment,
@@ -241,6 +254,7 @@ __all__ = [
     "MAX_AUDIT_CHAIN_KEY_BYTES",
     "MAX_BATCH_ITEMS",
     "MAX_COMPOSED_POLICIES",
+    "MAX_COMPOSITE_AUDIT_SINKS",
     "MAX_CONTEXT_CONTRACT_BYTES",
     "MAX_CONTEXT_CONTRACT_FIELDS",
     "MAX_DEPLOYMENT_AUTH_CLOCK_SKEW_SECONDS",
@@ -264,6 +278,8 @@ __all__ = [
     "MIN_AUDIT_CHAIN_KEY_BYTES",
     "MIN_DEPLOYMENT_AUTH_KEY_BYTES",
     "OPENAI_AGENTS_ADAPTER_VERSION",
+    "OPENTELEMETRY_DECISION_EVENT_NAME",
+    "OPENTELEMETRY_DECISION_EVENT_VERSION",
     "POLICY_COMPARISON_VERSION",
     "POLICY_COMPOSITION_VERSION",
     "POLICY_COVERAGE_VERSION",
@@ -289,6 +305,7 @@ __all__ = [
     "AuditSink",
     "BoundToolCatalog",
     "BoundToolGate",
+    "CompositeAuditSink",
     "ConditionExplanation",
     "ConditionExplanationStatus",
     "ContextContract",
@@ -308,6 +325,8 @@ __all__ = [
     "OpenAIAgentsApprovalStore",
     "OpenAIAgentsIntegrationError",
     "OpenAIAgentsToolPolicy",
+    "OpenTelemetryDecisionEventSink",
+    "OpenTelemetryIntegrationError",
     "Outcome",
     "Policy",
     "PolicyActivationError",

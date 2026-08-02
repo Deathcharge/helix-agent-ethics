@@ -475,10 +475,38 @@ jobs:
       - name: Smoke-test the OpenAI Agents example
         run: python examples/openai_agents_guardrail_demo.py
 
+  opentelemetry-contract:
+    name: OpenTelemetry 1.44.0 contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.lock
+            requirements-opentelemetry.lock
+            pyproject.toml
+      - name: Install locked development and OpenTelemetry contract dependencies
+        run: |
+          python -m pip install --require-hashes \
+            -r requirements-dev.lock \
+            -r requirements-opentelemetry.lock
+          python -m pip install --no-build-isolation --no-deps -e .
+      - name: Test exact OpenTelemetry API and SDK contract
+        run: python -m pytest --no-cov integration_tests/test_opentelemetry_sdk.py
+      - name: Smoke-test the OpenTelemetry example
+        run: python examples/opentelemetry_decision_event_demo.py
+
   attest:
     name: Attest distributions
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test, openai-agents-contract]
+    needs: [test, openai-agents-contract, opentelemetry-contract]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

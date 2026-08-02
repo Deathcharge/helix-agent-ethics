@@ -99,6 +99,9 @@ All notable product changes are recorded here.
   resolved-call store cleanup, fail-visible storage exhaustion, bounded duplicate-safe raw argument
   parsing, preserved existing controls, a CI-executed no-network example, and an exact
   `openai-agents==0.18.3` hashed CI contract.
+- An optional OpenTelemetry decision-event sink with a stable privacy-minimized `samsarix.*`
+  attribute contract, exact `opentelemetry-api/sdk==1.44.0` integration lane, no-network example,
+  and bounded ordered `CompositeAuditSink` fan-out for durable storage plus trace correlation.
 
 ### Changed
 

@@ -24,6 +24,8 @@ adoption remain separate evidence-based decisions.
   execution paths.
 - [x] Expose one immutable metadata-only audit record to a caller-supplied sink while preserving
   the existing JSONL API and fail-closed behavior.
+- [x] Correlate metadata-only decisions with a caller-owned OpenTelemetry trace through an optional
+  exact-version-tested event sink, while retaining durable storage through bounded ordered fan-out.
 - [x] Bind decisions and audit evidence to the exact canonical policy body, independent of
   operator-authored policy ID/version labels.
 - [x] Reuse bounded regression suites for deterministic, input-free baseline/candidate impact
@@ -74,7 +76,8 @@ Current hardening backlog:
 
 - No published package/release, public third-party adopter, or production deployment evidence.
 - The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible.
-  The public SDK adapter is reproducible integration evidence, not an external adopter case study.
+  The public OpenAI and OpenTelemetry adapters are reproducible integration evidence, not external
+  adopter case studies.
 - Installed-wheel smoke coverage, retained CI distributions, and GitHub build-provenance
   attestations exist. PyPI project ownership, Trusted Publishing, protected release approval, and
   durable registry publication evidence are not yet configured.
@@ -84,6 +87,8 @@ Current hardening backlog:
   or cross-process coordination; rollback detection depends on an externally protected head.
 - Caller-owned sinks provide a delivery seam, not built-in HTTP, queues, retries, exactly-once
   storage, retention, or a hosted audit service.
+- OpenTelemetry events provide sampled correlation only. SDK/exporter configuration, propagation,
+  collector delivery, backend access, and durable authorization evidence remain caller-owned.
 - Atomic runtime generations are process-local; durable desired state, artifact distribution,
   authenticated deployment, restart recovery, and multi-host convergence remain caller-owned.
 - Complete tool-gate deployments can now be wrapped in a freshness-aware symmetric HMAC envelope.

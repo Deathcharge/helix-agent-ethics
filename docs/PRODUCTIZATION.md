@@ -71,6 +71,10 @@ Bounded review used current primary sources:
   validation from request evaluation to catch authoring errors early.
 - [OPA decision logs](https://www.openpolicyagent.org/docs/management-decision-logs) emphasize
   decision identity and masking/removing sensitive input in logs.
+- [OpenTelemetry Python instrumentation](https://opentelemetry.io/docs/languages/python/instrumentation/)
+  recommends API-only dependencies for instrumentation libraries and application-owned SDK setup;
+  its tracing API models events as occurrences within an active operation. A metadata-only decision
+  event can add production correlation without owning an exporter or copying sensitive tool data.
 - [NIST SP 800-92](https://csrc.nist.gov/pubs/sp/800/92/final) treats log management as a practical
   enterprise security control, while the
   [NIST AI RMF Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)
@@ -224,6 +228,8 @@ certification or ethics truth.
 - [ ] Add property-based precedence/parser tests if another dependency is justified.
 - [x] Add an optional caller-supplied audit sink interface for centralized logging while preserving
   JSONL compatibility and failing closed on configured sink errors.
+- [x] Add optional exact-version-tested OpenTelemetry decision events and bounded ordered sink
+  composition without making trace telemetry a durable audit claim.
 - [x] Bind structured human-review evidence to the exact tool-call ID, normalized arguments,
   capabilities, and actor before allowing a resumed call.
 - [x] Add immutable registration-time tool bindings so per-call payloads cannot downgrade trusted
@@ -291,8 +297,8 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 517 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 517
-  passed and 95.75% total branch-aware coverage under the configured `--cov-branch` gate. A
+- Added 523 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 523
+  passed and 95.80% total branch-aware coverage under the configured `--cov-branch` gate. A
   separate real-SDK contract test runs against the exact hashed `openai-agents==0.18.3` graph.
 - Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an
   isolated no-dependency environment: install/import/version/schema/deployment verification and a
@@ -373,6 +379,9 @@ certification or ethics truth.
   fresh application facts immediately before execution. A public no-network example, focused
   guide, adversarial core suite, and exact real-SDK CI lane cover the integration without changing
   the base package dependency boundary.
+- Added a versioned metadata-only OpenTelemetry event sink, bounded ordered audit-sink composition,
+  exact API/SDK contract test, and an in-memory no-network example. The application retains SDK,
+  exporter, sampling, collector, trace access, durable audit, and partial-delivery recovery.
 - Added a bounded HMAC-SHA-256 `AuditSink`, strict verifier/CLI, external-head rollback check,
   versioned entry/report schemas, adversarial mutation/reordering/truncation tests, and a runnable
   gate example. The design stays metadata-only and explicitly leaves key custody, external
@@ -430,6 +439,8 @@ External validation gates:
 - A decision can become stale before enforcement; callers must avoid TOCTOU gaps.
 - Prepared batches authorize no transaction: audit delivery may be partial on sink failure, and
   framework scheduling or callback failure may still produce partial side effects.
+- Composite audit delivery is ordered but not transactional, and OpenTelemetry event acceptance
+  does not prove sampling, export, collector receipt, storage, or retention.
 - Catalog exact matching and dispatcher snapshots prove only that trusted names agree and selected
   callback object references remain stable. They do not authenticate the registry, catalog,
   deployment, or callback code; freeze closure/global/object state or delegated registry lookups;

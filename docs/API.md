@@ -647,6 +647,22 @@ destination requires exactly-once storage.
 The built-in local sink appends one compact record and calls `fsync`. Its destination parent must
 already exist. It is also what `ToolGate(..., audit_log=path)` uses.
 
+### `CompositeAuditSink(*sinks)`
+
+Validates and retains 1-`MAX_COMPOSITE_AUDIT_SINKS` (currently 32) distinct synchronous audit
+sinks, then delivers each record in supplied order. It stops at the first child failure or invalid
+return and does not call later sinks. Earlier deliveries cannot be rolled back and no retry occurs.
+The immutable `sinks` property exposes the exact delivery order.
+
+### `OpenTelemetryDecisionEventSink()`
+
+Lazily imports the optional exact `opentelemetry-api==1.44.0` integration and adds one
+`OPENTELEMETRY_DECISION_EVENT_NAME` event to the current recording span for each audit record. The
+event contract is `OPENTELEMETRY_DECISION_EVENT_VERSION = 1` and contains only the existing
+metadata-only record fields under versioned `samsarix.*` attributes. It creates no span and a
+non-recording span is a successful no-op. API-shape or event-delivery failures flow through the
+ordinary fail-closed audit boundary. See [OPENTELEMETRY.md](OPENTELEMETRY.md).
+
 ### `append_audit_record(path, decision) -> None`
 
 Appends one compact JSONL record and calls `fsync`. The destination's parent must already exist.

@@ -41,6 +41,14 @@ are bounded and type-checked. The embedding application remains responsible for:
 - controlling audit destination credentials, network egress, idempotency, access, rotation,
   retention, integrity, and deletion.
 
+When using `OpenTelemetryDecisionEventSink`, the application also owns SDK/exporter configuration,
+trace-context propagation, sampling, attribute/event limits, collector authentication and TLS,
+queue/export failures, backend access, and retention. The sink emits only versioned event
+attributes derived from `AuditRecord`, plus the event-version and audit-record-version attributes,
+but policy/rule identifiers and fingerprints are still operational metadata. A non-recording span
+intentionally accepts no event, and a successful local `add_event` does not prove export. Never use
+trace events as the sole durable authorization record.
+
 When using the optional OpenAI Agents SDK adapter, applications must also keep actor/context
 providers application-owned, use strict top-level `FunctionTool` objects, leave pre-approval input
 guardrails disabled for review flows, and treat SDK “always approve” as a broad future-call grant
@@ -81,6 +89,9 @@ artifacts inside one process; it does not authorize that change or distribute it
 Caller-supplied audit sinks are trusted application code invoked synchronously before authorization;
 their failures prevent tool execution, but their transport and downstream storage are outside this
 package's boundary.
+`CompositeAuditSink` is ordered but not transactional: a later child failure cannot undo an earlier
+delivery. It performs no retry, deduplication, or recovery. Put the authoritative durable sink first
+and use `decision_id` for downstream idempotency when the application retries uncertain delivery.
 
 `HmacAuditChainSink` adds shared-secret integrity and ordering evidence to the metadata-only local
 stream. It does not encrypt records or authenticate an individual author. Anyone with the key can
