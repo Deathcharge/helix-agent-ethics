@@ -139,6 +139,22 @@ tools, manage trust roots, prevent mutable-tag substitution, persist desired sta
 hosts. Deployment documents contain complete policy rules, values, descriptions, and messages;
 protect the file more strictly than metadata-only status, audit, or comparison reports.
 
+A `ToolGateDeploymentEnvelope` can authenticate the complete policy deployment and trusted catalog
+with HMAC-SHA-256 while binding a key ID, target audience, monotonic sequence, issuance time, and
+expiry. Parsing an envelope does not verify it. Use `verify_tool_gate_deployment_envelope` for
+inspection or the authenticated `ToolGate`/`ToolDispatcher` binding methods immediately before
+use. The caller must provide keys through a separate trusted channel, compare the exact audience,
+use a trustworthy clock, and persist the highest accepted sequence in protected durable state.
+Without that state, an older still-valid envelope can be replayed. Clock skew extends the effective
+issuance and expiry boundaries.
+
+HMAC is symmetric: any verifier with the key can forge an indistinguishable envelope, so this
+feature does not identify an author or approver and is not a substitute for asymmetric signatures,
+Sigstore/TUF policy, threshold authorization, transparency, or an organizational release service.
+The envelope is not encrypted and contains full policy and catalog content. Key rotation,
+revocation, KMS access, remote transport, one-time activation, durable desired state, and
+multi-host convergence remain external responsibilities.
+
 `PolicyRuntime` constructs and verifies a complete candidate before an atomic in-process swap and
 retains the last successful generation after candidate failure. Optional compare-and-swap protects
 against lost updates between cooperating callers of the same runtime object. It is not durable

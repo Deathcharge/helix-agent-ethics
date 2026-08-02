@@ -78,7 +78,7 @@ samsarix-ethics catalog TOOL_CATALOG.json [--format text|json]
 samsarix-ethics gate-deployment create --policy-deployment DEPLOYMENT.json --tool-catalog CATALOG.json --output OUTPUT.json
 samsarix-ethics gate-deployment verify TOOL_GATE_DEPLOYMENT.json [--format text|json]
 samsarix-ethics audit-chain verify CHAIN.jsonl --key-file KEY [--expected-head MAC] [--stream-id ID] [--format text|json]
-samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|tool-catalog|tool-gate-deployment|audit-record|audit-chain-entry|audit-chain-verification]
+samsarix-ethics schema [policy|policy-test|policy-comparison|policy-composition|policy-coverage|policy-explanation|policy-lint|policy-runtime-status|policy-shadow|context-contract|deployment-lock|policy-deployment|tool-context|tool-approval|tool-catalog|tool-gate-deployment|tool-gate-deployment-envelope|audit-record|audit-chain-entry|audit-chain-verification]
 samsarix-ethics explain (--policy POLICY.json [--context-contract CONTRACT.json] [--deployment-lock LOCK.json] | --deployment DEPLOYMENT.json) [--input INPUT.json|-] [--format json|text]
 samsarix-ethics lock create --policy POLICY.json [--context-contract CONTRACT.json] [--format json|text]
 samsarix-ethics lock verify LOCK.json --policy POLICY.json [--context-contract CONTRACT.json] [--format text|json]
@@ -448,6 +448,16 @@ For coherent promotion, package the locked policy deployment and reviewed catalo
 `ToolGateDeployment`, then call `ToolGate.bind_deployment(...)` with the complete trusted registry
 snapshot. See [coherent tool-gate deployments](docs/TOOL_GATE_DEPLOYMENTS.md).
 
+When those bytes cross an untrusted storage or delivery boundary, wrap the complete deployment in
+a freshness-aware `ToolGateDeploymentEnvelope`. It authenticates the exact deployment, audience,
+key ID, monotonic sequence, issuance, and expiry with domain-separated HMAC-SHA-256. Bind with
+`ToolGate.bind_authenticated_deployment(...)` or
+`ToolDispatcher.bind_authenticated_deployment(...)` so authentication is checked at setup time.
+The caller supplies trusted keys, target audience, clock, and protected minimum sequence; HMAC is
+symmetric authentication, not individual signer identity. See
+[authenticated deployments](docs/AUTHENTICATED_DEPLOYMENTS.md) and run
+`python examples/authenticated_deployment_demo.py`.
+
 To keep authorization and callback selection on one dependency-free runtime path, bind the final
 Python callables themselves:
 
@@ -579,6 +589,10 @@ pre-use validation—without attempting to reproduce the much broader OPA or Ced
   boundaries; they are equality evidence, not signatures or rollback protection.
 - Single-file policy deployments prevent mixed local artifact reads and always contain a matching
   lock; they do not authenticate origin, download artifacts, or coordinate hosts.
+- Authenticated tool-gate deployment envelopes bind the complete enforcement unit to an audience,
+  key ID, bounded validity window, and monotonic sequence. Verifiers can also mint because HMAC is
+  symmetric; protected sequence state, trusted time, key custody, and multi-host rollout remain
+  external.
 - Policy explanations expose value-minimized rule/condition status without input, literals, or
   messages, but remain an authorization oracle that requires operator-only access.
 - Caller-owned audit sinks receive the same versioned metadata-only record and no raw input.
@@ -631,7 +645,8 @@ The product is a library plus CLI; it has no server or cloud component. The pack
 validated immutable models, deterministic evaluation, fail-closed in-process tool enforcement,
 versioned trusted tool catalogs, versioned schemas, bounded I/O, authoring diagnostics, regression
 testing, rule coverage, policy impact comparison, layered composition, application context
-contracts, exact deployment locks, single-file policy deployments, value-minimized policy
+contracts, exact deployment locks, single-file policy deployments, authenticated deployment
+envelopes, value-minimized policy
 explanations, baseline-authoritative shadow rollout, atomic live policy activation, immutable
 framework-neutral dispatch bindings, keyed metadata-only audit integrity, and presentation/exit
 codes.
@@ -655,6 +670,9 @@ Deliberate limitations:
   establish freshness, or prevent rollback.
 - Policy deployments make one local file coherent but do not sign it, persist desired state,
   verify transport identity, or make a distributed rollout atomic.
+- HMAC deployment envelopes authenticate bytes and freshness claims for one audience but do not
+  encrypt policy, identify an individual signer, persist the highest accepted sequence, provide
+  public-key verification, or replace Sigstore/TUF and organizational release controls.
 - Dispatcher snapshots stabilize callable references, not mutable callback internals, delegated
   registry lookups, imported globals, code identity, or side-effect transactions.
 - Explanations cover one supplied input and disclose rule/path/operator status; they do not prove

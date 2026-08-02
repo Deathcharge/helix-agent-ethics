@@ -128,6 +128,7 @@ jobs:
           samsarix-ethics schema policy-deployment >/dev/null
           samsarix-ethics schema tool-catalog >/dev/null
           samsarix-ethics schema tool-gate-deployment >/dev/null
+          samsarix-ethics schema tool-gate-deployment-envelope >/dev/null
           samsarix-ethics schema audit-chain-entry >/dev/null
           samsarix-ethics schema audit-chain-verification >/dev/null
           samsarix-ethics catalog examples/catalogs/coding-agent-tools.json >/dev/null
@@ -136,6 +137,24 @@ jobs:
             --tool-catalog examples/catalogs/coding-agent-tools.json \
             --output /tmp/coding-agent.gate-deployment.json
           samsarix-ethics gate-deployment verify /tmp/coding-agent.gate-deployment.json
+          python -c 'from pathlib import Path; Path("/tmp/deployment-auth.key").write_bytes(b"k" * 32)'
+          auth_issued="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          auth_expires="$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"
+          samsarix-ethics gate-deployment authenticate \
+            /tmp/coding-agent.gate-deployment.json \
+            --key-file /tmp/deployment-auth.key \
+            --key-id ci-key \
+            --audience coding-agent:ci \
+            --sequence 1 \
+            --issued-at "$auth_issued" \
+            --expires-at "$auth_expires" \
+            --output /tmp/coding-agent.authenticated.json
+          samsarix-ethics gate-deployment verify-authentication \
+            /tmp/coding-agent.authenticated.json \
+            --key-file /tmp/deployment-auth.key \
+            --key-id ci-key \
+            --audience coding-agent:ci \
+            --minimum-sequence 1
           samsarix-ethics deployment verify \
             examples/deployment/tool-call-baseline.deployment.json
           samsarix-ethics deployment verify \
@@ -175,6 +194,7 @@ jobs:
           python examples/policy_runtime_demo.py
           python examples/coding_agent_batch_demo.py
           python examples/tool_dispatcher_demo.py
+          python examples/authenticated_deployment_demo.py
       - name: Build distributions
         if: matrix.python-version == '3.11'
         run: python -m build --no-isolation
@@ -201,6 +221,7 @@ jobs:
           /tmp/samsarix-wheel/bin/samsarix-ethics schema policy-deployment >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-catalog >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-gate-deployment >/dev/null
+          /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-gate-deployment-envelope >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-context >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema tool-approval >/dev/null
           /tmp/samsarix-wheel/bin/samsarix-ethics schema audit-record >/dev/null
@@ -215,6 +236,24 @@ jobs:
             --policy-deployment examples/deployment/coding-agent-baseline.deployment.json \
             --tool-catalog examples/catalogs/coding-agent-tools.json \
             --output /tmp/wheel-coding-agent.gate-deployment.json
+          /tmp/samsarix-wheel/bin/python -c 'from pathlib import Path; Path("/tmp/wheel-deployment-auth.key").write_bytes(b"k" * 32)'
+          wheel_auth_issued="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          wheel_auth_expires="$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"
+          /tmp/samsarix-wheel/bin/samsarix-ethics gate-deployment authenticate \
+            /tmp/wheel-coding-agent.gate-deployment.json \
+            --key-file /tmp/wheel-deployment-auth.key \
+            --key-id wheel-ci-key \
+            --audience coding-agent:wheel-ci \
+            --sequence 1 \
+            --issued-at "$wheel_auth_issued" \
+            --expires-at "$wheel_auth_expires" \
+            --output /tmp/wheel-coding-agent.authenticated.json
+          /tmp/samsarix-wheel/bin/samsarix-ethics gate-deployment verify-authentication \
+            /tmp/wheel-coding-agent.authenticated.json \
+            --key-file /tmp/wheel-deployment-auth.key \
+            --key-id wheel-ci-key \
+            --audience coding-agent:wheel-ci \
+            --minimum-sequence 1
           /tmp/samsarix-wheel/bin/python - <<'PY'
           import json
           from pathlib import Path

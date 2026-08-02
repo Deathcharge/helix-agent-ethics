@@ -45,6 +45,7 @@ the legacy `helix-unified` repository.
 - `deployment.py`: strict immutable deployment locks and exact artifact verification.
 - `policy_deployment.py`: complete single-file enforcement units and internal lock verification.
 - `tool_gate_deployment.py`: coherent policy-and-catalog units with exact catalog pinning.
+- `authenticated_deployment.py`: whole-deployment HMAC authentication, audience, and freshness.
 - `dispatch.py`: exact callback snapshots and framework-neutral sync/async dispatch.
 - `validation.py`: shared bounded JSON validation for parsed and in-memory contexts.
 - `contracts.py`: immutable application fact declarations, policy compatibility, and runtime type
@@ -104,6 +105,14 @@ writing avoids partial output and implicit overwrite. The format carries no time
 locations, signatures, or mutable tags, so identical source artifacts produce identical content.
 Origin authentication and distribution remain composable external controls such as protected Git,
 immutable OCI digests, Sigstore, or an organization release system.
+
+An optional `ToolGateDeploymentEnvelope` authenticates the complete policy-and-catalog deployment
+plus a key ID, exact audience, monotonic sequence, and bounded issuance/expiry window. Verification
+uses a caller-owned keyring and current trust inputs; gate and dispatcher helpers perform that
+verification immediately before registry binding. The symmetric-key design preserves the
+zero-runtime-dependency boundary, but every verifier can mint envelopes. Public signer identity,
+trusted sequence persistence, clock integrity, remote fetching, and distributed convergence remain
+control-plane responsibilities.
 
 ### Schemas plus executable examples
 
@@ -265,6 +274,9 @@ authorization and risk facts can be re-read.
 - **Filesystem/audit operator** owns access control, transport, idempotency, key custody/rotation,
   external head checkpoints, cross-process writer exclusion, retention, backups, and availability
   for audit destinations.
+- **Deployment target operator** owns the authenticated-envelope keyring, expected audience,
+  trustworthy clock, highest accepted sequence, key revocation, artifact transport, and immediate
+  binding after verification. HMAC proves possession of a shared key, not individual authorship.
 
 ## Distribution
 

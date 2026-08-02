@@ -189,7 +189,35 @@ unsigned. The primary evaluation commands accept it directly and reject separate
 arguments that could create an ambiguous configuration. See
 [single-file policy deployments](POLICY_DEPLOYMENTS.md).
 
-## 14. Activate a reviewed candidate without rebuilding live gates
+## 14. Authenticate a complete tool-gate deployment
+
+After creating a coherent tool-gate deployment, bind its complete bytes to one target environment,
+release sequence, and validity window:
+
+```bash
+samsarix-ethics gate-deployment authenticate coding-agent.gate-deployment.json \
+  --key-file deployment-auth.key \
+  --key-id prod-2026-q3 \
+  --audience coding-agent:production \
+  --sequence 42 \
+  --issued-at 2026-08-02T12:00:00Z \
+  --expires-at 2026-08-03T12:00:00Z \
+  --output coding-agent.authenticated.json
+
+samsarix-ethics gate-deployment verify-authentication \
+  coding-agent.authenticated.json \
+  --key-file deployment-auth.key \
+  --key-id prod-2026-q3 \
+  --audience coding-agent:production \
+  --minimum-sequence 42 \
+  --at 2026-08-02T12:00:00Z
+```
+
+Keep the key and highest accepted sequence outside the envelope in protected target state. HMAC
+verifiers can also mint envelopes; use an asymmetric release system where author/verifier
+separation is required. See [authenticated deployments](AUTHENTICATED_DEPLOYMENTS.md).
+
+## 15. Activate a reviewed candidate without rebuilding live gates
 
 ```python
 from samsarix_ethics import PolicyRuntime, ToolGate, load_policy_deployment
@@ -208,7 +236,7 @@ The complete candidate is validated before one atomic in-process swap. A stale g
 invalid candidate leaves the last successful policy active. See
 [atomic policy runtime](POLICY_RUNTIME.md).
 
-## 15. Start a policy of your own
+## 16. Start a policy of your own
 
 ```bash
 samsarix-ethics init my-policy.json
@@ -237,6 +265,7 @@ samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema tool-catalog > tool-catalog-v1.schema.json
 samsarix-ethics schema tool-gate-deployment > tool-gate-deployment-v1.schema.json
+samsarix-ethics schema tool-gate-deployment-envelope > tool-gate-deployment-envelope-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 samsarix-ethics schema audit-chain-entry > audit-chain-entry-v1.schema.json
 samsarix-ethics schema audit-chain-verification > audit-chain-verification-v1.schema.json

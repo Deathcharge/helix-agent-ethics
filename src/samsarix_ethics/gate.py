@@ -10,12 +10,18 @@ import inspect
 import re
 from collections.abc import Awaitable, Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Generic, TypeVar, cast
 
 from .approval import ToolCallApproval, _fingerprint_prepared_tool_call
 from .audit import AuditSink, JsonlAuditSink, _emit_audit_record, _validated_sink
+from .authenticated_deployment import (
+    ToolGateDeploymentEnvelope,
+    VerifiedToolGateDeployment,
+    verify_tool_gate_deployment_envelope,
+)
 from .catalog import ToolCatalog, validate_tool_catalog_registration
 from .contracts import ContextContract
 from .deployment import DeploymentLock
@@ -329,6 +335,42 @@ class ToolGate:
             audit_sink=audit_sink,
         )
         return gate.bind_catalog(deployment.tool_catalog, registered_tools=registered_tools)
+
+    @classmethod
+    def bind_authenticated_deployment(
+        cls,
+        envelope: ToolGateDeploymentEnvelope,
+        *,
+        authentication_keys: Mapping[str, bytes | bytearray | memoryview],
+        expected_audience: str,
+        registered_tools: Iterable[str],
+        minimum_sequence: int = 1,
+        now: datetime | None = None,
+        clock_skew_seconds: int = 0,
+        audit_log: str | Path | None = None,
+        audit_sink: AuditSink | None = None,
+    ) -> BoundToolCatalog:
+        """Authenticate a current envelope immediately before gate construction."""
+
+        verified = verify_tool_gate_deployment_envelope(
+            envelope,
+            authentication_keys,
+            expected_audience=expected_audience,
+            minimum_sequence=minimum_sequence,
+            now=now,
+            clock_skew_seconds=clock_skew_seconds,
+        )
+        bindings = cls.bind_deployment(
+            verified.deployment,
+            registered_tools=registered_tools,
+            audit_log=audit_log,
+            audit_sink=audit_sink,
+        )
+        return BoundToolCatalog._create(
+            bindings.gate,
+            bindings.catalog,
+            authenticated_deployment=verified,
+        )
 
     def bind_catalog(
         self,
@@ -848,6 +890,7 @@ class BoundToolCatalog(Mapping[str, BoundToolGate]):
     _catalog: ToolCatalog
     _catalog_fingerprint: str
     _bindings: Mapping[str, BoundToolGate]
+    _authenticated_deployment: VerifiedToolGateDeployment | None
 
     def __init__(self) -> None:
         raise TypeError("BoundToolCatalog objects are created by ToolGate.bind_catalog")
@@ -861,11 +904,18 @@ class BoundToolCatalog(Mapping[str, BoundToolGate]):
         )
 
     @classmethod
-    def _create(cls, gate: ToolGate, catalog: ToolCatalog) -> BoundToolCatalog:
+    def _create(
+        cls,
+        gate: ToolGate,
+        catalog: ToolCatalog,
+        *,
+        authenticated_deployment: VerifiedToolGateDeployment | None = None,
+    ) -> BoundToolCatalog:
         bound = object.__new__(cls)
         object.__setattr__(bound, "_gate", gate)
         object.__setattr__(bound, "_catalog", catalog)
         object.__setattr__(bound, "_catalog_fingerprint", fingerprint_tool_catalog(catalog))
+        object.__setattr__(bound, "_authenticated_deployment", authenticated_deployment)
         object.__setattr__(
             bound,
             "_bindings",
@@ -895,6 +945,12 @@ class BoundToolCatalog(Mapping[str, BoundToolGate]):
         """Return the exact catalog fingerprint bound to this mapping."""
 
         return self._catalog_fingerprint
+
+    @property
+    def authenticated_deployment(self) -> VerifiedToolGateDeployment | None:
+        """Return the verification that authorized this binding, when authenticated."""
+
+        return self._authenticated_deployment
 
     @property
     def tool_names(self) -> tuple[str, ...]:

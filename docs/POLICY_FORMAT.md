@@ -140,7 +140,8 @@ The wheel contains Draft 2020-12 schemas for policies, policy-test suites, polic
 policy-composition, policy-coverage, policy-explanation, policy-lint, policy-runtime status, and
 policy-shadow reports, context contracts, deployment locks, complete policy deployments,
 normalized tool-call contexts, bound approval records, trusted tool catalogs, coherent tool-gate
-deployments, audit records, audit-chain entries, and audit-chain verification reports. Print fresh
+deployments, authenticated tool-gate deployment envelopes, audit records, audit-chain entries, and
+audit-chain verification reports. Print fresh
 copies without a network request:
 
 ```bash
@@ -160,6 +161,7 @@ samsarix-ethics schema tool-context > tool-context-v1.schema.json
 samsarix-ethics schema tool-approval > tool-approval-v1.schema.json
 samsarix-ethics schema tool-catalog > tool-catalog-v1.schema.json
 samsarix-ethics schema tool-gate-deployment > tool-gate-deployment-v1.schema.json
+samsarix-ethics schema tool-gate-deployment-envelope > tool-gate-deployment-envelope-v1.schema.json
 samsarix-ethics schema audit-record > audit-record-v1.schema.json
 samsarix-ethics schema audit-chain-entry > audit-chain-entry-v1.schema.json
 samsarix-ethics schema audit-chain-verification > audit-chain-verification-v1.schema.json

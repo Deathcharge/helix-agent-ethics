@@ -156,6 +156,7 @@ def test_schema_commands_emit_versioned_json() -> None:
     deployment_lock = _run_cli("schema", "deployment-lock")
     policy_deployment = _run_cli("schema", "policy-deployment")
     tool_gate_deployment = _run_cli("schema", "tool-gate-deployment")
+    tool_gate_deployment_envelope = _run_cli("schema", "tool-gate-deployment-envelope")
     tool_context = _run_cli("schema", "tool-context")
     tool_approval = _run_cli("schema", "tool-approval")
     tool_catalog = _run_cli("schema", "tool-catalog")
@@ -189,6 +190,10 @@ def test_schema_commands_emit_versioned_json() -> None:
     assert json.loads(policy_deployment.stdout)["$id"].endswith("/policy-deployment/v1.json")
     assert tool_gate_deployment.returncode == 0
     assert json.loads(tool_gate_deployment.stdout)["$id"].endswith("/tool-gate-deployment/v1.json")
+    assert tool_gate_deployment_envelope.returncode == 0
+    assert json.loads(tool_gate_deployment_envelope.stdout)["$id"].endswith(
+        "/tool-gate-deployment-envelope/v1.json"
+    )
     assert tool_context.returncode == 0
     assert json.loads(tool_context.stdout)["$id"].endswith("/tool-context/v1.json")
     assert tool_approval.returncode == 0
@@ -229,9 +234,98 @@ def test_gate_deployment_create_verify_and_minimize_output(tmp_path: Path) -> No
     assert created_report["tool_gate_deployment_version"] == 1
     assert created_report["tool_catalog"]["tool_count"] == 7
     assert created_report["tool_catalog"]["fingerprint"].startswith("v1:sha256:")
+    assert created_report["tool_gate_deployment_fingerprint"].startswith("v1:sha256:")
     assert verified_report["tool_catalog"] == created_report["tool_catalog"]
     assert "capabilities" not in created.stdout
     assert "rules" not in verified.stdout
+
+
+def test_gate_deployment_authenticate_verify_and_reject_stale_claims(tmp_path: Path) -> None:
+    root = Path(__file__).parents[1]
+    deployment_path = tmp_path / "coding-agent.gate-deployment.json"
+    envelope_path = tmp_path / "coding-agent.authenticated.json"
+    key_path = tmp_path / "deployment-auth.key"
+    key_path.write_bytes(b"deployment-authentication-test-key")
+
+    created_deployment = _run_cli(
+        "gate-deployment",
+        "create",
+        "--policy-deployment",
+        str(root / "examples/deployment/coding-agent-baseline.deployment.json"),
+        "--tool-catalog",
+        str(root / "examples/catalogs/coding-agent-tools.json"),
+        "--output",
+        str(deployment_path),
+    )
+    authenticated = _run_cli(
+        "gate-deployment",
+        "authenticate",
+        str(deployment_path),
+        "--key-file",
+        str(key_path),
+        "--key-id",
+        "prod-2026-q3",
+        "--audience",
+        "coding-agent:production",
+        "--sequence",
+        "42",
+        "--issued-at",
+        "2026-08-02T12:00:00Z",
+        "--expires-at",
+        "2026-08-03T12:00:00Z",
+        "--output",
+        str(envelope_path),
+        "--format",
+        "json",
+    )
+    verified = _run_cli(
+        "gate-deployment",
+        "verify-authentication",
+        str(envelope_path),
+        "--key-file",
+        str(key_path),
+        "--key-id",
+        "prod-2026-q3",
+        "--audience",
+        "coding-agent:production",
+        "--minimum-sequence",
+        "42",
+        "--at",
+        "2026-08-02T18:00:00Z",
+        "--format",
+        "json",
+    )
+    stale = _run_cli(
+        "gate-deployment",
+        "verify-authentication",
+        str(envelope_path),
+        "--key-file",
+        str(key_path),
+        "--key-id",
+        "prod-2026-q3",
+        "--audience",
+        "coding-agent:production",
+        "--minimum-sequence",
+        "43",
+        "--at",
+        "2026-08-02T18:00:00Z",
+    )
+
+    assert created_deployment.returncode == 0
+    assert authenticated.returncode == 0
+    authenticated_report = json.loads(authenticated.stdout)
+    assert authenticated_report["authentication_verified"] is False
+    assert authenticated_report["sequence"] == 42
+    assert authenticated_report["deployment_fingerprint"].startswith("v1:sha256:")
+    assert "rules" not in authenticated.stdout
+    assert "capabilities" not in authenticated.stdout
+    assert verified.returncode == 0
+    verified_report = json.loads(verified.stdout)
+    assert verified_report["authentication_verified"] is True
+    assert verified_report["verified_at"] == "2026-08-02T18:00:00Z"
+    assert stale.returncode == 2
+    assert stale.stdout == ""
+    assert "older than the trusted minimum" in stale.stderr
 
 
 def test_deployment_lock_create_verify_and_enforce(

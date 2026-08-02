@@ -14,11 +14,13 @@ from typing import Any, BinaryIO
 
 from ._policy_payload import MAX_POLICY_BYTES, serialize_policy_document
 from .audit import AuditRecord, JsonlAuditSink
+from .authenticated_deployment import ToolGateDeploymentEnvelope
 from .catalog import ToolCatalog
 from .contracts import ContextContract
 from .deployment import DeploymentLock
 from .errors import (
     ContextContractValidationError,
+    DeploymentAuthenticationError,
     DeploymentLockValidationError,
     InputValidationError,
     PolicyDeploymentValidationError,
@@ -38,6 +40,7 @@ MAX_DEPLOYMENT_LOCK_BYTES = 65_536
 MAX_POLICY_DEPLOYMENT_BYTES = 4_194_304
 MAX_TOOL_CATALOG_BYTES = 262_144
 MAX_TOOL_GATE_DEPLOYMENT_BYTES = 4_718_592
+MAX_TOOL_GATE_DEPLOYMENT_ENVELOPE_BYTES = 5_242_880
 
 SAMPLE_POLICY: dict[str, Any] = {
     "schema_version": 1,
@@ -276,6 +279,23 @@ def load_tool_gate_deployment(path: str | Path) -> ToolGateDeployment:
         raise ToolGateDeploymentValidationError(str(exc)) from exc
 
 
+def load_tool_gate_deployment_envelope(path: str | Path) -> ToolGateDeploymentEnvelope:
+    """Parse one bounded deployment envelope without trusting its authentication."""
+
+    try:
+        data = _parse_json(
+            _read_file(
+                path,
+                max_bytes=MAX_TOOL_GATE_DEPLOYMENT_ENVELOPE_BYTES,
+                label="tool gate deployment envelope",
+            ),
+            label="tool gate deployment envelope",
+        )
+        return ToolGateDeploymentEnvelope.from_dict(data)
+    except InputValidationError as exc:
+        raise DeploymentAuthenticationError(str(exc)) from exc
+
+
 def load_context(path: str | Path | None, *, stdin: BinaryIO | None = None) -> dict[str, Any]:
     """Load a bounded evaluation object from a path or binary standard input."""
 
@@ -349,6 +369,31 @@ def write_tool_gate_deployment(
         force=force,
         label="tool gate deployment",
         error_type=ToolGateDeploymentValidationError,
+    )
+
+
+def write_tool_gate_deployment_envelope(
+    path: str | Path,
+    envelope: ToolGateDeploymentEnvelope,
+    *,
+    force: bool = False,
+) -> Path:
+    """Atomically write one authenticated deployment envelope."""
+
+    if not isinstance(envelope, ToolGateDeploymentEnvelope):
+        raise TypeError("envelope must be a ToolGateDeploymentEnvelope")
+    payload = serialize_policy_document(
+        envelope.to_dict(),
+        label="tool gate deployment envelope",
+        max_bytes=MAX_TOOL_GATE_DEPLOYMENT_ENVELOPE_BYTES,
+        error_type=DeploymentAuthenticationError,
+    )
+    return _write_atomic_payload(
+        path,
+        payload,
+        force=force,
+        label="tool gate deployment envelope",
+        error_type=DeploymentAuthenticationError,
     )
 
 

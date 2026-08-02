@@ -9,7 +9,10 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .tool_gate_deployment import ToolGateDeployment
 
 from .catalog import ToolCatalog
 from .contracts import ContextContract
@@ -17,15 +20,18 @@ from .errors import (
     ContextContractValidationError,
     PolicyValidationError,
     ToolCatalogValidationError,
+    ToolGateDeploymentValidationError,
 )
 from .models import Policy
 
 POLICY_FINGERPRINT_VERSION = 1
 CONTEXT_CONTRACT_FINGERPRINT_VERSION = 1
 TOOL_CATALOG_FINGERPRINT_VERSION = 1
+TOOL_GATE_DEPLOYMENT_FINGERPRINT_VERSION = 1
 
 _POLICY_FINGERPRINT = re.compile(r"^v1:sha256:[0-9a-f]{64}$")
 _CONTEXT_CONTRACT_FINGERPRINT = re.compile(r"^v1:sha256:[0-9a-f]{64}$")
+_TOOL_GATE_DEPLOYMENT_FINGERPRINT = re.compile(r"^v1:sha256:[0-9a-f]{64}$")
 
 
 def _fingerprint_json(payload: Mapping[str, Any]) -> str:
@@ -99,9 +105,34 @@ def fingerprint_tool_catalog(catalog: ToolCatalog) -> str:
     return f"v{TOOL_CATALOG_FINGERPRINT_VERSION}:sha256:{digest}"
 
 
+def fingerprint_tool_gate_deployment(deployment: ToolGateDeployment) -> str:
+    """Return a versioned SHA-256 fingerprint of one complete tool-gate deployment."""
+
+    # Local import avoids the provenance/deployment module cycle.
+    from .tool_gate_deployment import ToolGateDeployment as _ToolGateDeployment
+
+    if not isinstance(deployment, _ToolGateDeployment):
+        raise TypeError("deployment must be a ToolGateDeployment")
+    payload = {
+        "tool_gate_deployment_fingerprint_version": (TOOL_GATE_DEPLOYMENT_FINGERPRINT_VERSION),
+        "deployment": deployment.to_dict(),
+    }
+    try:
+        digest = _fingerprint_json(payload)
+    except (TypeError, ValueError, UnicodeError) as exc:
+        raise ToolGateDeploymentValidationError(
+            f"tool gate deployment cannot be fingerprinted: {type(exc).__name__}"
+        ) from exc
+    return f"v{TOOL_GATE_DEPLOYMENT_FINGERPRINT_VERSION}:sha256:{digest}"
+
+
 def _is_policy_fingerprint(value: object) -> bool:
     return isinstance(value, str) and _POLICY_FINGERPRINT.fullmatch(value) is not None
 
 
 def _is_context_contract_fingerprint(value: object) -> bool:
     return isinstance(value, str) and _CONTEXT_CONTRACT_FINGERPRINT.fullmatch(value) is not None
+
+
+def _is_tool_gate_deployment_fingerprint(value: object) -> bool:
+    return isinstance(value, str) and _TOOL_GATE_DEPLOYMENT_FINGERPRINT.fullmatch(value) is not None
