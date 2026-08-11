@@ -109,6 +109,10 @@ All notable product changes are recorded here.
   strict Samsarix evidence on resume, atomic single-use approval consumption, fresh current-policy
   enforcement, a no-network real-agent example, adversarial tests, and a dedicated slim
   hash-locked CI contract.
+- Optional exact-registry MCP Python SDK `1.28.1` server handler with fresh request-scoped facts,
+  application-owned async review, one-shot fingerprint-bound approval evidence, immutable tool
+  definition snapshots, a no-network in-memory client/server example, adversarial tests, and a
+  dedicated hash-locked CI contract.
 
 ### Changed
 

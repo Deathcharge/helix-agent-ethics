@@ -27,6 +27,10 @@ def test_public_api_is_importable() -> None:
     assert "LangChainIntegrationError" in samsarix_ethics.__all__
     assert "LangChainToolPolicy" in samsarix_ethics.__all__
     assert "create_langchain_tool_policy" in samsarix_ethics.__all__
+    assert "MCPServerIntegrationError" in samsarix_ethics.__all__
+    assert "MCPServerToolPolicy" in samsarix_ethics.__all__
+    assert "MCPToolReviewRequest" in samsarix_ethics.__all__
+    assert "create_mcp_server_tool_policy" in samsarix_ethics.__all__
     assert "OpenAIAgentsApprovalStore" in samsarix_ethics.__all__
     assert "OpenAIAgentsIntegrationError" in samsarix_ethics.__all__
     assert "OpenAIAgentsToolPolicy" in samsarix_ethics.__all__
@@ -121,6 +125,7 @@ def test_public_api_is_importable() -> None:
     assert samsarix_ethics.MAX_PENDING_OPENAI_APPROVALS == 4_096
     assert samsarix_ethics.LANGCHAIN_ADAPTER_VERSION == 1
     assert samsarix_ethics.LANGCHAIN_REVIEW_INTERRUPT_TYPE == "samsarix.tool_call.review"
+    assert samsarix_ethics.MCP_SERVER_ADAPTER_VERSION == 1
     assert samsarix_ethics.OPENAI_AGENTS_ADAPTER_VERSION == 1
     assert samsarix_ethics.PYDANTIC_AI_ADAPTER_VERSION == 1
     assert samsarix_ethics.MAX_PENDING_PYDANTIC_AI_APPROVALS == 4096

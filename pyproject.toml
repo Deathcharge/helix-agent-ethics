@@ -17,7 +17,7 @@ authors = [
 maintainers = [
     { name = "Samsarix LLC", email = "support@samsarix.com" },
 ]
-keywords = ["ai-agents", "guardrails", "policy-as-code", "governance", "audit"]
+keywords = ["ai-agents", "guardrails", "mcp", "policy-as-code", "governance", "audit"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -33,6 +33,9 @@ dependencies = []
 [project.optional-dependencies]
 langchain = [
     "langchain==1.3.14",
+]
+mcp = [
+    "mcp==1.28.1",
 ]
 openai-agents = [
     "openai-agents==0.18.3",

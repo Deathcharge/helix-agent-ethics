@@ -531,6 +531,34 @@ jobs:
       - name: Smoke-test the Pydantic AI example
         run: python examples/pydantic_ai_policy_toolset_demo.py
 
+  mcp-contract:
+    name: MCP Python SDK 1.28.1 contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.lock
+            requirements-mcp.lock
+            pyproject.toml
+      - name: Install locked development and MCP contract dependencies
+        run: |
+          python -m pip install --require-hashes \
+            -r requirements-dev.lock \
+            -r requirements-mcp.lock
+          python -m pip install --no-build-isolation --no-deps -e .
+      - name: Test exact MCP server contract
+        run: python -m pytest --no-cov integration_tests/test_mcp_sdk.py
+      - name: Smoke-test the MCP server example
+        run: python examples/mcp_server_policy_demo.py
+
   opentelemetry-contract:
     name: OpenTelemetry 1.44.0 contract
     runs-on: ubuntu-latest
@@ -568,6 +596,7 @@ jobs:
         openai-agents-contract,
         langchain-contract,
         pydantic-ai-contract,
+        mcp-contract,
         opentelemetry-contract,
       ]
     runs-on: ubuntu-latest

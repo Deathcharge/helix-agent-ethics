@@ -126,6 +126,15 @@ Bounded review used current primary sources:
   framework-owned scheduling, and a complete ordered batch decision surface.
 - The [MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema) explicitly says
   tool annotations are hints and must not drive decisions when their server is untrusted.
+- The [MCP tools specification](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+  recommends keeping a human in the loop with the ability to deny tool invocations for sensitive
+  operations, and the
+  [official Python SDK](https://github.com/modelcontextprotocol/python-sdk) exposes a stable public
+  low-level `Server.call_tool` handler. This supports exact-registry server enforcement without
+  claiming coverage of direct handlers, other protocol primitives, or proxy/provider paths.
+- The SDK's [WebSocket transport advisory](https://github.com/modelcontextprotocol/python-sdk/security/advisories/GHSA-vj7q-gjh5-988w)
+  affects releases before 1.28.1. The integration therefore pins 1.28.1 and still documents that
+  deprecated-WebSocket users must explicitly enable strict Host/Origin security settings.
 - Samsarix Core and Samsarix Agent Framework both expose deterministic local registry-name
   snapshots, but only Core carries MCP behavioral hints and neither registry owns Agent Ethics
   capabilities. This supports a separate application-authored catalog that checks the complete
@@ -272,6 +281,9 @@ certification or ethics truth.
   fingerprint-bound native LangGraph interrupt/resume, and an exact-version real-agent CI contract.
 - [x] Add exact-registry Pydantic AI wrapper enforcement with native deferred review, strict
   Samsarix approval metadata, and an exact-version slim real-agent CI contract.
+- [x] Add exact-registry enforcement at the stable MCP Python SDK low-level server handler with
+  request-scoped facts, one-shot application review, and an exact-version in-memory client/server
+  CI contract.
 - [ ] Add policy-format version migration only after a second format and adopter need exist.
 - [ ] Add benchmark thresholds once representative policy sizes are known.
 
@@ -309,10 +321,10 @@ certification or ethics truth.
 ## Completed work
 
 - Established the `samsarix_ethics` public API and `samsarix-ethics` console command.
-- Added 554 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 554
-  passed and 94.90% total branch-aware coverage under the configured `--cov-branch` gate. Separate
+- Added 563 real core tests; latest pinned local `python -m pytest` pytest-cov terminal report: 563
+  passed and 95.01% total branch-aware coverage under the configured `--cov-branch` gate. Separate
   real-SDK contract tests run against exact hashed `openai-agents==0.18.3`, `langchain==1.3.14`,
-  `pydantic-ai-slim==2.22.0`, and OpenTelemetry 1.44.0 dependency graphs.
+  `pydantic-ai-slim==2.22.0`, `mcp==1.28.1`, and OpenTelemetry 1.44.0 dependency graphs.
 - Rebuilt the wheel and source distribution, passed `twine check`, and verified the wheel in an
   isolated no-dependency environment: install/import/version/schema/deployment verification and a
   deployed allow decision all succeeded, and runtime construction used the packaged API.
@@ -402,6 +414,11 @@ certification or ethics truth.
   contract proves approval, replay blocking, rejection, deny, serialized-history resume, forged
   native-approval blocking, and registry-drift failure against exact
   `pydantic-ai-slim==2.22.0` without changing the dependency-free base install.
+- Added an optional stable MCP Python SDK server adapter that snapshots real `Tool` definitions,
+  exact-matches their name set, obtains fresh request-scoped facts, and protects the final
+  low-level async handler.
+  One-shot review evidence, adversarial tests, an in-memory client/server contract, no-network
+  example, focused guide, and exact hashed lock preserve the dependency-free base package.
 - Added a versioned metadata-only OpenTelemetry event sink, bounded ordered audit-sink composition,
   exact API/SDK contract test, and an in-memory no-network example. The application retains SDK,
   exporter, sampling, collector, trace access, durable audit, and partial-delivery recovery.
@@ -479,6 +496,10 @@ External validation gates:
   reviewer authentication/expiry remains application-owned, and durable reconstruction needs an
   application-owned first-write/consume store. Other execution paths can bypass the wrapped
   toolset, and parallel calls are not transactional.
+- MCP SDK schema validation occurs before the adapter and produces no Samsarix audit decision.
+  Review payloads contain proposed arguments; reviewer authentication, confidentiality, expiry,
+  timeout/cancellation, and concurrency are application-owned. Direct handlers, FastMCP internal
+  routes, non-tool primitives, and gateway/proxy/provider paths can bypass this adapter.
 - File permissions and retention vary by operating system and are caller responsibilities.
 - Python dependency tooling resolves transitive development dependencies; exact direct pins reduce
   drift but do not constitute a fully hashed supply-chain lock.

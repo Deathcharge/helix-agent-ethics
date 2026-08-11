@@ -76,6 +76,25 @@ side effects as outside this adapter. Parallel calls remain non-transactional.
 The default first-write/consume store blocks result replay only inside one live adapter instance;
 durable reconstruction requires an application-owned implementation stored with workflow state.
 
+When using the optional MCP Python SDK adapter, advertise only `tool_policy.tools` and register
+only `tool_policy.call_tool` for protected tools. Keep the original handler private, preserve the
+SDK decorator's default input-schema validation, and derive actor/context facts from authenticated
+server state rather than arguments, descriptions, schemas, or `ToolAnnotations`. Review requests
+intentionally disclose proposed arguments and trusted capability labels to application code;
+authenticate and authorize reviewers, protect that payload, impose expiry and timeout/cancellation,
+and treat `review.approval(...)` as unsigned binding evidence. Every retry requires a fresh review.
+After a review response, the adapter re-reads request, actor, and context providers; an actor change
+invalidates the approval fingerprint and current context is re-evaluated.
+Schema validation occurs before the protected handler and therefore produces no Samsarix decision
+or authorization audit record. Direct handler calls, FastMCP internal routes, other MCP primitives,
+gateways/proxies/providers, validation/provider side effects, and callbacks registered outside the
+exact adapter bypass this boundary. The adapter does not provide sandboxing, cancellation,
+rollback, or transactionality across concurrent calls.
+The exact 1.28.1 contract includes the SDK fix for deprecated WebSocket Host/Origin validation,
+but applications using that transport must still enable and configure `TransportSecuritySettings`.
+Prefer stdio or Streamable HTTP and follow the SDK's transport-specific authentication, DNS
+rebinding, Host, Origin, and TLS guidance; the policy adapter is not transport security.
+
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
 an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
 code, loads no plugins, and stores no raw evaluation input in its built-in audit record.

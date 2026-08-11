@@ -9,7 +9,7 @@ The Python 3.11 CI job builds the wheel and source distribution once, validates 
 the wheel into a clean virtual environment, and uploads the exact files as
 `python-distributions-<commit>` for 14 days. The same workflow exercises the source package across
 Python 3.11-3.14. Dedicated hash-locked lanes exercise the exact OpenAI Agents SDK, LangChain,
-Pydantic AI, and OpenTelemetry API/SDK contracts plus their no-network examples; release candidates
+Pydantic AI, MCP Python SDK, and OpenTelemetry API/SDK contracts plus their no-network examples; release candidates
 are valid only when the complete matrix and all optional-integration lanes are green.
 
 For pushes to `main`, a separate least-privilege job waits for the complete matrix, downloads those
@@ -65,7 +65,18 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python examples/pydantic_ai_policy_toolset_demo.py
    ```
 
-7. In a fourth fresh virtual environment, validate only the OpenTelemetry optional contract:
+7. In a fourth fresh virtual environment, validate only the MCP optional contract:
+
+   ```bash
+   python -m pip install --require-hashes \
+     -r requirements-dev.lock \
+     -r requirements-mcp.lock
+   python -m pip install --no-build-isolation --no-deps -e .
+   python -m pytest --no-cov integration_tests/test_mcp_sdk.py
+   python examples/mcp_server_policy_demo.py
+   ```
+
+8. In a fifth fresh virtual environment, validate only the OpenTelemetry optional contract:
 
    ```bash
    python -m pip install --require-hashes \
@@ -75,7 +86,7 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python examples/opentelemetry_decision_event_demo.py
    ```
 
-8. Download the exact CI distributions for the commit, then verify their provenance:
+9. Download the exact CI distributions for the commit, then verify their provenance:
 
    ```bash
    gh run download RUN_ID \
@@ -87,9 +98,9 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
      --repo Deathcharge/samsarix-agent-ethics
    ```
 
-9. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
+10. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
    `samsarix-ethics --version`, schema export, policy validation, and one allow/deny walkthrough.
-10. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
+11. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
    ref in the release notes.
 
 ## Registry publication prerequisites

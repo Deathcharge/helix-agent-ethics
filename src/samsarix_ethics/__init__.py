@@ -168,6 +168,13 @@ from .langchain import (
     LangChainToolPolicy,
     create_langchain_tool_policy,
 )
+from .mcp import (
+    MCP_SERVER_ADAPTER_VERSION,
+    MCPServerIntegrationError,
+    MCPServerToolPolicy,
+    MCPToolReviewRequest,
+    create_mcp_server_tool_policy,
+)
 from .models import MAX_POLICY_RULES, Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
 from .openai_agents import (
     MAX_PENDING_OPENAI_APPROVALS,
@@ -295,6 +302,7 @@ __all__ = [
     "MAX_TOOL_CATALOG_TOOLS",
     "MAX_TOOL_GATE_DEPLOYMENT_BYTES",
     "MAX_TOOL_GATE_DEPLOYMENT_ENVELOPE_BYTES",
+    "MCP_SERVER_ADAPTER_VERSION",
     "MIN_AUDIT_CHAIN_KEY_BYTES",
     "MIN_DEPLOYMENT_AUTH_KEY_BYTES",
     "OPENAI_AGENTS_ADAPTER_VERSION",
@@ -347,6 +355,9 @@ __all__ = [
     "JsonlAuditSink",
     "LangChainIntegrationError",
     "LangChainToolPolicy",
+    "MCPServerIntegrationError",
+    "MCPServerToolPolicy",
+    "MCPToolReviewRequest",
     "OpenAIAgentsApprovalStore",
     "OpenAIAgentsIntegrationError",
     "OpenAIAgentsToolPolicy",
@@ -417,6 +428,7 @@ __all__ = [
     "compose_policies",
     "create_deployment_lock",
     "create_langchain_tool_policy",
+    "create_mcp_server_tool_policy",
     "create_openai_agents_tool_policy",
     "create_policy_deployment",
     "create_pydantic_ai_tool_policy",

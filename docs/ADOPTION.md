@@ -6,17 +6,36 @@ deployment. It is intentionally specific enough for maintainers to reproduce and
 ## Public runtime contract
 
 The repository includes optional exact-version adapters for strict top-level OpenAI Agents SDK
-`FunctionTool` objects, exact LangChain `BaseTool` registries, and exact Pydantic AI `ToolsetTool`
-registries. Dedicated CI jobs install hashed dependency graphs for `openai-agents==0.18.3`,
-`langchain==1.3.14`, and `pydantic-ai-slim==2.22.0`, exercise real framework types, and run
+`FunctionTool` objects, exact LangChain `BaseTool` registries, exact Pydantic AI `ToolsetTool`
+registries, and exact stable MCP Python SDK server registries. Dedicated CI jobs install hashed
+dependency graphs for `openai-agents==0.18.3`, `langchain==1.3.14`,
+`pydantic-ai-slim==2.22.0`, and `mcp==1.28.1`, exercise real framework types, and run
 no-network examples. The OpenAI contract verifies guardrail execution and fail-closed handling
 before schema coercion. The LangChain contract verifies a real checkpointed interrupt/resume and
 final middleware ordering. The Pydantic AI contract verifies native deferred approval/rejection,
-requires Samsarix evidence beyond a native boolean, and detects registry drift. The
+requires Samsarix evidence beyond a native boolean, and detects registry drift. The MCP contract
+connects a real in-memory client/server session and verifies exact listing, schema validation,
+allow, deny, one-shot review, missing review, and registry drift. The
 [OpenAI guide](OPENAI_AGENTS.md), [LangChain guide](LANGCHAIN.md), and
-[Pydantic AI guide](PYDANTIC_AI.md) make this reproducible from a public checkout. These are
+[Pydantic AI guide](PYDANTIC_AI.md), plus the [MCP guide](MCP.md), make this reproducible from a public checkout. These are
 maintained compatibility contracts, not evidence of a third-party adopter, live model call,
 production traffic, or hosted deployment.
+
+## Implemented gap: stable MCP server-side enforcement
+
+The MCP tools specification recommends confirmation for sensitive operations, while the protocol
+schema says tool annotations are untrusted hints. The stable Python SDK exposes a public low-level
+`Server.call_tool` handler and public `Tool` definitions. Samsarix exact-matches the complete MCP
+tool-name set to application-authored capabilities, advertises copied definitions, and retrieves fresh
+request facts before final handler invocation. Review is application-owned and returns one-shot
+fingerprint-bound evidence for the current call only.
+
+SDK JSON Schema validation precedes the protected handler. Direct callbacks, FastMCP internal
+routes, other protocol primitives, proxies, provider execution, and side effects in providers or
+validators remain outside the boundary. Review payloads contain proposed arguments and trusted
+capabilities; reviewer identity, confidentiality, expiry, timeout/cancellation, and concurrent
+side-effect behavior remain application-owned. This is exact public runtime evidence, not an
+adopter, gateway, or production claim.
 
 ## Implemented gap: exact-registry LangChain enforcement
 

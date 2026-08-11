@@ -463,6 +463,25 @@ A native boolean approval without this evidence fails closed, and approved resum
 current call and policy. The adapter contract version is `PYDANTIC_AI_ADAPTER_VERSION = 1`. See
 [PYDANTIC_AI.md](PYDANTIC_AI.md).
 
+### `create_mcp_server_tool_policy(bindings, tools, tool_handler, *, application_context_provider=None, actor_provider=None, context_provider=None, approval_provider=None)`
+
+Creates an optional `MCPServerToolPolicy` for the stable MCP Python SDK low-level server. MCP is
+imported only when this factory is called. `tools` must be a complete registry of valid real
+`mcp.types.Tool` objects; catalog matching uses their names. Definitions are deep-copied at
+construction, and `policy.tools` returns fresh copies for the server's `list_tools` handler.
+
+Register `policy.call_tool` with `Server.call_tool()` using its default schema validation. Each
+schema-valid invocation bounds and detaches arguments, obtains fresh request-scoped application,
+actor, and context values, and authorizes immediately before calling the async `tool_handler` once.
+Allow delegates, deny blocks, and review optionally awaits the application-owned provider.
+
+The provider receives an immutable `MCPToolReviewRequest`, whose detached `arguments`, redacted
+representation, sensitive `to_dict()`, and `approval(approved=...)` helper bind a fresh one-shot
+call ID and exact fingerprint. Reviewer authentication, confidentiality, expiry, timeout, and
+cancellation remain application-owned. The adapter contract version is
+`MCP_SERVER_ADAPTER_VERSION = 1`; integration failures raise `MCPServerIntegrationError`. See
+[MCP.md](MCP.md) for the exact supported and unsupported execution paths.
+
 ### `BoundToolCatalog`
 
 The immutable mapping returned by `ToolGate.bind_catalog(...)`. It exposes `gate`, `catalog`,
@@ -737,11 +756,11 @@ records. See [AUDIT_CHAINS.md](AUDIT_CHAINS.md) for the format and complete thre
 `PolicyValidationError`, `PolicyDeploymentValidationError`, `PolicyActivationError`,
 `PolicyCompositionError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
 `AuditLogError`, `AuditChainError`, `OpenAIAgentsIntegrationError`, `LangChainIntegrationError`,
-`PydanticAIIntegrationError`, and the tool-call enforcement errors derive from
+`PydanticAIIntegrationError`, `MCPServerIntegrationError`, and the tool-call enforcement errors derive from
 `SamsarixEthicsError`. `AuditChainError` also derives from `AuditLogError`, preserving fail-closed
 gate handling. The base
 class and specialized errors are exported from `samsarix_ethics` and defined in
-`samsarix_ethics.errors`.
+`samsarix_ethics.errors` or their optional integration module.
 
 ## Compatibility
 
