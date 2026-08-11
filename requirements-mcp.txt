@@ -1,2 +1,4 @@
 # Exact stable MCP Python SDK contract used by CI and the no-network example.
 mcp==1.28.1
+# Align the shared cryptography backend with the separately installed development lock.
+cffi==2.1.0
