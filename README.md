@@ -634,8 +634,8 @@ python -m pip install -e '.[mcp]'
 python examples/mcp_server_policy_demo.py
 ```
 
-`create_mcp_server_tool_policy(bound_catalog, tools, handler)` exact-matches a complete registry of
-real MCP `Tool` definitions to trusted Samsarix bindings. Advertise only `tool_policy.tools`, then
+`create_mcp_server_tool_policy(bound_catalog, tools, handler)` exact-matches the complete MCP
+tool-name set to trusted Samsarix bindings. Advertise only `tool_policy.tools`, then
 register `tool_policy.call_tool` with the stable low-level `Server.call_tool()` decorator. Every
 valid call receives fresh application-owned actor/context facts; allow delegates once, deny never
 delegates, and review invokes an optional application-owned async approval provider before current

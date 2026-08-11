@@ -286,8 +286,9 @@ state. Resume refreshes actor/context facts and re-enforces current policy.
 Pydantic schema and custom argument validation occur before the wrapper, while other toolsets,
 provider-side tools, and direct calls remain outside this boundary.
 
-The optional MCP Python SDK adapter snapshots one complete registry of real `Tool` definitions and
-exact-matches it to trusted catalog bindings. The low-level `Server.call_tool` handler retrieves
+The optional MCP Python SDK adapter snapshots one complete registry of valid real `Tool`
+definitions and exact-matches its name set to trusted catalog bindings. The low-level
+`Server.call_tool` handler retrieves
 fresh request-scoped application facts, authorizes detached validated arguments, and delegates to
 the application handler once only after allow. Review calls an application-owned async provider
 with a fresh one-shot exact-call fingerprint before final current-policy enforcement. The SDK's

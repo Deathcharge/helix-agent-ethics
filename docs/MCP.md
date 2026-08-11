@@ -112,7 +112,7 @@ provider failure, or missing provider cannot authorize a review outcome.
 Covered:
 
 - the stable MCP Python SDK 1.28.1 low-level `Server.call_tool` handler;
-- calls whose full registry exactly matches the trusted `BoundToolCatalog`;
+- calls whose complete registry name set exactly matches the trusted `BoundToolCatalog`;
 - bounded validated JSON argument objects and fresh request-scoped application facts; and
 - a handler invoked only by `tool_policy.call_tool` after final Samsarix enforcement.
 

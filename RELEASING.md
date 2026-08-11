@@ -71,6 +71,7 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m pip install --require-hashes \
      -r requirements-dev.lock \
      -r requirements-mcp.lock
+   python -m pip install --no-build-isolation --no-deps -e .
    python -m pytest --no-cov integration_tests/test_mcp_sdk.py
    python examples/mcp_server_policy_demo.py
    ```

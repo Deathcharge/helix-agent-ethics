@@ -466,8 +466,8 @@ current call and policy. The adapter contract version is `PYDANTIC_AI_ADAPTER_VE
 ### `create_mcp_server_tool_policy(bindings, tools, tool_handler, *, application_context_provider=None, actor_provider=None, context_provider=None, approval_provider=None)`
 
 Creates an optional `MCPServerToolPolicy` for the stable MCP Python SDK low-level server. MCP is
-imported only when this factory is called. `tools` must be a complete exact registry of real
-`mcp.types.Tool` objects matching the trusted `BoundToolCatalog`; definitions are deep-copied at
+imported only when this factory is called. `tools` must be a complete registry of valid real
+`mcp.types.Tool` objects; catalog matching uses their names. Definitions are deep-copied at
 construction, and `policy.tools` returns fresh copies for the server's `list_tools` handler.
 
 Register `policy.call_tool` with `Server.call_tool()` using its default schema validation. Each

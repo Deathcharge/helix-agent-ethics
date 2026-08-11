@@ -203,6 +203,19 @@ def test_real_server_review_without_provider_fails_closed() -> None:
     assert reviews == []
 
 
+def test_real_server_rejected_review_fails_closed() -> None:
+    server, calls, reviews = _server(approve_review=False)
+
+    async def scenario() -> None:
+        async with create_connected_server_and_client_session(server) as client:
+            result = await client.call_tool("send_message", {"mode": "send"})
+            assert result.isError is True
+
+    anyio.run(scenario)
+    assert calls == []
+    assert len(reviews) == 1
+
+
 def test_real_sdk_registry_drift_is_rejected_before_server_start() -> None:
     async def handler(_name: str, _arguments: dict[str, Any]) -> dict[str, Any]:
         return {}

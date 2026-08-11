@@ -127,7 +127,8 @@ Bounded review used current primary sources:
 - The [MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema) explicitly says
   tool annotations are hints and must not drive decisions when their server is untrusted.
 - The [MCP tools specification](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
-  recommends human-deniable invocation for sensitive operations, and the
+  recommends keeping a human in the loop with the ability to deny tool invocations for sensitive
+  operations, and the
   [official Python SDK](https://github.com/modelcontextprotocol/python-sdk) exposes a stable public
   low-level `Server.call_tool` handler. This supports exact-registry server enforcement without
   claiming coverage of direct handlers, other protocol primitives, or proxy/provider paths.
@@ -413,8 +414,9 @@ certification or ethics truth.
   contract proves approval, replay blocking, rejection, deny, serialized-history resume, forged
   native-approval blocking, and registry-drift failure against exact
   `pydantic-ai-slim==2.22.0` without changing the dependency-free base install.
-- Added an optional stable MCP Python SDK server adapter that snapshots an exact real `Tool`
-  registry, obtains fresh request-scoped facts, and protects the final low-level async handler.
+- Added an optional stable MCP Python SDK server adapter that snapshots real `Tool` definitions,
+  exact-matches their name set, obtains fresh request-scoped facts, and protects the final
+  low-level async handler.
   One-shot review evidence, adversarial tests, an in-memory client/server contract, no-network
   example, focused guide, and exact hashed lock preserve the dependency-free base package.
 - Added a versioned metadata-only OpenTelemetry event sink, bounded ordered audit-sink composition,

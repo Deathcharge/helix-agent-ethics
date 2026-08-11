@@ -79,7 +79,7 @@ async def main() -> None:
     async with create_connected_server_and_client_session(server) as client:
         result = await client.call_tool("read_file", {"path": "README.md"})
         if result.isError:
-            raise AssertionError("the policy-protected MCP call must succeed")
+            raise AssertionError(f"the policy-protected MCP call must succeed: {result.content}")
         print(result.structuredContent)
 
 

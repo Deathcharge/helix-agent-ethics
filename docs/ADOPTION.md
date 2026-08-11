@@ -25,8 +25,8 @@ production traffic, or hosted deployment.
 
 The MCP tools specification recommends confirmation for sensitive operations, while the protocol
 schema says tool annotations are untrusted hints. The stable Python SDK exposes a public low-level
-`Server.call_tool` handler and public `Tool` definitions. Samsarix exact-matches that entire real
-registry to application-authored capabilities, advertises copied definitions, and retrieves fresh
+`Server.call_tool` handler and public `Tool` definitions. Samsarix exact-matches the complete MCP
+tool-name set to application-authored capabilities, advertises copied definitions, and retrieves fresh
 request facts before final handler invocation. Review is application-owned and returns one-shot
 fingerprint-bound evidence for the current call only.
 
