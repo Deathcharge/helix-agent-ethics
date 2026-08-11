@@ -26,9 +26,11 @@ arguments, then protect a copy:
 from agents import Agent, function_tool
 from samsarix_ethics import ToolGate, create_openai_agents_tool_policy
 
+
 @function_tool(strict_mode=True)
 def send_message(recipient: str, body: str) -> str:
     return application_mailer.send(recipient, body)
+
 
 binding = ToolGate(policy, audit_sink=decision_store.append).bind(
     "send_message",

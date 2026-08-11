@@ -239,10 +239,7 @@ change selection:
 dispatcher = ToolDispatcher.bind_catalog(
     gate,
     catalog,
-    registered_tools={
-        name: registry.get_tool(name).function
-        for name in registry.list_tools()
-    },
+    registered_tools={name: registry.get_tool(name).function for name in registry.list_tools()},
 )
 result = dispatcher.execute(model_tool_name, model_arguments, actor={"id": current_agent_id})
 ```

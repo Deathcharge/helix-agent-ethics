@@ -28,6 +28,9 @@ adoption remain separate evidence-based decisions.
 - [x] Add an exact-registry Pydantic AI wrapper toolset with native deferred review,
   fingerprint-bound Samsarix resume evidence, exact slim-version locking, and a real no-network
   agent contract.
+- [x] Add exact-registry enforcement at the stable MCP Python SDK server handler, with fresh
+  request facts, one-shot application-owned review, exact-version locking, and a real in-memory
+  client/server contract.
 - [x] Expose one immutable metadata-only audit record to a caller-supplied sink while preserving
   the existing JSONL API and fail-closed behavior.
 - [x] Correlate metadata-only decisions with a caller-owned OpenTelemetry trace through an optional
@@ -82,12 +85,16 @@ Current hardening backlog:
 
 - No published package/release, public third-party adopter, or production deployment evidence.
 - The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible.
-  The public OpenAI, LangChain, Pydantic AI, and OpenTelemetry adapters are reproducible
+  The public OpenAI, LangChain, Pydantic AI, MCP, and OpenTelemetry adapters are reproducible
   integration evidence,
   not external adopter case studies.
 - LangChain review checkpoints intentionally contain proposed tool arguments. Reviewer identity,
   checkpoint confidentiality, expiry, one-time resume, and multi-call transactionality remain
   application-owned.
+- MCP review requests intentionally contain proposed tool arguments and capability labels.
+  Reviewer identity/authentication, confidentiality, timeout/cancellation, and side-effect
+  transactionality remain application-owned; only low-level stable-SDK tool calls routed through
+  the adapter are covered.
 - Installed-wheel smoke coverage, retained CI distributions, and GitHub build-provenance
   attestations exist. PyPI project ownership, Trusted Publishing, protected release approval, and
   durable registry publication evidence are not yet configured.

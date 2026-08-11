@@ -8,8 +8,8 @@ It is for Python developers who need a small policy-as-code boundary in front of
 workflows, or other consequential operations. Policies and inputs are JSON, decisions are
 explainable, and the optional audit log excludes raw input by design. The package makes no
 network calls and its core has no runtime dependencies. Optional exact-version adapters protect
-OpenAI Agents SDK function tools, LangChain tool registries, and Pydantic AI toolsets with
-fingerprint-bound native review flows. An optional OpenTelemetry API extra emits metadata-only
+OpenAI Agents SDK function tools, LangChain tool registries, Pydantic AI toolsets, and stable MCP
+Python SDK servers with fingerprint-bound review flows. An optional OpenTelemetry API extra emits metadata-only
 decision events into caller-owned traces. Other Samsarix repositories can embed the core, but none
 is required; the package and its release lifecycle stand on their own.
 
@@ -470,10 +470,7 @@ from samsarix_ethics import ToolDispatcher, load_tool_gate_deployment
 gate_deployment = load_tool_gate_deployment("coding-agent.gate-deployment.json")
 dispatcher = ToolDispatcher.bind_deployment(
     gate_deployment,
-    registered_tools={
-        name: registry.get_tool(name).function
-        for name in registry.list_tools()
-    },
+    registered_tools={name: registry.get_tool(name).function for name in registry.list_tools()},
 )
 result = dispatcher.execute(model_tool_name, model_arguments, context=trusted_context)
 ```
@@ -628,6 +625,29 @@ and atomically consumed; durable reconstruction supplies an application-owned ap
 [Pydantic AI toolset guide](docs/PYDANTIC_AI.md) for multi-call resolution, persistence, sensitive
 metadata, and unsupported-path boundaries.
 
+## MCP Python SDK server integration
+
+Install the exact stable SDK contract and run the in-memory client/server demo:
+
+```bash
+python -m pip install -e '.[mcp]'
+python examples/mcp_server_policy_demo.py
+```
+
+`create_mcp_server_tool_policy(bound_catalog, tools, handler)` exact-matches a complete registry of
+real MCP `Tool` definitions to trusted Samsarix bindings. Advertise only `tool_policy.tools`, then
+register `tool_policy.call_tool` with the stable low-level `Server.call_tool()` decorator. Every
+valid call receives fresh application-owned actor/context facts; allow delegates once, deny never
+delegates, and review invokes an optional application-owned async approval provider before current
+policy enforcement with re-read request facts. Approval evidence is bound to a fresh one-shot call ID, exact arguments,
+capabilities, actor, and policy evaluation.
+
+The integration is pinned to `mcp==1.28.1` and uses the SDK's public in-memory server/client
+contract in CI. SDK JSON Schema validation occurs before the protected handler and does not emit a
+Samsarix decision. FastMCP private routes, direct handler calls, resources, prompts, sampling,
+proxy/provider paths, and any tool not advertised and dispatched through this exact adapter are
+outside its boundary. See the [MCP server integration guide](docs/MCP.md).
+
 ## Downstream adoption
 
 Samsarix Agent Framework is the first verified downstream consumer. Its optional policy registry
@@ -636,8 +656,8 @@ capabilities outside model arguments, re-reads authentication/approval facts for
 blocks execution on every non-allow outcome or gate failure. The consumer contract runs on Python
 3.11-3.14 while the framework's dependency-free core retains Python 3.10 support.
 
-The repository also carries public, reproducible OpenAI Agents SDK, LangChain, and Pydantic AI
-adapters with exact-version contract tests. The consumer repository remains private as of
+The repository also carries public, reproducible OpenAI Agents SDK, LangChain, Pydantic AI, and MCP
+Python SDK adapters with exact-version contract tests. The consumer repository remains private as of
 2026-08-01, so none of these items is a public third-party case study or production deployment.
 Exact commits,
 compatibility, rollback, support level, and evidence limits are recorded in

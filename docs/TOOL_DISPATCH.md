@@ -42,10 +42,7 @@ The dispatcher copies the supplied mapping and retains each callable object. Rep
 the original registry or dictionary later does not change dispatch. Pass the final tool function:
 
 ```python
-callbacks = {
-    name: registry.get_tool(name).function
-    for name in registry.list_tools()
-}
+callbacks = {name: registry.get_tool(name).function for name in registry.list_tools()}
 ```
 
 Do not bind a callback such as `lambda **args: registry.call(name, **args)` if that call performs a

@@ -28,13 +28,16 @@ from samsarix_ethics import ToolGate, create_pydantic_ai_tool_policy
 
 tools = FunctionToolset()
 
+
 @tools.tool_plain
 def read_ticket(ticket_id: str) -> str:
     return ticket_store.read(ticket_id)
 
+
 @tools.tool_plain
 def send_message(recipient: str, body: str) -> str:
     return messenger.send(recipient, body)
+
 
 bindings = ToolGate(policy, audit_sink=audit_sink).bind_catalog(
     catalog,
