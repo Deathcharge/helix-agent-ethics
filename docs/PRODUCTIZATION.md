@@ -53,8 +53,19 @@ and bound the initial handshake independently of the later policy adapter. None 
 is misrepresented as a new Samsarix authentication, retry, storage or exactly-once guarantee.
 
 CI now runs all four MCP client contract files on Linux and Windows; contributor/release commands
-match. Full source/package checks and exact-head review/merge/artifact evidence are recorded in the
-increment's pull request. Final release disposition remains **release candidate**, not publication
+match. Local Windows/Python 3.11.9 core verification passes **663 tests with 95.36% branch-inclusive
+coverage** (449.34 seconds). The local built wheel passes all **123 client contracts from
+site-packages** (96.34 seconds). A separate `--no-deps` wheel environment without MCP/AnyIO/HTTPX2
+passes imports, version, policy validation, schema output, and read/delete exits 0/3. Wheel/sdist
+build and Twine checks pass; neither distribution includes integration fixtures or certificate
+keys. Ruff check/format (93 files), mypy (41 source files), `pip check`, the MCP demo and all changed
+local documentation links pass. Initial PR CI `33390715248` passes all 11 test jobs: core 663 tests
+on Python 3.11–3.14 (3.11 Linux coverage 95.33%), plus every optional adapter including the 123 MCP
+client contracts on Linux and Windows. Main-only attestation is correctly skipped on the PR.
+
+Exact-head review/merge and final attested-artifact evidence belong to
+[PR #44](https://github.com/Deathcharge/samsarix-agent-ethics/pull/44).
+Final release disposition remains **release candidate**, not publication
 or proof of production hosting/product-market fit. No sibling repository or licensing was changed.
 
 Remaining gates, in order:

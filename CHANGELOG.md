@@ -6,6 +6,10 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Real verified-TLS MCP client-credentials OAuth acceptance on Linux/Windows, including credential
+  isolation, certificate/metadata rejection, token/review revocation, bounded auth response bodies,
+  and interrupted token exchange. Documented/tested HTTPX2 request-hook wiring supplies missing
+  SDK-generated token-request timeouts; no runtime dependency or authentication service was added.
 - Optional MCP HTTP response budgets with separate wire/decoded byte limits, bounded streaming
   gzip/deflate handling, early declared-length rejection, terminal failure latching, owned cleanup,
   and adversarial real-network/pool-pressure tests. HTTPX2 2.12.0 is now a direct client-extra pin
