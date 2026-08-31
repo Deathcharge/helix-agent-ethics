@@ -11,6 +11,8 @@ the wheel into a clean virtual environment, and uploads the exact files as
 Python 3.11-3.14. Dedicated hash-locked lanes exercise the exact OpenAI Agents SDK, LangChain,
 Pydantic AI, MCP v1 server, MCP v2 client, and OpenTelemetry API/SDK contracts plus their no-network examples; release candidates
 are valid only when the complete matrix and all optional-integration lanes are green.
+The core, SDK and process lanes install the local project non-editably using the locked build
+backend. The separate wheel smoke test still verifies the exact distributions produced by CI.
 
 For pushes to `main`, a separate least-privilege job waits for the complete matrix, downloads those
 already-verified files, and creates GitHub build-provenance attestations. The attestation links each
@@ -21,12 +23,37 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
 
 ## Candidate verification
 
+Run from the root of a checkout of the intended commit, with Python 3.11+ and GitHub CLI available.
+The integration tests and hashed SDK locks live in the checkout; an extracted sdist alone is not
+the complete release-verification workspace. Do not set `PYTHONPATH` to `src`, enable system site
+packages, or reuse a development environment: those can hide a missing installation.
+
+Use a distinct **new** virtual environment for each of steps 3-9 (core, OpenAI Agents, LangChain,
+Pydantic AI, MCP v1, OpenTelemetry, MCP v2). For example, create `.venv/release-core` for step 3:
+
+```bash
+python -m venv .venv/release-core
+```
+
+Activate with `source .venv/release-core/bin/activate` on macOS/Linux or
+`.venv\release-core\Scripts\Activate.ps1` in PowerShell. Before the next lane, deactivate and create
+a differently named environment. The following blocks use the active environment's `python`.
+PowerShell users should join backslash-continued commands onto one line; backslash is Bash syntax.
+Stop after any unexpected nonzero command; do not continue to publish based on later successes.
+
+Every lane installs the hash-locked tools/SDK **and then this package**, with dependency resolution
+and build isolation disabled. Regular installs exercise the installed package; editable installs
+remain appropriate for development but are not the release acceptance path. See
+[pip's regular/editable installation guidance](https://pip.pypa.io/en/stable/topics/local-project-installs/).
+
 1. Confirm `main` is clean, synchronized, and green at the intended commit.
 2. Confirm `pyproject.toml`, `samsarix_ethics.__version__`, and the changelog name the same version.
 3. Install the hash-locked development environment and run the base release suite:
 
    ```bash
    python -m pip install --require-hashes -r requirements-dev.lock
+   python -m pip install --no-build-isolation --no-deps .
+   python -m pip check
    python -m ruff format --check .
    python -m ruff check .
    python -m mypy
@@ -43,6 +70,8 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m pip install --require-hashes \
      -r requirements-dev.lock \
      -r requirements-openai-agents.lock
+   python -m pip install --no-build-isolation --no-deps .
+   python -m pip check
    python -m pytest --no-cov integration_tests/test_openai_agents_sdk.py
    python examples/openai_agents_guardrail_demo.py
    ```
@@ -53,6 +82,8 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m pip install --require-hashes \
      -r requirements-dev.lock \
      -r requirements-langchain.lock
+   python -m pip install --no-build-isolation --no-deps .
+   python -m pip check
    python -m pytest --no-cov integration_tests/test_langchain_sdk.py
    python examples/langchain_policy_middleware_demo.py
    ```
@@ -63,6 +94,8 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m pip install --require-hashes \
      -r requirements-dev.lock \
      -r requirements-pydantic-ai.lock
+   python -m pip install --no-build-isolation --no-deps .
+   python -m pip check
    python -m pytest --no-cov integration_tests/test_pydantic_ai_sdk.py
    python examples/pydantic_ai_policy_toolset_demo.py
    ```
@@ -73,7 +106,8 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m pip install --require-hashes \
      -r requirements-dev.lock \
      -r requirements-mcp.lock
-   python -m pip install --no-build-isolation --no-deps -e .
+   python -m pip install --no-build-isolation --no-deps .
+   python -m pip check
    python -m pytest --no-cov integration_tests/test_mcp_sdk.py
    python examples/mcp_server_policy_demo.py
    ```
@@ -84,6 +118,8 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m pip install --require-hashes \
      -r requirements-dev.lock \
      -r requirements-opentelemetry.lock
+   python -m pip install --no-build-isolation --no-deps .
+   python -m pip check
    python -m pytest --no-cov integration_tests/test_opentelemetry_sdk.py
    python examples/opentelemetry_decision_event_demo.py
    ```
@@ -95,26 +131,49 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m pip install --require-hashes \
      -r requirements-dev.lock \
      -r requirements-mcp-client.lock
-   python -m pip install --no-build-isolation --no-deps -e .
+   python -m pip install --no-build-isolation --no-deps .
    python -m pip check
    python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py integration_tests/test_mcp_client_oauth.py integration_tests/test_mcp_client_refresh.py
    python examples/mcp_client_policy_demo.py
    ```
 
-10. Download the exact CI distributions for the commit, then verify their provenance:
+10. Select the successful **main push** CI run whose `headSha` equals the intended full commit SHA.
+    Confirm all test/SDK/recovery jobs and `Attest distributions` succeeded. Replace `RUN_ID`,
+    `COMMIT` and `VERSION` below with that run, full SHA and package version. PR builds do not have
+    attestations. Download into a new commit-specific directory, separate from local `dist/` builds;
+    if it already exists, inspect it or choose a fresh directory instead of overwriting files.
+    Verify both distributions before installing or executing either:
 
     ```bash
+    gh run view RUN_ID --json event,headSha,headBranch,status,conclusion,jobs
     gh run download RUN_ID \
       --name python-distributions-COMMIT \
-      --dir dist
-    gh attestation verify dist/samsarix_agent_ethics-VERSION-py3-none-any.whl \
-      --repo Deathcharge/samsarix-agent-ethics
-    gh attestation verify dist/samsarix_agent_ethics-VERSION.tar.gz \
-      --repo Deathcharge/samsarix-agent-ethics
+      --dir .venv/release-artifacts/COMMIT
+    gh attestation verify .venv/release-artifacts/COMMIT/samsarix_agent_ethics-VERSION-py3-none-any.whl \
+      --repo Deathcharge/samsarix-agent-ethics \
+      --source-digest COMMIT \
+      --source-ref refs/heads/main \
+      --signer-workflow Deathcharge/samsarix-agent-ethics/.github/workflows/ci.yml
+    gh attestation verify .venv/release-artifacts/COMMIT/samsarix_agent_ethics-VERSION.tar.gz \
+      --repo Deathcharge/samsarix-agent-ethics \
+      --source-digest COMMIT \
+      --source-ref refs/heads/main \
+      --signer-workflow Deathcharge/samsarix-agent-ethics/.github/workflows/ci.yml
     ```
 
-11. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
+    Repository-only verification is not enough to select a particular candidate. The commit, ref
+    and signer constraints bind the artifact to the expected source/build identity; they do not
+    replace code review or prove runtime safety. See the
+    [GitHub CLI verification contract](https://cli.github.com/manual/gh_attestation_verify).
+
+11. Install the verified downloaded wheel with `--no-deps` in a new virtual environment and run
     `samsarix-ethics --version`, schema export, policy validation, and one allow/deny walkthrough.
+    Also replace the locally built package in each of the six SDK environments with that exact
+    wheel using `python -m pip install --no-deps --force-reinstall WHEEL_PATH`, run
+    `python -m pip check`, and repeat that lane's test and example commands. Keep MCP v1 and v2
+    separate. Confirm `python -c "import samsarix_ethics; print(samsarix_ethics.__file__)"` points
+    inside the lane's `site-packages`, not the checkout. Record results for the downloaded artifact,
+    not just a locally rebuilt wheel with the same version label.
     From the same checkout or extracted sdist, run `python -m benchmarks.policy_gate run` using that
     environment's interpreter and retain the JSON with the exact wheel digest. The benchmark source
     is in the sdist, not the installed runtime API; timings are informational until deployment SLOs

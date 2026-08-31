@@ -6,6 +6,10 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Clean-room release instructions install the package in every isolated SDK/core lane, verify
+  exact candidate commit/ref/workflow provenance, and recheck SDK contracts against downloaded
+  wheels. CI uses regular installations; regression checks guard the critical guide commands.
+
 - Post-grant MCP refresh-token TLS contracts for rotation/omission, concurrent calls, review-time
   rejection, storage failures, bounded responses and interrupted exchanges. Document SDK relative
   expiry reload and rotation-loss recovery boundaries; no runtime auth API or dependency change.

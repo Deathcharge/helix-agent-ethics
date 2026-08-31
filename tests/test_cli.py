@@ -10,11 +10,15 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+import pytest
+
+import samsarix_ethics
+
 
 def _run_cli(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
-    source_path = str(Path(__file__).parents[1] / "src")
-    environment["PYTHONPATH"] = source_path + os.pathsep + environment.get("PYTHONPATH", "")
+    # Exercise the same package as the parent, whether installed regularly or editably.
+    environment["PYTHONPATH"] = str(Path(samsarix_ethics.__file__).resolve().parents[1])
     return subprocess.run(
         [sys.executable, "-m", "samsarix_ethics", *args],
         input=stdin,
@@ -23,6 +27,25 @@ def _run_cli(*args: str, stdin: str | None = None) -> subprocess.CompletedProces
         check=False,
         env=environment,
     )
+
+
+def test_cli_subprocess_uses_parent_package_not_checkout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    installed_root = tmp_path / "installed" / "site-packages"
+    monkeypatch.setattr(
+        samsarix_ethics, "__file__", str(installed_root / "samsarix_ethics/__init__.py")
+    )
+    monkeypatch.setenv("PYTHONPATH", "unrelated-import-root")
+
+    def capture(command: list[str], **options: Any) -> subprocess.CompletedProcess[str]:
+        assert command == [sys.executable, "-m", "samsarix_ethics", "--version"]
+        assert options["env"]["PYTHONPATH"] == str(installed_root.resolve())
+        return subprocess.CompletedProcess(command, 0, stdout="captured", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", capture)
+    assert _run_cli("--version").stdout == "captured"
+    assert os.environ["PYTHONPATH"] == "unrelated-import-root"
 
 
 def test_help_and_version() -> None:
