@@ -560,9 +560,16 @@ jobs:
         run: python examples/mcp_server_policy_demo.py
 
   mcp-client-contract:
-    name: MCP Python SDK 2.1.1 client contract
-    runs-on: ubuntu-latest
+    name: MCP Python SDK 2.1.1 client contract (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -584,7 +591,10 @@ jobs:
           python -m pip install --no-build-isolation --no-deps -e .
           python -m pip check
       - name: Test exact MCP client contract
-        run: python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py
+        run: >-
+          python -m pytest --no-cov
+          integration_tests/test_mcp_client_sdk.py
+          integration_tests/test_mcp_client_http.py
       - name: Smoke-test the MCP client example
         run: python examples/mcp_client_policy_demo.py
 

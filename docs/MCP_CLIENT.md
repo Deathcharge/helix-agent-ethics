@@ -17,7 +17,7 @@ The exact supported contract is `mcp==2.1.1` with directly declared `anyio==4.14
 The existing `mcp` extra pins `mcp==1.28.1` for the
 server adapter. These extras are **mutually incompatible in one environment**; neither silently
 upgrades the other. The base Samsarix package still has zero runtime dependencies. MCP and AnyIO
-are loaded lazily by the async factory. The v2 lock, CI lane, and in-memory tests are separate.
+are loaded lazily by the async factory. The v2 lock and CI environment are separate.
 
 The demo reads a support ticket, requests simulated approval for a reply, and blocks deletion
 before the remote handler receives it. It needs no network, credentials, sibling repo, or LLM.
@@ -140,10 +140,91 @@ must record review lifecycle and transport outcomes separately, without logging 
 - Parallel calls are independently authorized, not transactional. No cross-call rollback,
   distributed locking, or resource-state snapshot is provided.
 - Validate the selected network transport, disconnects, cancellation, secrets handling, and audit
-  retention in your deployment. CI proves the in-memory exact SDK contract, not production hosting.
+  retention in your deployment. CI exercises in-memory and loopback TCP contracts, not production
+  hosting, real OAuth, TLS termination, or your proxy configuration.
+
+## Streamable HTTP integration
+
+Keep the endpoint and credentials application-owned, never model-supplied. The SDK accepts a
+caller-owned `httpx2.AsyncClient` through its public transport factory:
+
+```python
+import httpx2
+from mcp import Client
+from mcp.client.streamable_http import streamable_http_client
+
+# endpoint is a fixed, allowlisted HTTPS URL; auth is your configured SDK OAuth provider.
+async with httpx2.AsyncClient(
+    auth=auth,
+    trust_env=False,
+    follow_redirects=False,
+    timeout=httpx2.Timeout(30, read=30),
+    limits=httpx2.Limits(max_connections=20, max_keepalive_connections=10),
+) as http:
+    async with Client(streamable_http_client(endpoint, http_client=http)) as client:
+        protected = await create_mcp_client_tool_policy(
+            bindings, client, server_id="support-primary",
+            actor_provider=authenticated_actor,
+            context_provider=current_authorization_facts,
+            approval_provider=authenticated_review,
+        )
+        result = await protected.call_tool("get_ticket", {"ticket_id": "T-100"})
+```
+
+This is application wiring, not an OAuth setup or runnable credential-free example. Use the SDK's
+[OAuth client guide](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/) to configure your actual
+provider. Do not disable certificate verification. `trust_env=False` ignores ambient HTTP proxy
+configuration; configure a required corporate proxy explicitly. Redirect following is deliberately
+disabled: select the canonical endpoint and review any target change before creating a new client.
+Connection limits are not response-size, rate, cost, or whole-workflow limits.
+
+One HTTP client per credential/tenant boundary prevents mutable default headers or cookies being
+shared accidentally. Authenticate actor facts independently; neither `_meta` nor `server_id`
+establishes tenant identity. A changed token or registry during approval can reject the final
+preflight. Remote credentials revoked *after* preflight still require server-side enforcement.
+The SDK does not close a caller-supplied HTTP client: keep the outer `async with` shown above.
+
+Handle transport failures around the **whole Client context**, including context exit. With the
+tested SDK, 401/403 failures can surface as `MCPError` rather than `HTTPStatusError`; background
+transport errors may be nested in Python `ExceptionGroup`. Do not parse error text for authorization
+decisions or log complete exception/request objects containing credentials or payloads. Preserve
+cancellation and reconcile remote state before considering a separately authorized retry.
+The adapter itself never retries. OAuth authentication/refresh hooks, custom transports, or proxies
+may replay HTTP requests independently; review that behavior separately. The static-credential tests
+below do not establish at-most-once behavior for those components.
+
+### Reproduce the network contract
+
+After installing the development and v2 client locks as described in [RELEASING.md](../RELEASING.md):
+
+```bash
+python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py
+```
+
+The HTTP suite owns an ephemeral `127.0.0.1` socket, real Uvicorn/ASGI server, SDK HTTP client and
+bounded teardown. It requires no internet, paid API, persistent credential, or separate server.
+Its random bearer tokens and authentication middleware are **test fixtures, not production auth**.
+Linux and Windows CI run the same tests.
+
+| Exercised boundary | Evidence asserted |
+| --- | --- |
+| Auto/legacy negotiation; JSON/SSE responses | Read and reviewed send arrive; denied delete does not |
+| Concurrent clients; forged tenant metadata | Server sees each connection's authenticated principal |
+| Invalid credentials/origin | Actual HTTP 401/403; no handler invocation |
+| Revocation or advertised drift during review | Recheck fails before any `tools/call` |
+| Unknown tool or failed audit delivery | No remote invocation; unknown tool causes no extra HTTP request |
+| Deadline, task cancellation, result-stream disconnect | One wire call and handler invocation; no tool retry; owned resources close |
+
+The injected disconnect happens after the handler has run. An `allow` audit record therefore does
+**not** establish delivery, success, rollback, or exactly-once execution. Cancellation tests observe
+cleanup by client/server shutdown, not a universal remote-cancellation deadline. These tests do not
+cover internet/TLS/OAuth infrastructure, hostile response sizes, reverse proxies, connection-pool
+exhaustion, or durability across process crashes. Reproduce those with your selected deployment.
 
 References: [official v2 migration guide](https://py.sdk.modelcontextprotocol.io/migration/),
 [client API](https://py.sdk.modelcontextprotocol.io/client/),
+[HTTP transport configuration](https://py.sdk.modelcontextprotocol.io/client/transports/),
+[Streamable HTTP specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http),
 [pagination](https://py.sdk.modelcontextprotocol.io/advanced/pagination/), and
 [MCP tools specification](https://modelcontextprotocol.io/specification/2026-07-28/server/tools).
 Version evidence was checked on 2026-08-31.

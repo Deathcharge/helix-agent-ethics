@@ -6,6 +6,9 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Real loopback Streamable HTTP MCP v2 contracts on Linux/Windows: JSON/SSE and auto/legacy
+  workflows, tenant isolation, origin/auth rejection, review-time revocation/drift, audit failure,
+  cancellation, timeout and lost-result behavior; documented application-owned HTTP lifecycle.
 - Optional MCP v2 (`2.1.1`) client adapter with bounded full-registry discovery/pinning,
   fail-closed outbound policy enforcement, complete-request one-shot review binding,
   explicit continuation reauthorization, per-phase deadlines, a real SDK CI contract,
