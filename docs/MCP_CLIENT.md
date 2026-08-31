@@ -142,8 +142,9 @@ must record review lifecycle and transport outcomes separately, without logging 
 - Parallel calls are independently authorized, not transactional. No cross-call rollback,
   distributed locking, or resource-state snapshot is provided.
 - Validate the selected network transport, disconnects, cancellation, secrets handling, and audit
-  retention in your deployment. CI exercises in-memory and loopback TCP contracts, not production
-  hosting, real OAuth, TLS termination, or your proxy configuration.
+  retention in your deployment. CI exercises in-memory, loopback TCP and verified TLS with the
+  stock SDK client-credentials OAuth provider against isolated test servers. It does not validate
+  production hosting, your identity provider, TLS termination, or proxy configuration.
 
 ## Streamable HTTP integration
 
@@ -157,6 +158,12 @@ from mcp.client.streamable_http import streamable_http_client
 from samsarix_ethics import create_mcp_client_tool_policy, create_mcp_http_transport
 
 # endpoint is a fixed, allowlisted HTTPS URL; auth is your configured SDK OAuth provider.
+network_timeout = httpx2.Timeout(30, read=30)
+
+async def supply_missing_timeout(request: httpx2.Request) -> None:
+    # MCP 2.1.1 token requests bypass AsyncClient's default timeout insertion.
+    request.extensions.setdefault("timeout", network_timeout.as_dict())
+
 bounded_http = create_mcp_http_transport(
     httpx2.AsyncHTTPTransport(
         trust_env=False,
@@ -172,7 +179,8 @@ async with httpx2.AsyncClient(
     trust_env=False,
     follow_redirects=False,
     # HTTP network-idle limit, separate from the adapter's dispatch deadline.
-    timeout=httpx2.Timeout(30, read=30),
+    timeout=network_timeout,
+    event_hooks={"request": [supply_missing_timeout]},
 ) as http:
     async with Client(streamable_http_client(endpoint, http_client=http)) as client:
         protected = await create_mcp_client_tool_policy(
@@ -196,7 +204,16 @@ The response-budget wrapper does not select or validate credential destinations 
 Enforce the HTTPS allowlist in application configuration before supplying credentials; local
 cleartext HTTP in the integration suite uses only isolated loopback servers and ephemeral test tokens.
 
-This example caps HTTP read inactivity at 30 seconds, even if a call supplies a larger adapter
+The hook fills only **missing** request timeouts, including those on this SDK's generated token
+requests; `AsyncClient(timeout=...)` alone does not cover those requests. It preserves explicit
+SDK/per-request values, so it is not a universal timeout ceiling. This is application wiring via
+HTTPX2's public [request hooks](https://httpx2.pydantic.dev/advanced/event-hooks/) and
+[timeout extension](https://httpx2.pydantic.dev/advanced/extensions/#timeout), not an SDK monkeypatch.
+Also bound the application's connection/authentication phase and overall workflow with cooperative
+deadlines: the policy adapter is constructed **after** the initial OAuth/SDK handshake and cannot
+time it out. Keep async Client entry, use and exit in the same task/cancel-scope lifetime.
+
+This example caps ordinary MCP HTTP read inactivity at 30 seconds, even if a call supplies a larger adapter
 `read_timeout_seconds`. For a longer silent tool, configure **both** the HTTP read-idle limit and
 the adapter dispatch deadline deliberately. Network activity can reset the HTTP idle timer but
 does not extend the adapter's total dispatch-phase deadline. Neither limit bounds the entire
@@ -216,8 +233,62 @@ transport errors may be nested in Python `ExceptionGroup`. Do not parse error te
 decisions or log complete exception/request objects containing credentials or payloads. Preserve
 cancellation and reconcile remote state before considering a separately authorized retry.
 The adapter itself never retries. OAuth authentication/refresh hooks, custom transports, or proxies
-may replay HTTP requests independently; review that behavior separately. The static-credential tests
-below do not establish at-most-once behavior for those components.
+may replay HTTP requests independently; review that behavior separately. Neither suite below
+establishes at-most-once execution across arbitrary authentication middleware or remote services.
+
+### Service-to-service OAuth acceptance
+
+For a pre-registered machine client, configure the SDK provider on the caller-owned HTTP client:
+
+```python
+from mcp.client.auth.extensions.client_credentials import ClientCredentialsOAuthProvider
+
+auth = ClientCredentialsOAuthProvider(
+    server_url=endpoint,
+    storage=tenant_token_storage,
+    client_id=registered_client_id,
+    client_secret=secret_from_credential_store,
+    token_endpoint_auth_method="client_secret_basic",
+    scope="support:tools",
+)
+```
+
+Use the [SDK OAuth guide](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/) for provider
+and storage contracts. Credentials, issuer/endpoint allowlists, encrypted durable storage, absolute
+token expiry on reload, revocation/rotation, and reviewer identity remain application-owned. Scope
+each provider/store/client together; discard the provider as well as the client after a token-store
+failure. In this SDK, in-memory token state is updated before storage completes; retrying with the
+same provider is not a fail-closed storage-recovery strategy.
+
+The loopback TLS acceptance tests use this exact provider, not a stubbed auth flow, and independently
+observe protected handlers and token grants. Important observed limits:
+
+- Both Basic and form-post client authentication work over verified HTTPS. Credentials go to the
+  separate token endpoint, not the resource or metadata endpoints; opaque access tokens identify
+  the server-authenticated tenant independently of supplied MCP metadata.
+- The SDK validates resource/issuer metadata identity, but discovery can introduce additional URL
+  destinations. An allowlisted MCP URL alone is not an egress/SSRF policy for metadata and token
+  endpoints. Enforce permitted HTTPS destinations before credentials leave the application.
+- A resource challenge can replace the provider's constructor scope. That scope is **not** a grant
+  ceiling: the authorization server must enforce the client's allowed scopes/resource audience.
+  The test server rejects a challenged `support:admin` scope; no tool runs.
+- Revoked access tokens can cause a fresh client-credentials exchange and replay. The tested read
+  executes once per authorized invocation; this is reacquisition, not a refresh-token grant.
+  Revoking both the token and client during review prevents final tool dispatch.
+- A plain 403 is retried once by this SDK auth provider without obtaining another token. The test
+  middleware rejects both requests **before** the handler. Do not extrapolate exactly-once behavior
+  to a server that performs a side effect before returning 401/403.
+- Discovery/token response bodies pass through the same budgets and latch. TLS, token-service,
+  token-storage, scope and network-timeout errors do not themselves latch a body-budget failure.
+- SDK OAuth exceptions/logs can include the authorization server's error response body. The fixed
+  Samsarix budget labels and metadata-only audit sink do not sanitize third-party loggers. Apply
+  application logging/redaction policy and never log provider/token/request objects or raw errors.
+
+The test-only CA, certificates, clients, in-memory stores and narrow authorization server are
+generated locally and are **not production authentication components**. Certificates are trusted
+only by the test clients; no system trust store is changed. No real account or provider credentials
+are needed. Browser authorization-code/PKCE, CIMD/registration, refresh-token grants, persistent
+credential recovery, and long-lived OAuth-authenticated SSE subscriptions are not covered.
 
 ### Response budgets and recovery
 
@@ -270,7 +341,7 @@ wrapper is not a general compression-conformance validator.
 After installing the development and v2 client locks as described in [RELEASING.md](../RELEASING.md):
 
 ```bash
-python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py
+python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py integration_tests/test_mcp_client_oauth.py
 ```
 
 The HTTP suite owns an ephemeral `127.0.0.1` socket, real Uvicorn/ASGI server, SDK HTTP client and
@@ -289,12 +360,19 @@ Linux and Windows CI run the same tests.
 | Identity/gzip/deflate; declared and chunked body overruns | Exact decoded boundary accepted; wire/decoded overflow closes and latches |
 | Unsupported/corrupt encodings; simultaneous responses | No post-latch request dispatch or delivery of the next pending chunk |
 | Single-connection pool pressure/cancellation | Pool timeout is distinct; closing/cancelling a response releases the connection |
+| TLS on resource and issuer origins | Untrusted CA, expired certificate and hostname mismatch reject before HTTP credentials reach that origin |
+| Stock client-credentials OAuth, Basic/form-post, JSON/SSE, auto/legacy | Read/review/deny workflow; scoped audience-bound grants; separate tenant stores |
+| Invalid client, resource/issuer mismatch, challenged scope, token-service/storage failure | No protected handler; no successful token persistence |
+| Oversized resource metadata, issuer metadata or token response | Body-budget latch prevents subsequent HTTP dispatch |
+| Revoked token/client; plain 403 | Explicitly counted grant/replay behavior, with no unauthorized handler invocation |
+| Token exchange network timeout/cancellation | Request timeout hook works; server observes disconnect; no token persistence or tool effect |
 
 The injected disconnect happens after the handler has run. An `allow` audit record therefore does
 **not** establish delivery, success, rollback, or exactly-once execution. Cancellation tests observe
 cleanup by client/server shutdown, not a universal remote-cancellation deadline. These tests do not
-cover internet/TLS/OAuth infrastructure, hostile response headers/parser memory, reverse proxies,
-SSE event-store resumption, or durability across process crashes. Reproduce those with
+cover internet/identity-provider infrastructure, hostile response headers/parser memory, reverse
+proxies, long-lived OAuth SSE subscriptions/event-store resumption, or durability across process
+crashes. Reproduce those with
 your selected deployment.
 
 References: [official v2 migration guide](https://py.sdk.modelcontextprotocol.io/migration/),
