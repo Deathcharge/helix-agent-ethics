@@ -2,7 +2,68 @@
 
 Last updated: 2026-08-31
 
-## Current increment: interrupted artifact publication and process restart
+## Current increment: reproducible performance evidence
+
+Baseline revalidated: clean, synchronized `main` at `c9c1e38286098c9f5b4ab304011e728ca2d38d49`,
+with successful main CI `33395558329`. Previous turn was progress: real-process recovery was merged
+and exact-main wheel/sdist provenance plus 175 installed-wheel checks were verified. Work branch:
+`codex/policy-performance-evidence`. The full long-running product objective remains unchanged.
+
+An adopter could reproduce correctness but could not measure or compare policy-gating overhead
+through repository-owned tooling. This increment serves developers/operators deciding whether the
+independent library fits a coding/support agent's latency and resource budget. It adds evidence,
+not a hosted service, benchmark leaderboard, performance SLA or new runtime API.
+
+Bounded primary research checked [OPA performance guidance](https://www.openpolicyagent.org/docs/policy-performance)
+and [Python timing behavior](https://docs.python.org/3/library/timeit.html). The concrete choice is to
+separate synthetic policy scans, complete gate/dispatch boundaries, preparation-inclusive batches,
+shadow work, in-memory load/bind and real filesystem audit writes. Raw individual timings and repeat
+means are retained; noisy hosted-runner performance is not a CI speed gate.
+
+Implemented: 14 default workloads (10/100/1,000-rule last/no-match plus eight coding workloads), exact
+outcome/callback checks on every invocation, actual audit-record verification, cooperative time and
+work/report-size budgets, exclusive UTF-8 report output, environment/harness/fixture/package content
+fingerprints, and strict compatible-run median comparison. Wrong decisions, forbidden callbacks,
+lost audit records, invalid/incompatible evidence and exhausted budgets cannot produce success.
+No arguments, actor, policy contents, callback values, local paths or hostname are emitted. Environment
+labels and content fingerprints are operational metadata; reports are unsigned and need trusted storage.
+
+Focused verification: **67 benchmark tests pass, one POSIX-only FIFO test is skipped on Windows**;
+an isolated coverage run measured all 251 harness statements and 40 branches covered. This is test
+coverage, not exhaustive correctness/security proof. The `f1107c7` full Windows run passed **742 tests,
+one POSIX-only skip, 95.47% core coverage in 200.42s**, before two final stdout/output-race tests.
+Final local report parsing rejects exponent-overflow numbers and non-file inputs before reading.
+The source baseline including the initial
+59 benchmark tests passed **736 tests in 262.08s, 95.47% core coverage**; four additional callback/audit/
+deadline adversarial tests then passed in the focused run. Ruff check/format (100 files), mypy
+(41 source files), build and Twine pass. The installed wheel, with no optional SDKs, completed the
+default 14 workloads and a zero-budget self-comparison; raw samples are retained at
+`benchmarks/results/2026-08-31-windows-python311.json`. This observation is not an isolated-hardware
+SLO. [PR #46](https://github.com/Deathcharge/samsarix-agent-ethics/pull/46) has all 13 test jobs green at
+`b0f4db22317fb6cb9edd30efb703fed604b81613`; both downloaded Linux/Windows artifacts contain 14 valid
+workloads and pass self-comparison. The extracted sdist also ran against the no-optional-SDK installed
+wheel. CodeRabbit review `5067256954` on `b0f4db2` returned three minor/trivial comments. Follow-ups
+strengthen Windows JSON-escaped path privacy checks and pin/test subprocess cwd. Reports are retained
+after a later CI failure; correctness failures and the explicit completion/resource cap remain
+blocking, rather than enabling blanket continue-on-error. This distinction is now documented.
+Final-head CI and exact-main package evidence remain post-commit checks recorded on the PR.
+The performance guide distinguishes
+empirical per-invocation quantiles from production queueing/tail latency, wall occupancy from CPU/cost,
+temporary-volume fsync from deployment durability, and memory parsing from interpreter/disk startup.
+The source distribution includes the harness; wheel runtime contents/public APIs/dependencies do not change.
+
+Acceptance: runnable no-extra-dependency source/sdist/installed-wheel workloads; bounded errors and
+non-overwrite output; no false success on changed behavior; exact report compatibility and recomputed
+statistics; real Linux/Windows execution; retained raw evidence; reviewed/green commits and exact-main
+package verification. Measured observations and final evidence will be recorded on this increment's PR.
+
+Remaining P1 gates are owner-selected deployment identity/storage/rollback/supervisor acceptance,
+aggregate resource/spend limits, external pilot, legal/publication identity/approval and actual release.
+P2 work is controlled deployment load/SLO selection, profile-led optimizations with semantic parity,
+and selected long-lived/browser/refresh OAuth flows. Local benchmark observations do not close those
+gates. No paid service, production deployment, package publication or sibling repository change.
+
+## Previous increment: interrupted artifact publication and process restart
 
 Baseline revalidated: clean, synchronized `main` at `036e52ce0bcc0212ec80b5c655668803eb4183ab`
 on 2026-08-31. Work branch: `codex/deployment-crash-recovery`. Previous goal turn was concrete

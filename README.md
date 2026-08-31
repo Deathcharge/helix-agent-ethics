@@ -316,6 +316,14 @@ also kills owned publishers at real file-operation boundaries and verifies resta
 See [interrupted publication and restart](docs/POLICY_DEPLOYMENTS.md#interrupted-publication-and-restart)
 for staging-file cleanup, reauthentication, rollback anchors, and the power-loss durability limit.
 
+## Measure before deploying
+
+From a checkout or source distribution, `python -m benchmarks.policy_gate run --output baseline.json`
+measures correctness-checked policy scaling, coding-agent dispatch/batches, shadow evaluation and
+real local audit fsync. It needs no optional SDK, service or credential. See the
+[performance guide](docs/PERFORMANCE.md) for compatible-run comparison, retained Linux/Windows CI
+evidence, sampling limits and the difference between local timing and a production SLO.
+
 ## Python API
 
 ```python

@@ -6,6 +6,11 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Bounded, correctness-checked local performance workloads with raw per-call timings, strict
+  compatible-report comparison, workload/environment fingerprints and retained Linux/Windows CI
+  evidence. Measures policy scaling, coding-agent dispatch/batches, shadow and actual audit fsync;
+  no optional dependency, timing-based shared-runner gate or production performance guarantee.
+
 - Real-process deployment publication/restart contracts on Linux/Windows, including interrupted
   create/replace, concurrent exclusive creators, and reauthentication before fresh callbacks.
   A runnable emergency-policy example demonstrates why memory-only activation is not persistence.

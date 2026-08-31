@@ -115,6 +115,10 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
 
 11. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
     `samsarix-ethics --version`, schema export, policy validation, and one allow/deny walkthrough.
+    From the same checkout or extracted sdist, run `python -m benchmarks.policy_gate run` using that
+    environment's interpreter and retain the JSON with the exact wheel digest. The benchmark source
+    is in the sdist, not the installed runtime API; timings are informational until deployment SLOs
+    and controlled comparison conditions are selected. See [the methodology](docs/PERFORMANCE.md).
 12. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
     ref in the release notes.
 

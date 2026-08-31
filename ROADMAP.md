@@ -85,6 +85,10 @@ adoption remain separate evidence-based decisions.
 
 Current hardening backlog:
 
+- [x] Provide bounded, correctness-checked performance evidence for policy scaling, real coding-agent
+  dispatch/batches, shadow and local audit fsync, with strict report comparison and Linux/Windows CI
+  artifacts. Controlled deployment load/SLO acceptance remains distinct from these local observations.
+
 - [x] Add opt-in encoded/decoded MCP HTTP response budgets before SDK JSON/SSE parsing, with
   fail-closed transport latching and real gzip/deflate, cancellation and pool-pressure evidence.
 - [x] Exercise verified TLS and the stock SDK client-credentials OAuth provider against separate
