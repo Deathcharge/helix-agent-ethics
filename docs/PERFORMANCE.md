@@ -120,7 +120,12 @@ subsequent report-parser hardening does not retroactively change this observatio
 Linux/Windows process-contract jobs run a short 14-workload suite (10 iterations, three repeats,
 two warmups) and retain `policy-benchmarks-<os>-<commit>` JSON artifacts for 14 days. CI validates
 workload correctness, report shape/comparison and resource limits; it does **not** gate on noisy
-shared-runner speed. The normal Python matrix tests invalid evidence and comparator exit behavior.
+shared-runner latency statistics or a relative speed threshold. The 120-second cooperative run cap
+is an intentional blocking resource/completion guard, like the enclosing job timeout: exhaustion
+means this required run did not complete, not that a latency SLO was missed. Correctness failures
+also remain blocking. A produced report is retained even if a later check fails; failed/incomplete
+runs are not manufactured into successful timing evidence. The normal Python matrix tests invalid
+evidence and comparator exit behavior.
 Run larger acceptance measurements on controlled deployment hardware before selecting an SLO.
 
 [OPA's performance guidance](https://www.openpolicyagent.org/docs/policy-performance) distinguishes

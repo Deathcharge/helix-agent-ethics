@@ -36,7 +36,14 @@ def test_real_workloads_check_outcomes_callbacks_audit_and_boundaries(
     }
     assert all(len(r["samples_ns"]) == 4 for r in report["results"])
     payload = json.dumps(report)
-    for private in ("benchmark-coding-agent", "README.md", "workspace_contained", str(bench.ROOT)):
+    for private in (
+        "benchmark-coding-agent",
+        "README.md",
+        "workspace_contained",
+        str(bench.ROOT),
+        json.dumps(str(bench.ROOT))[1:-1],
+        bench.ROOT.as_posix(),
+    ):
         assert private not in payload
     assert bench.compare(report, report, 0)["passed"]
 
@@ -275,7 +282,10 @@ def test_wrong_outcome_aborts_instead_of_recording_fast_sample(
         workload.run()
 
 
-def test_cli_run_compare_and_regression_exit(tmp_path: Path) -> None:
+def test_cli_run_compare_and_regression_exit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     baseline, candidate = tmp_path / "baseline.json", tmp_path / "candidate.json"
     command = [sys.executable, "-m", "benchmarks.policy_gate"]
     result = subprocess.run(
@@ -297,6 +307,7 @@ def test_cli_run_compare_and_regression_exit(tmp_path: Path) -> None:
         text=True,
         timeout=30,
         check=False,
+        cwd=bench.ROOT,
     )
     assert result.returncode == 0 and result.stdout == "" and result.stderr == ""
     report = bench.read_report(baseline)
@@ -309,6 +320,7 @@ def test_cli_run_compare_and_regression_exit(tmp_path: Path) -> None:
         text=True,
         timeout=15,
         check=False,
+        cwd=bench.ROOT,
     )
     assert result.returncode == 1 and result.stderr == ""
     assert json.loads(result.stdout)["passed"] is False
@@ -359,3 +371,27 @@ def test_exhausted_run_writes_no_report(tmp_path: Path, capsys: pytest.CaptureFi
     assert not output.exists()
     captured = capsys.readouterr()
     assert not captured.out and "time budget exhausted" in captured.err
+
+
+def test_stdout_run_is_machine_readable(capsys: pytest.CaptureFixture) -> None:
+    assert (
+        bench.main(["run", "--iterations", "1", "--repeats", "1", "--warmup", "0", "--rules", "1"])
+        == 0
+    )
+    output = capsys.readouterr()
+    assert not output.err
+    bench.validate_report(json.loads(output.out))
+
+
+def test_report_creation_race_cannot_overwrite_winner(
+    report: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "race.json"
+
+    def concurrent_creator(*_args: Any) -> dict:
+        target.write_text("other operator's report", encoding="utf-8")
+        return report
+
+    monkeypatch.setattr(bench, "run_benchmarks", concurrent_creator)
+    assert bench.main(["run", "--output", str(target)]) == 2
+    assert target.read_text() == "other operator's report"

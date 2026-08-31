@@ -626,7 +626,7 @@ jobs:
         run: python -m pytest --no-cov integration_tests/test_deployment_process.py
       - name: Demonstrate fresh-process emergency-policy recovery
         run: python examples/policy_restart_demo.py
-      - name: Measure bounded local policy workloads (informational timing)
+      - name: Measure bounded local workloads (latencies are informational)
         run: >-
           python -m benchmarks.policy_gate run --iterations 10 --repeats 3 --warmup 2
           --max-seconds 120 --output benchmark-results.json
@@ -635,6 +635,7 @@ jobs:
           python -m benchmarks.policy_gate compare benchmark-results.json benchmark-results.json
           --max-regression-percent 0
       - name: Retain machine-readable performance evidence
+        if: ${{ always() && hashFiles('benchmark-results.json') != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: policy-benchmarks-${{ matrix.os }}-${{ github.sha }}

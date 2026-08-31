@@ -28,7 +28,10 @@ lost audit records, invalid/incompatible evidence and exhausted budgets cannot p
 No arguments, actor, policy contents, callback values, local paths or hostname are emitted. Environment
 labels and content fingerprints are operational metadata; reports are unsigned and need trusted storage.
 
-Focused verification: **65 benchmark tests pass, one POSIX-only FIFO test is skipped on Windows**.
+Focused verification: **67 benchmark tests pass, one POSIX-only FIFO test is skipped on Windows**;
+an isolated coverage run measured all 251 harness statements and 40 branches covered. This is test
+coverage, not exhaustive correctness/security proof. The `f1107c7` full Windows run passed **742 tests,
+one POSIX-only skip, 95.47% core coverage in 200.42s**, before two final stdout/output-race tests.
 Final local report parsing rejects exponent-overflow numbers and non-file inputs before reading.
 The source baseline including the initial
 59 benchmark tests passed **736 tests in 262.08s, 95.47% core coverage**; four additional callback/audit/
@@ -39,7 +42,12 @@ default 14 workloads and a zero-budget self-comparison; raw samples are retained
 SLO. [PR #46](https://github.com/Deathcharge/samsarix-agent-ethics/pull/46) has all 13 test jobs green at
 `b0f4db22317fb6cb9edd30efb703fed604b81613`; both downloaded Linux/Windows artifacts contain 14 valid
 workloads and pass self-comparison. The extracted sdist also ran against the no-optional-SDK installed
-wheel. Final-head CI and external review evidence are being completed. The performance guide distinguishes
+wheel. CodeRabbit review `5067256954` on `b0f4db2` returned three minor/trivial comments. Follow-ups
+strengthen Windows JSON-escaped path privacy checks and pin/test subprocess cwd. Reports are retained
+after a later CI failure; correctness failures and the explicit completion/resource cap remain
+blocking, rather than enabling blanket continue-on-error. This distinction is now documented.
+Final-head CI and exact-main package evidence remain post-commit checks recorded on the PR.
+The performance guide distinguishes
 empirical per-invocation quantiles from production queueing/tail latency, wall occupancy from CPU/cost,
 temporary-volume fsync from deployment durability, and memory parsing from interpreter/disk startup.
 The source distribution includes the harness; wheel runtime contents/public APIs/dependencies do not change.
