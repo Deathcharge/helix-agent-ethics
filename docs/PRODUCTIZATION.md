@@ -46,6 +46,14 @@ actual imported package root, matching the existing restart/process helpers. A r
 distinct installed path and ensures no checkout or unrelated import root is injected. The 90%
 coverage threshold remains unchanged; the failed run is retained as evidence, not called green.
 
+After the helper fix, the actual regular-install Windows run passes **808 tests, one POSIX-only
+skip, 95.56% coverage in 199.37s**, with only the installed package measured (5,260 statements rather
+than the two-copy 10,520). Process recovery passes **38 tests in 35.39s** and its demo. Build/Twine,
+Ruff check/format (103 files), mypy (41 source files) and ten guide checks pass. CI `33407950805`
+is green at `8df424d`; the superseded first run was cancelled by normal workflow concurrency.
+Every CI installer now also runs `pip check`. Clean SDK and exact-final-main evidence remain
+in progress and will be recorded on [PR #49](https://github.com/Deathcharge/samsarix-agent-ethics/pull/49).
+
 P1 acceptance still requires a selected production identity/storage/operational environment, real
 adopter pilot, protected registry publication setup/approval and legal review. P2 includes selected
 browser/long-lived SSE workflows and deployment load/SLOs. No live deployment, paid API, registry
