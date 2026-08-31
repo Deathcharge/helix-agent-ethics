@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import gzip
+import subprocess
+import sys
 import zlib
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import anyio
@@ -406,3 +409,30 @@ def test_cooperative_cleanup_deadline_covers_sdk_internal_close(
         assert wrapped.failure_reason == ("unsupported_encoding" if stage == "header" else None)
 
     anyio.run(scenario)
+
+
+def test_public_transport_is_accepted_by_strict_consumer_typing(tmp_path: Path) -> None:
+    config = tmp_path / "mypy.ini"
+    config.write_text("[mypy]\n", encoding="utf-8")
+    result = subprocess.run(  # noqa: S603 -- fixed interpreter/module/code; no untrusted input.
+        [
+            sys.executable,
+            "-m",
+            "mypy",
+            "--config-file",
+            str(config),
+            "--strict",
+            "--follow-imports=silent",
+            "--no-incremental",
+            "-c",
+            "import httpx2; from samsarix_ethics import create_mcp_http_transport; "
+            "bounded = create_mcp_http_transport(httpx2.AsyncHTTPTransport()); "
+            "client = httpx2.AsyncClient(transport=bounded); "
+            "reason: str | None = bounded.failure_reason",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

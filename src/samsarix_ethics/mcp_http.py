@@ -8,9 +8,18 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from importlib import import_module
 from types import TracebackType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .errors import SamsarixEthicsError
+
+if TYPE_CHECKING:
+    # Optional nominal base for consumers with the extra installed. Core tooling
+    # also runs without HTTPX2; runtime inheritance is added lazily by the factory.
+    from httpx2 import (  # type: ignore[import-not-found, unused-ignore]
+        AsyncBaseTransport as _HTTPXTransport,
+    )
+else:
+    _HTTPXTransport = object
 
 MCP_HTTP_RESPONSE_BUDGET_VERSION = 1
 DEFAULT_MCP_HTTP_RESPONSE_BYTES = 4 * 1024 * 1024
@@ -89,7 +98,7 @@ class _DecodedStream:
             await self.response.aclose()
 
 
-class MCPHTTPTransport:
+class MCPHTTPTransport(_HTTPXTransport):  # type: ignore[misc, unused-ignore]
     """Own a wrapped async HTTP transport; construct with create_mcp_http_transport.
 
     Budgets apply per HTTP response, not per SSE event or whole workflow. Any local

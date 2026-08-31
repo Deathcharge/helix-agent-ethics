@@ -24,21 +24,25 @@ or MCP dependencies. The recommended guide wiring now enables budgets before ope
 places TLS/proxy/pool configuration on the wrapped transport to avoid bypassing it with HTTP mounts.
 
 Local verification: **660 core tests pass with 95.35% branch-inclusive coverage**; the new module's
-41 unit tests cover 100% of its statements/branches. **79 exact-SDK client tests pass**, including
-39 new transport tests. Tests cover exact boundaries, incremental wire/decoded overflow,
+41 unit tests cover 100% of its statements/branches. **80 exact-SDK client tests pass**, including
+40 new transport tests. Tests cover exact boundaries, incremental wire/decoded overflow,
 declared/chunked bodies, gzip/deflate inflation and corruption, unsupported encodings, failed
 discovery before tool dispatch, oversized results after one authorized invocation, both MCP modes
 and JSON/SSE formats, interleaved failure latching, cancellation and single-connection pool pressure.
 Final engineering review caught an SDK-internal cleanup path outside the original timeout guard;
 the stream close now has the same shielded deadline. Five deliberately stalled cleanup cases cover
 iteration, explicit response close, header rejection, transport close and context exit.
+An additional strict-consumer typing check found that the dynamic runtime transport base was not
+visible to type checkers. A type-checking-only nominal base fixes direct `AsyncClient` wiring without
+importing optional dependencies at runtime; a bounded subprocess regression now checks this in CI.
 
 On Windows/Python 3.11.9, Ruff formatting/lint, mypy (41 source files), locked installation and
-`pip check`, wheel/sdist build and Twine checks pass. The built wheel passes all 79 client contracts
+`pip check`, wheel/sdist build and Twine checks pass. The built wheel passes all 80 client contracts
 from site-packages. A separate `--no-deps` wheel environment without MCP/AnyIO/HTTPX2 passes imports,
 CLI version, policy validation and allow/deny exits 0/3. Wheel contents include the new module and
 optional dependency metadata but exclude the integration server fixture; changed-document local
-links resolve. CI, external review and exact merged-artifact evidence will be recorded in the PR.
+links resolve. `pip-audit` 2.10.1 reports no known vulnerabilities in the unchanged client lock.
+CI, external review and exact merged-artifact evidence will be recorded in the PR.
 
 Final acceptance remains a release candidate, not proven production hosting or external demand.
 No sibling repository, production service, package publication or licensing was changed.
