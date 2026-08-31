@@ -30,7 +30,22 @@ change. Frozen pre-change reference helpers, independent golden assertions and b
 JSON pairs test equivalence. Public decision/explanation/batch checks preserve precedence, warnings,
 ordering and errors; mutation/reference checks protect fresh reads. Focused engine/parity/explanation
 checks pass 103 tests. Ruff and mypy (41 source files), build, Twine and no-optional-SDK wheel install
-pass. Full source, security review, final CI and exact-main verification are in progress.
+pass. The full Windows suite passes **797 tests, one POSIX-only skip, 95.56% coverage in 283.06s**.
+The installed candidate wheel passes **331 engine/parity/explanation/benchmark, process-recovery
+and MCP client contracts, with one POSIX-only skip, in 80.86s**. The SDK test environment was then
+restored to an editable install. [PR #47](https://github.com/Deathcharge/samsarix-agent-ethics/pull/47)
+CI `33401698358` is green at `e9ded056bbe80459f5d7b6314a4483cc00284aae`: 798 tests on each Python
+3.11-3.14 job, plus Linux/Windows recovery and SDK contracts. CodeRabbit's automatic review was
+skipped; that status is not review approval. Codex Security scan
+`803d2cc7-74bb-4a8c-be07-b7621f1b4648` sealed the fixed `a4f0707..b00df32` runtime/test diff with
+zero findings and no discovery candidates. Both changed files have no-issue review dispositions;
+supporting gate/dispatch/runtime/shadow/MCP paths were inspected. The sealed report is nevertheless
+**partial**: it retained the earlier administrative `compact-review-close` checkpoint as deferred,
+despite final inventory/candidate recording. Do not represent it as a complete clean scan or a
+whole-repository audit. The immutable report is preserved; this bookkeeping limitation is carried
+into release evidence. Preflight passed without configuration changes; TAC access/grants could not
+be verified because the connector was disconnected. Final-head CI and exact-main verification
+remain post-commit checks to be recorded on the PR.
 
 Three alternating installed-wheel pairs (A/B, B/A, A/B) retain all six raw reports under
 `benchmarks/results/2026-08-31-hot-path/`. Each pair is compatible and passes a 20% median-regression
