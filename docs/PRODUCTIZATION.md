@@ -65,6 +65,11 @@ client contracts on Linux and Windows. Main-only attestation is correctly skippe
 
 Exact-head review/merge and final attested-artifact evidence belong to
 [PR #44](https://github.com/Deathcharge/samsarix-agent-ethics/pull/44).
+Independent review prompted explicit resource-body assertions for form-post credential containment
+(including requests rejected before MCP reads them) and clearer default-versus-explicit timeout
+wording. The bounded test observer replays original ASGI messages; all 31 TLS/OAuth cases pass
+after this refinement. A stale verification-progress comment was reconciled against the completed
+checks above; it did not represent an outstanding test failure.
 Final release disposition remains **release candidate**, not publication
 or proof of production hosting/product-market fit. No sibling repository or licensing was changed.
 

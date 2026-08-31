@@ -169,6 +169,7 @@ class ProtectedServer(HTTPHarness):
         self.metadata_requests = 0
         self.unauthorized = 0
         self.basic_seen = False
+        self.request_bodies: list[bytes] = []
         self.metadata_resource: str | None = None
         self.metadata_padding = 0
         self.challenge_scope = "support:tools"
@@ -177,6 +178,30 @@ class ProtectedServer(HTTPHarness):
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         if scope["type"] == "http":
+            # Observe actual receipt, including requests rejected before MCP reads their body.
+            # Keep this bounded and replay the original ASGI messages to the existing harness.
+            original_receive = receive
+            messages: list[Any] = []
+            body = bytearray()
+            with anyio.fail_after(5):
+                while True:
+                    message = await original_receive()
+                    if message["type"] == "http.disconnect":
+                        return
+                    assert message["type"] == "http.request"
+                    messages.append(message)
+                    body.extend(message.get("body", b""))
+                    assert len(body) <= 32768
+                    if not message.get("more_body", False):
+                        break
+            self.request_bodies.append(bytes(body))
+            pending_messages = iter(messages)
+
+            async def replay_receive() -> Any:
+                message = next(pending_messages, None)
+                return message if message is not None else await original_receive()
+
+            receive = replay_receive
             header = dict(scope["headers"]).get(b"authorization", b"").decode("ascii")
             self.basic_seen |= header.startswith("Basic ")
             if scope["path"] == "/.well-known/oauth-protected-resource/mcp":
@@ -462,6 +487,12 @@ def test_tls_oauth_support_workflow(
                     assert store.writes == 1
                 assert resource.handler_principals == ["one", "one"]
                 assert not resource.basic_seen
+                assert any(body for body in resource.request_bodies)
+                assert all(
+                    secret.encode() not in body
+                    for secret, _ in authority.clients.values()
+                    for body in resource.request_bodies
+                )
                 assert authority.grants == [("one", resource.url, "support:tools")]
                 assert all(
                     scheme == "none" for path, scheme in authority.events if path != "/token"

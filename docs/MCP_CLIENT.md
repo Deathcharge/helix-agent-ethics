@@ -213,8 +213,9 @@ Also bound the application's connection/authentication phase and overall workflo
 deadlines: the policy adapter is constructed **after** the initial OAuth/SDK handshake and cannot
 time it out. Keep async Client entry, use and exit in the same task/cancel-scope lifetime.
 
-This example caps ordinary MCP HTTP read inactivity at 30 seconds, even if a call supplies a larger adapter
-`read_timeout_seconds`. For a longer silent tool, configure **both** the HTTP read-idle limit and
+This example defaults ordinary MCP HTTP read inactivity to 30 seconds; explicit SDK/per-request
+HTTP timeout values still take precedence. A larger adapter `read_timeout_seconds` alone does not
+configure the HTTP timeout. For a longer silent tool, configure **both** the HTTP read-idle limit and
 the adapter dispatch deadline deliberately. Network activity can reset the HTTP idle timer but
 does not extend the adapter's total dispatch-phase deadline. Neither limit bounds the entire
 discovery/review/dispatch workflow.
