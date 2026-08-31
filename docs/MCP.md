@@ -1,8 +1,11 @@
 # MCP Python SDK server integration
 
-Samsarix can enforce an exact trusted tool catalog at the stable MCP Python SDK's low-level
+Samsarix can enforce an exact trusted tool catalog at the maintained MCP v1 Python SDK's low-level
 server handler. It uses only public version 1 SDK contracts and leaves the base package
 dependency-free.
+
+For outbound calls on the current v2 SDK, use the separate [MCP client adapter](MCP_CLIENT.md).
+Its `mcp-client` extra pins v2 and cannot be installed together with this v1 `mcp` extra.
 
 ## Install and run
 

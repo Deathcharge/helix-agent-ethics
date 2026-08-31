@@ -9,7 +9,7 @@ The Python 3.11 CI job builds the wheel and source distribution once, validates 
 the wheel into a clean virtual environment, and uploads the exact files as
 `python-distributions-<commit>` for 14 days. The same workflow exercises the source package across
 Python 3.11-3.14. Dedicated hash-locked lanes exercise the exact OpenAI Agents SDK, LangChain,
-Pydantic AI, MCP Python SDK, and OpenTelemetry API/SDK contracts plus their no-network examples; release candidates
+Pydantic AI, MCP v1 server, MCP v2 client, and OpenTelemetry API/SDK contracts plus their no-network examples; release candidates
 are valid only when the complete matrix and all optional-integration lanes are green.
 
 For pushes to `main`, a separate least-privilege job waits for the complete matrix, downloads those
@@ -86,22 +86,35 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python examples/opentelemetry_decision_event_demo.py
    ```
 
-9. Download the exact CI distributions for the commit, then verify their provenance:
+9. In a sixth fresh virtual environment, validate only the MCP v2 client contract. Never combine
+   the v1 server and v2 client locks or extras:
 
    ```bash
-   gh run download RUN_ID \
-     --name python-distributions-COMMIT \
-     --dir dist
-   gh attestation verify dist/samsarix_agent_ethics-VERSION-py3-none-any.whl \
-     --repo Deathcharge/samsarix-agent-ethics
-   gh attestation verify dist/samsarix_agent_ethics-VERSION.tar.gz \
-     --repo Deathcharge/samsarix-agent-ethics
+   python -m pip install --require-hashes \
+     -r requirements-dev.lock \
+     -r requirements-mcp-client.lock
+   python -m pip install --no-build-isolation --no-deps -e .
+   python -m pip check
+   python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py
+   python examples/mcp_client_policy_demo.py
    ```
 
-10. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
-   `samsarix-ethics --version`, schema export, policy validation, and one allow/deny walkthrough.
-11. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
-   ref in the release notes.
+10. Download the exact CI distributions for the commit, then verify their provenance:
+
+    ```bash
+    gh run download RUN_ID \
+      --name python-distributions-COMMIT \
+      --dir dist
+    gh attestation verify dist/samsarix_agent_ethics-VERSION-py3-none-any.whl \
+      --repo Deathcharge/samsarix-agent-ethics
+    gh attestation verify dist/samsarix_agent_ethics-VERSION.tar.gz \
+      --repo Deathcharge/samsarix-agent-ethics
+    ```
+
+11. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
+    `samsarix-ethics --version`, schema export, policy validation, and one allow/deny walkthrough.
+12. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
+    ref in the release notes.
 
 ## Registry publication prerequisites
 

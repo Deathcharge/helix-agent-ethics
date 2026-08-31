@@ -31,6 +31,8 @@ adoption remain separate evidence-based decisions.
 - [x] Add exact-registry enforcement at the stable MCP Python SDK server handler, with fresh
   request facts, one-shot application-owned review, exact-version locking, and a real in-memory
   client/server contract.
+- [x] Add MCP v2 client-side enforcement with paginated definition pinning, explicit single-round
+  continuation authorization, full-request review binding, and a separate exact-version CI lane.
 - [x] Expose one immutable metadata-only audit record to a caller-supplied sink while preserving
   the existing JSONL API and fail-closed behavior.
 - [x] Correlate metadata-only decisions with a caller-owned OpenTelemetry trace through an optional
@@ -95,6 +97,9 @@ Current hardening backlog:
   Reviewer identity/authentication, confidentiality, timeout/cancellation, and side-effect
   transactionality remain application-owned; only low-level stable-SDK tool calls routed through
   the adapter are covered.
+- MCP v2 client review also contains metadata and continuation state. Pinning discovers advertised
+  drift, not hidden server code changes, cryptographic target identity, or atomic remote state.
+  V1 server and v2 client SDK contracts require separate environments.
 - Installed-wheel smoke coverage, retained CI distributions, and GitHub build-provenance
   attestations exist. PyPI project ownership, Trusted Publishing, protected release approval, and
   durable registry publication evidence are not yet configured.

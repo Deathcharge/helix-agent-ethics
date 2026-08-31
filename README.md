@@ -6,10 +6,11 @@ review?**
 
 It is for Python developers who need a small policy-as-code boundary in front of tool calls,
 workflows, or other consequential operations. Policies and inputs are JSON, decisions are
-explainable, and the optional audit log excludes raw input by design. The package makes no
-network calls and its core has no runtime dependencies. Optional exact-version adapters protect
-OpenAI Agents SDK function tools, LangChain tool registries, Pydantic AI toolsets, and stable MCP
-Python SDK servers with fingerprint-bound review flows. An optional OpenTelemetry API extra emits metadata-only
+explainable, and the optional audit log excludes raw input by design. The core makes no network
+calls and has no runtime dependencies. Optional exact-version adapters protect
+OpenAI Agents SDK function tools, LangChain tool registries, Pydantic AI toolsets, MCP v1 servers,
+and outbound MCP v2 client calls with fingerprint-bound review flows. An optional OpenTelemetry
+API extra emits metadata-only
 decision events into caller-owned traces. Other Samsarix repositories can embed the core, but none
 is required; the package and its release lifecycle stand on their own.
 
@@ -625,6 +626,25 @@ and atomically consumed; durable reconstruction supplies an application-owned ap
 [Pydantic AI toolset guide](docs/PYDANTIC_AI.md) for multi-call resolution, persistence, sensitive
 metadata, and unsupported-path boundaries.
 
+## MCP Python SDK client integration
+
+```bash
+# Use a separate environment from the v1 server extra below.
+python -m pip install -e '.[mcp-client]'
+python examples/mcp_client_policy_demo.py
+```
+
+`await create_mcp_client_tool_policy(bound_catalog, connected_client, server_id="support-primary")`
+pins the full paginated tool registry and enforces policy before each outbound MCP v2 tool-call
+round. The `mcp-client` extra pins `mcp==2.1.1`; CI verifies a real in-memory support workflow.
+Tool definition drift, unapproved review, and blocked policy decisions prevent dispatch.
+Metadata and explicit continuation state are included in review binding and policy context.
+
+The adapter does not automatically resolve or resend `InputRequiredResult`: every continuation
+must pass through policy again. It owns no transport authentication, trusts no remote capability
+annotations, and does not make remote side effects transactional. See the
+[MCP client integration guide](docs/MCP_CLIENT.md) for wiring and precise limits.
+
 ## MCP Python SDK server integration
 
 Install the exact stable SDK contract and run the in-memory client/server demo:
@@ -646,7 +666,8 @@ The integration is pinned to `mcp==1.28.1` and uses the SDK's public in-memory s
 contract in CI. SDK JSON Schema validation occurs before the protected handler and does not emit a
 Samsarix decision. FastMCP private routes, direct handler calls, resources, prompts, sampling,
 proxy/provider paths, and any tool not advertised and dispatched through this exact adapter are
-outside its boundary. See the [MCP server integration guide](docs/MCP.md).
+outside its boundary. The v1 server extra and v2 client extra cannot share one environment.
+See the [MCP server integration guide](docs/MCP.md).
 
 ## Downstream adoption
 
