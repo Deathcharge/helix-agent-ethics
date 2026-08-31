@@ -6,6 +6,10 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Optional MCP HTTP response budgets with separate wire/decoded byte limits, bounded streaming
+  gzip/deflate handling, early declared-length rejection, terminal failure latching, owned cleanup,
+  and adversarial real-network/pool-pressure tests. HTTPX2 2.12.0 is now a direct client-extra pin
+  (already in its lock); the base package remains dependency-free.
 - Real loopback Streamable HTTP MCP v2 contracts on Linux/Windows: JSON/SSE and auto/legacy
   workflows, tenant isolation, origin/auth rejection, review-time revocation/drift, audit failure,
   cancellation, timeout and lost-result behavior; documented application-owned HTTP lifecycle.

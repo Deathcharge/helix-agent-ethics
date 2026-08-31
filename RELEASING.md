@@ -95,7 +95,7 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
      -r requirements-mcp-client.lock
    python -m pip install --no-build-isolation --no-deps -e .
    python -m pip check
-   python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py
+   python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py
    python examples/mcp_client_policy_demo.py
    ```
 

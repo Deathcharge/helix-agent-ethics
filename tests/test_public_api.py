@@ -33,6 +33,11 @@ def test_public_api_is_importable() -> None:
     assert "MCPClientReviewRequest" in samsarix_ethics.__all__
     assert "create_mcp_client_tool_policy" in samsarix_ethics.__all__
     assert samsarix_ethics.MCP_CLIENT_ADAPTER_VERSION == 1
+    assert samsarix_ethics.MCP_HTTP_RESPONSE_BUDGET_VERSION == 1
+    assert samsarix_ethics.DEFAULT_MCP_HTTP_RESPONSE_BYTES == 4194304
+    assert "MCPHTTPResponseError" in samsarix_ethics.__all__
+    assert "MCPHTTPTransport" in samsarix_ethics.__all__
+    assert "create_mcp_http_transport" in samsarix_ethics.__all__
     assert "MCPServerToolPolicy" in samsarix_ethics.__all__
     assert "MCPToolReviewRequest" in samsarix_ethics.__all__
     assert "create_mcp_server_tool_policy" in samsarix_ethics.__all__

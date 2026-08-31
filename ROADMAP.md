@@ -85,6 +85,10 @@ adoption remain separate evidence-based decisions.
 
 Current hardening backlog:
 
+- [x] Add opt-in encoded/decoded MCP HTTP response budgets before SDK JSON/SSE parsing, with
+  fail-closed transport latching and real gzip/deflate, cancellation and pool-pressure evidence.
+- Body budgets are not whole-process memory/CPU, request/header, rate or workflow quotas.
+  Production TLS/OAuth/proxy acceptance and process-crash recovery remain deployment work.
 - No published package/release, public third-party adopter, or production deployment evidence.
 - The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible.
   The public OpenAI, LangChain, Pydantic AI, MCP, and OpenTelemetry adapters are reproducible

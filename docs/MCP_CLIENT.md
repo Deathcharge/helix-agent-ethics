@@ -13,7 +13,8 @@ python -m pip install -e '.[mcp-client]'
 python examples/mcp_client_policy_demo.py
 ```
 
-The exact supported contract is `mcp==2.1.1` with directly declared `anyio==4.14.2` for deadlines.
+The exact supported contract is `mcp==2.1.1`, `anyio==4.14.2` for deadlines, and
+`httpx2==2.12.0` for optional response budgets.
 The existing `mcp` extra pins `mcp==1.28.1` for the
 server adapter. These extras are **mutually incompatible in one environment**; neither silently
 upgrades the other. The base Samsarix package still has zero runtime dependencies. MCP and AnyIO
@@ -62,7 +63,8 @@ Before every call, discovery is repeated and must equal the pinned snapshot. Cha
 require deliberate review and re-binding, never automatic acceptance. Registration is bounded to
 256 tools and 256 pages, with nonempty unique cursors up to 4,096 characters, the core JSON
 depth/item/string limits, and a 1 MiB canonical snapshot limit. These are limits **after SDK
-decoding**, not transport response-size limits. Bound transport resources separately.
+decoding**. Enable the HTTP response budgets below before opening a network Client; an already
+connected client is not retrofitted by `create_mcp_client_tool_policy`.
 
 ## Arguments, metadata and continuations
 
@@ -152,15 +154,25 @@ caller-owned `httpx2.AsyncClient` through its public transport factory:
 import httpx2
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
+from samsarix_ethics import create_mcp_client_tool_policy, create_mcp_http_transport
 
 # endpoint is a fixed, allowlisted HTTPS URL; auth is your configured SDK OAuth provider.
+bounded_http = create_mcp_http_transport(
+    httpx2.AsyncHTTPTransport(
+        trust_env=False,
+        retries=0,
+        limits=httpx2.Limits(max_connections=20, max_keepalive_connections=10),
+    ),
+    max_wire_bytes=4 * 1024 * 1024,
+    max_response_bytes=4 * 1024 * 1024,
+)
 async with httpx2.AsyncClient(
+    transport=bounded_http,
     auth=auth,
     trust_env=False,
     follow_redirects=False,
     # HTTP network-idle limit, separate from the adapter's dispatch deadline.
     timeout=httpx2.Timeout(30, read=30),
-    limits=httpx2.Limits(max_connections=20, max_keepalive_connections=10),
 ) as http:
     async with Client(streamable_http_client(endpoint, http_client=http)) as client:
         protected = await create_mcp_client_tool_policy(
@@ -175,7 +187,9 @@ async with httpx2.AsyncClient(
 This is application wiring, not an OAuth setup or runnable credential-free example. Use the SDK's
 [OAuth client guide](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/) to configure your actual
 provider. Do not disable certificate verification. `trust_env=False` ignores ambient HTTP proxy
-configuration; configure a required corporate proxy explicitly. Redirect following is deliberately
+configuration; configure TLS, a required corporate proxy and pool limits on the **wrapped
+AsyncHTTPTransport**, not on AsyncClient. Do not add client `proxy`/`mounts` that bypass the bounded
+transport; every used route must have its own bounded wrapper. Redirect following is deliberately
 disabled: select the canonical endpoint and review any target change before creating a new client.
 Connection limits are not response-size, rate, cost, or whole-workflow limits.
 
@@ -202,12 +216,56 @@ The adapter itself never retries. OAuth authentication/refresh hooks, custom tra
 may replay HTTP requests independently; review that behavior separately. The static-credential tests
 below do not establish at-most-once behavior for those components.
 
+### Response budgets and recovery
+
+`create_mcp_http_transport(transport, *, max_wire_bytes=4194304, max_response_bytes=4194304)`
+returns an `MCPHTTPTransport` implementing the HTTPX2 async transport interface. Each budget must
+be an integer in `[1, 67108864]`; booleans/floats are rejected before optional imports. The factory
+requires exactly HTTPX2 2.12.0 and imports it lazily. The base package still needs no HTTP dependency.
+The wrapper owns its supplied transport: do not share or independently close that transport.
+
+- The wire budget counts encoded response-body bytes; the response budget counts decoded bytes
+  before they reach MCP JSON/SSE parsing. Each applies to a **whole HTTP response**, including a
+  long-lived SSE stream, not to individual events. Defaults are 4 MiB each.
+- Oversized valid Content-Length values reject before reading the body. Missing lengths and
+  chunked bodies are counted while streaming; malformed/ambiguous lengths reject. A declared
+  length must contain 1–20 ASCII digits, with only spaces/tabs allowed around it. HEAD/204/304
+  representation lengths do not predict a response body and are not used for early size rejection.
+- The request advertises `gzip, deflate, identity`. A single one of these encodings is supported;
+  other/stacked encodings reject before decoding. HTTPX2's bounded gzip/deflate decoder chunks are
+  counted without aggregation. Decoder errors latch the transport too. Returned response headers
+  omit Content-Encoding and Content-Length because the exposed stream is already decoded.
+- A contract violation closes the offending response and permanently sets `failure_reason`.
+  Further HTTP dispatches fail before reaching the wrapped transport, so reconnect/refresh hooks
+  cannot reset a breached budget on this instance. Concurrent streams check the latch before
+  delivering their next decoded chunk; they are not proactively interrupted while awaiting data.
+- `MCPHTTPResponseError.reason` and `failure_reason` contain fixed diagnostic labels, not URLs,
+  credentials, headers, or body fragments. The SDK can wrap/translate these errors: catch around the
+  whole Client lifetime and inspect the application-owned transport, not remote error text.
+- Transport/response cleanup uses a cooperative, shielded five-second deadline. Close failures
+  propagate and may replace the original exception; `failure_reason` preserves a prior rejection.
+  Normal network errors, pool timeouts, and caller cancellation do not themselves latch
+  a response-budget failure. No automatic retry or telemetry is added.
+
+After a latched failure, reconcile any remote side effects and review the server/limits before
+creating a **new** HTTP client, transport and policy adapter. Do not automatically rebuild them in
+a retry loop. Previously delivered SSE events, completed concurrent work, and remote mutations
+cannot be recalled. A rejected result does not mean its tool never executed.
+
+These are body-delivery budgets, **not a hard process-memory, CPU, request-body, header, rate or
+whole-workflow cap**. The wrapped transport and HTTP parser allocate buffers before this boundary;
+the pinned decoder may allocate a chunk up to 1 MiB before the decoded counter checks it. JSON
+objects and earlier accepted chunks also take memory. Pass an application-owned streaming transport
+(the guide uses AsyncHTTPTransport), not one that preloads responses. Apply process/resource limits,
+deadlines and workflow quotas separately. Existing SDK decoding semantics remain in effect; this
+wrapper is not a general compression-conformance validator.
+
 ### Reproduce the network contract
 
 After installing the development and v2 client locks as described in [RELEASING.md](../RELEASING.md):
 
 ```bash
-python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py
+python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py
 ```
 
 The HTTP suite owns an ephemeral `127.0.0.1` socket, real Uvicorn/ASGI server, SDK HTTP client and
@@ -223,17 +281,21 @@ Linux and Windows CI run the same tests.
 | Revocation or advertised drift during review | Recheck fails before any `tools/call` |
 | Unknown tool or failed audit delivery | No remote invocation; unknown tool causes no extra HTTP request |
 | Deadline, task cancellation, result-stream disconnect | One wire call and handler invocation; no tool retry; owned resources close |
+| Identity/gzip/deflate; declared and chunked body overruns | Exact decoded boundary accepted; wire/decoded overflow closes and latches |
+| Unsupported/corrupt encodings; simultaneous responses | No post-latch request dispatch or delivery of the next pending chunk |
+| Single-connection pool pressure/cancellation | Pool timeout is distinct; closing/cancelling a response releases the connection |
 
 The injected disconnect happens after the handler has run. An `allow` audit record therefore does
 **not** establish delivery, success, rollback, or exactly-once execution. Cancellation tests observe
 cleanup by client/server shutdown, not a universal remote-cancellation deadline. These tests do not
-cover internet/TLS/OAuth infrastructure, hostile response sizes, reverse proxies, connection-pool
-exhaustion, SSE event-store resumption, or durability across process crashes. Reproduce those with
+cover internet/TLS/OAuth infrastructure, hostile response headers/parser memory, reverse proxies,
+SSE event-store resumption, or durability across process crashes. Reproduce those with
 your selected deployment.
 
 References: [official v2 migration guide](https://py.sdk.modelcontextprotocol.io/migration/),
 [client API](https://py.sdk.modelcontextprotocol.io/client/),
 [HTTP transport configuration](https://py.sdk.modelcontextprotocol.io/client/transports/),
+[HTTPX2 custom transports](https://httpx2.pydantic.dev/advanced/transports/),
 [Streamable HTTP specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http),
 [pagination](https://py.sdk.modelcontextprotocol.io/advanced/pagination/), and
 [MCP tools specification](https://modelcontextprotocol.io/specification/2026-07-28/server/tools).

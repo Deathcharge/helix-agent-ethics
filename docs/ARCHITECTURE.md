@@ -304,6 +304,14 @@ application for explicit resolution and reauthorization. Remote schema coercion,
 hidden implementation drift, background callbacks, transport behavior and atomic remote state are
 not controlled by discovery pinning. See [MCP_CLIENT.md](MCP_CLIENT.md).
 
+The optional MCP HTTP transport wrapper owns one HTTPX2 2.12.0 async transport and counts encoded
+and decoded bytes separately before MCP response parsing. It preserves streaming through the
+pinned library's bounded gzip/deflate decoder chunks, rejects unsupported/stacked content encodings,
+and latches the entire wrapper after a local response-contract violation. Later HTTP attempts cannot
+reset a breached response budget on that instance. The application owns endpoint/authentication,
+timeouts, pool limits and outer resource budgets; this is not a hard process-memory limit or an
+atomic transaction. The policy adapter never retrofits an already connected client's transport.
+
 ## Trust boundaries
 
 - **Policy authors/operators** are trusted to define correct rules and secure policy files.
