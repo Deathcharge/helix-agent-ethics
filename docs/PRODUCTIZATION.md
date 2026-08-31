@@ -2,7 +2,76 @@
 
 Last updated: 2026-08-31
 
-## Current increment: real MCP v2 HTTP boundary
+## Current increment: bounded MCP HTTP response bodies
+
+Baseline revalidated: clean, synchronized `main` at `8ab66e21228292c6537b97b67cb82c4c75e29e52`
+on 2026-08-31. Work branch: `codex/mcp-http-response-budgets`. The preceding increment established
+real-network policy behavior but left response aggregation unbounded until SDK decoding completed.
+
+Inspection of HTTPX2 2.12.0 and its [public transport API](https://httpx2.pydantic.dev/advanced/transports/)
+showed that gzip/deflate decoding already yields bounded chunks. The new wrapper therefore reuses
+that streaming API rather than maintaining another compression implementation. Separate counters
+bound encoded and decoded response bodies; Content-Length enables early rejection but is not relied
+on for unknown/chunked lengths. A local budget/encoding violation closes the response and latches the
+wrapper, preventing reconnects from resetting a breached budget. Only identity/gzip/deflate single
+encodings are supported; other codings fail closed. No response body is stored in diagnostics.
+
+Public additions: `create_mcp_http_transport`, `MCPHTTPTransport`, `MCPHTTPResponseError`,
+`MCP_HTTP_RESPONSE_BUDGET_VERSION` and `DEFAULT_MCP_HTTP_RESPONSE_BYTES`. Each byte budget defaults to
+4 MiB and must be an integer from 1 byte to 64 MiB. HTTPX2 2.12.0 is directly declared in the client
+extra/input; the existing 30-package hashed lock is unchanged. Core imports still require no HTTP
+or MCP dependencies. The recommended guide wiring now enables budgets before opening a Client and
+places TLS/proxy/pool configuration on the wrapped transport to avoid bypassing it with HTTP mounts.
+
+Local core verification before the review follow-up: **660 tests pass with 95.35% branch-inclusive
+coverage**. The final module's **44 unit tests cover 100%** of its statements/branches.
+**92 exact-SDK client tests pass**, including 52 new transport tests. Tests cover exact boundaries,
+incremental wire/decoded overflow,
+declared/chunked bodies, gzip/deflate inflation and corruption, unsupported encodings, failed
+discovery before tool dispatch, oversized results after one authorized invocation, both MCP modes
+and JSON/SSE formats, interleaved failure latching, cancellation and single-connection pool pressure.
+Final engineering review caught an SDK-internal cleanup path outside the original timeout guard;
+the stream close now has the same shielded deadline. Five deliberately stalled cleanup cases cover
+iteration, explicit response close, header rejection, transport close and context exit.
+An additional strict-consumer typing check found that the dynamic runtime transport base was not
+visible to type checkers. A type-checking-only nominal base fixes direct `AsyncClient` wiring without
+importing optional dependencies at runtime; a bounded subprocess regression now checks this in CI.
+External review also prompted preservation of primary exceptions during failed cleanup. Close-only
+errors still propagate, while an active primary error/cancellation receives a fixed recovery note;
+12 exact-SDK regressions cover raised/timed-out cleanup after wire/decoded/decoder/header failures
+and caller errors/cancellation. The reviewer withdrew a proposed HTTPS-enforcement change after
+confirming endpoint/auth configuration is application-owned. The guide makes that boundary explicit;
+SECURITY.md now accurately distinguishes network-free core evaluation from optional network I/O.
+This corrects exposure documentation without introducing new vulnerability-class exclusions.
+
+On Windows/Python 3.11.9, Ruff formatting/lint, mypy (41 source files), locked installation and
+`pip check`, wheel/sdist build and Twine checks pass. The built wheel passes all 92 client contracts
+from site-packages. A separate `--no-deps` wheel environment without MCP/AnyIO/HTTPX2 passes imports,
+CLI version, policy validation and allow/deny exits 0/3. Wheel contents include the new module and
+optional dependency metadata but exclude the integration server fixture; changed-document local
+links resolve. `pip-audit` 2.10.1 reports no known vulnerabilities in the unchanged client lock.
+Final-head full core/CI, review resolution and exact merged-artifact evidence will be recorded in
+[PR #43](https://github.com/Deathcharge/samsarix-agent-ethics/pull/43).
+
+Final acceptance remains a release candidate, not proven production hosting or external demand.
+No sibling repository, production service, package publication or licensing was changed.
+Remaining priorities:
+
+1. P1: real TLS/OAuth/proxy and crash-recovery acceptance in an owner-selected deployment. Credential
+   storage/rotation, authenticated reviewer identity and durable outcomes remain application-owned.
+2. P1: outer process-memory/CPU, request/header and aggregate workflow quotas. Body counters run
+   after HTTP parser buffers and one decoder chunk (up to 1 MiB) are allocated; they are not an RSS cap.
+3. P1 owner gates: protected publication identity/approval and genuine external adopter validation.
+4. P2: latency/load budgets and SSE event-store resumption acceptance. Ordinary pool errors and
+   cancellation remain distinct from a latched response-contract failure.
+
+Earlier delivered SSE events or remote side effects cannot be undone by a later result rejection.
+In-flight streams check the latch on their next decoded chunk, not while waiting for network data.
+The supplied transport must be trusted, streaming and unshared; custom eager buffering or routes
+that bypass the wrapper remain outside this boundary. No automatic reconstruction/retry loop,
+credential store, telemetry sink or paid service was added.
+
+## Previous increment: real MCP v2 HTTP boundary
 
 Baseline: clean `main` at `b19de71785f817f2739869b98e4516f8b6f3b863` (PR #41),
 re-fetched and checked on 2026-08-31. Work branch: `codex/mcp-http-contract`.

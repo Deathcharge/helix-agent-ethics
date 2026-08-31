@@ -182,6 +182,13 @@ from .mcp_client import (
     MCPClientToolPolicy,
     create_mcp_client_tool_policy,
 )
+from .mcp_http import (
+    DEFAULT_MCP_HTTP_RESPONSE_BYTES,
+    MCP_HTTP_RESPONSE_BUDGET_VERSION,
+    MCPHTTPResponseError,
+    MCPHTTPTransport,
+    create_mcp_http_transport,
+)
 from .models import MAX_POLICY_RULES, Decision, Effect, Outcome, Policy, PolicyCondition, PolicyRule
 from .openai_agents import (
     MAX_PENDING_OPENAI_APPROVALS,
@@ -278,6 +285,7 @@ __all__ = [
     "AUDIT_RECORD_VERSION",
     "CONTEXT_CONTRACT_FINGERPRINT_VERSION",
     "CONTEXT_CONTRACT_VERSION",
+    "DEFAULT_MCP_HTTP_RESPONSE_BYTES",
     "DEPLOYMENT_LOCK_VERSION",
     "LANGCHAIN_ADAPTER_VERSION",
     "LANGCHAIN_REVIEW_INTERRUPT_TYPE",
@@ -310,6 +318,7 @@ __all__ = [
     "MAX_TOOL_GATE_DEPLOYMENT_BYTES",
     "MAX_TOOL_GATE_DEPLOYMENT_ENVELOPE_BYTES",
     "MCP_CLIENT_ADAPTER_VERSION",
+    "MCP_HTTP_RESPONSE_BUDGET_VERSION",
     "MCP_SERVER_ADAPTER_VERSION",
     "MIN_AUDIT_CHAIN_KEY_BYTES",
     "MIN_DEPLOYMENT_AUTH_KEY_BYTES",
@@ -366,6 +375,8 @@ __all__ = [
     "MCPClientIntegrationError",
     "MCPClientReviewRequest",
     "MCPClientToolPolicy",
+    "MCPHTTPResponseError",
+    "MCPHTTPTransport",
     "MCPServerIntegrationError",
     "MCPServerToolPolicy",
     "MCPToolReviewRequest",
@@ -440,6 +451,7 @@ __all__ = [
     "create_deployment_lock",
     "create_langchain_tool_policy",
     "create_mcp_client_tool_policy",
+    "create_mcp_http_transport",
     "create_mcp_server_tool_policy",
     "create_openai_agents_tool_policy",
     "create_policy_deployment",

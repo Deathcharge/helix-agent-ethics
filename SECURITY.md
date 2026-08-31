@@ -95,9 +95,18 @@ but applications using that transport must still enable and configure `Transport
 Prefer stdio or Streamable HTTP and follow the SDK's transport-specific authentication, DNS
 rebinding, Host, Origin, and TLS guidance; the policy adapter is not transport security.
 
+The optional MCP v2 client adapter delegates discovery and authorized calls through an
+application-supplied connected SDK client. Endpoints and credentials must remain application-owned;
+use the fixed, allowlisted HTTPS wiring in `docs/MCP_CLIENT.md` for network deployments. Optional
+`MCPHTTPTransport` response-body budgets constrain untrusted encoded/decoded response delivery and
+latch after a local contract violation. They do not select credential destinations, validate URL
+schemes, or replace TLS, HTTP parser/header limits, process resource controls, or workflow quotas.
+Remote side effects and previously delivered stream events cannot be undone by rejecting a result.
+
 `ToolGate` invokes only the explicit callback supplied by the embedding application and only after
-an allow decision; it is not a sandbox. The package makes no network requests, executes no policy
-code, loads no plugins, and stores no raw evaluation input in its built-in audit record.
+an allow decision; it is not a sandbox. Core policy evaluation makes no network requests, executes
+no policy code, loads no plugins, and stores no raw evaluation input in its built-in audit record.
+Optional framework adapters and application-supplied callbacks/transports may perform network I/O.
 `ToolDispatcher` optionally snapshots final application callback references and selects them by a
 cataloged name after authorization. It does not authenticate callback code, validate a framework's
 tool schema, freeze mutable callback/closure/global state, or isolate the resulting side effect.

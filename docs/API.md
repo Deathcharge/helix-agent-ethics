@@ -506,6 +506,34 @@ and 300 seconds per review; values must be finite in `(0, 3600]`.
 policy blocks retain typed gate errors, and SDK exceptions/cancellation propagate. See
 [MCP_CLIENT.md](MCP_CLIENT.md) for audit timing, limits, incompatible extras and transport ownership.
 
+### `create_mcp_http_transport(transport, *, max_wire_bytes=4194304, max_response_bytes=4194304)`
+
+Creates an optional `MCPHTTPTransport` for an unshared, application-owned HTTPX2 2.12.0 async
+transport. The wrapper owns its supplied transport and implements async HTTP dispatch/context
+management/`aclose()`. Configure it before opening the MCP Client; existing sessions are not
+modified. Budgets must be integers in `[1, 67108864]` and count per-response encoded/decoded body
+bytes, including the complete lifetime of an SSE response. It adds no retry or log sink.
+
+`max_wire_bytes` and `max_response_bytes` are read-only properties. `failure_reason` is initially
+`None`; a local contract violation latches it and prohibits further underlying HTTP dispatch.
+Reasons are `wire_bytes`, `decoded_bytes`, `invalid_content_length`, `unsupported_encoding`,
+`invalid_content_encoding`, `response_not_streaming`, or `invalid_stream`. An ordinary network
+failure or cancellation is not a budget failure. A closed wrapper rejects reuse with
+`MCPHTTPResponseError("transport_closed")`.
+Cleanup preserves an active primary exception; without one, cleanup failures propagate.
+
+`MCPHTTPResponseError.reason` contains a diagnostic label, not response/request data. Factory
+dependency errors use `install_mcp_client_extra` or `unsupported_httpx2_version`; invalid budgets
+raise `ValueError`, and an invalid wrapped transport raises `TypeError`. SDK task groups may
+wrap/translate transport exceptions. Read `failure_reason` from the application-owned wrapper
+when interpreting failure; do not trust a remote error message as local evidence.
+
+The contract version is `MCP_HTTP_RESPONSE_BUDGET_VERSION = 1` and the default constant is
+`DEFAULT_MCP_HTTP_RESPONSE_BYTES = 4194304`. Limits apply before MCP JSON/SSE parsing, not before
+all HTTP parser/decoder allocations. Identity, gzip and deflate are supported, with no stacked
+codings. See [MCP_CLIENT.md](MCP_CLIENT.md#response-budgets-and-recovery) for ownership, memory,
+cleanup, failure recovery, header changes, and proxy/mount bypass limits.
+
 ### `BoundToolCatalog`
 
 The immutable mapping returned by `ToolGate.bind_catalog(...)`. It exposes `gate`, `catalog`,
@@ -780,7 +808,8 @@ records. See [AUDIT_CHAINS.md](AUDIT_CHAINS.md) for the format and complete thre
 `PolicyValidationError`, `PolicyDeploymentValidationError`, `PolicyActivationError`,
 `PolicyCompositionError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
 `AuditLogError`, `AuditChainError`, `OpenAIAgentsIntegrationError`, `LangChainIntegrationError`,
-`PydanticAIIntegrationError`, `MCPServerIntegrationError`, `MCPClientIntegrationError`, and the
+`PydanticAIIntegrationError`, `MCPServerIntegrationError`, `MCPClientIntegrationError`,
+`MCPHTTPResponseError`, and the
 tool-call enforcement errors derive from
 `SamsarixEthicsError`. `AuditChainError` also derives from `AuditLogError`, preserving fail-closed
 gate handling. The base
