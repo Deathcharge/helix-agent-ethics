@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -223,6 +224,29 @@ def test_report_byte_bound(tmp_path: Path) -> None:
     target.write_bytes(b" " * (bench.MAX_REPORT_BYTES + 1))
     with pytest.raises(ValueError, match="byte budget"):
         bench.read_report(target)
+
+
+def test_overflowing_json_float_is_rejected_even_in_extra_metadata(tmp_path: Path) -> None:
+    target = tmp_path / "overflow.json"
+    target.write_text('{"report_version":1,"extra":1e309}', encoding="utf-8")
+    with pytest.raises(ValueError, match="Non-finite JSON"):
+        bench.read_report(target)
+
+
+def test_non_file_report_rejected_before_open(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(Path, "open", lambda *_args, **_kwargs: pytest.fail("Opened a non-file"))
+    with pytest.raises(ValueError, match="regular file"):
+        bench.read_report(tmp_path)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="POSIX named pipe contract")
+def test_named_pipe_report_is_rejected_without_waiting_for_writer(tmp_path: Path) -> None:
+    pipe = tmp_path / "pipe"
+    os.mkfifo(pipe, 0o600)
+    with pytest.raises(ValueError, match="regular file"):
+        bench.read_report(pipe)
 
 
 def test_existing_output_is_preserved_before_run(

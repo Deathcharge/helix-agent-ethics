@@ -38,7 +38,9 @@ change control. Matching labels do not prove identical hardware or load.
 
 The comparator rejects changed harnesses, fixtures, environments, workload order/counts, fingerprints
 and sampling options. It validates bounded positive integer raw samples, rejects duplicate JSON keys
-and non-finite values, and recomputes medians from samples instead of trusting summary fields.
+and non-finite values (including overflowing exponent notation), and recomputes medians from samples
+instead of trusting summary fields. Inputs must be regular files, not pipes/devices; keep input paths
+and their parent directories under operator control while reading and comparing.
 Package versions/content fingerprints may differ: that is the intended before/after variable.
 It does not prove a performance change is statistically significant or safe for production.
 
@@ -112,6 +114,8 @@ These are historical observations, not promised thresholds or deployment sizing.
 scan complexity, batching and storage must be measured separately. The raw report identifies its
 exact harness, fixture and imported-package content fingerprints; the package version alone is not
 enough to identify an unreleased build. A changed harness requires a fresh compatible baseline.
+The retained historical harness is at commit `ccad1729cec4c88d46ea7f1b795df03441645837`;
+subsequent report-parser hardening does not retroactively change this observation.
 
 Linux/Windows process-contract jobs run a short 14-workload suite (10 iterations, three repeats,
 two warmups) and retain `policy-benchmarks-<os>-<commit>` JSON artifacts for 14 days. CI validates

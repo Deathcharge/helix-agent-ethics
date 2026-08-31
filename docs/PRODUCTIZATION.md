@@ -28,13 +28,18 @@ lost audit records, invalid/incompatible evidence and exhausted budgets cannot p
 No arguments, actor, policy contents, callback values, local paths or hostname are emitted. Environment
 labels and content fingerprints are operational metadata; reports are unsigned and need trusted storage.
 
-Focused verification: **63 benchmark tests pass in 5.54s**. The source baseline including the initial
+Focused verification: **65 benchmark tests pass, one POSIX-only FIFO test is skipped on Windows**.
+Final local report parsing rejects exponent-overflow numbers and non-file inputs before reading.
+The source baseline including the initial
 59 benchmark tests passed **736 tests in 262.08s, 95.47% core coverage**; four additional callback/audit/
 deadline adversarial tests then passed in the focused run. Ruff check/format (100 files), mypy
 (41 source files), build and Twine pass. The installed wheel, with no optional SDKs, completed the
 default 14 workloads and a zero-budget self-comparison; raw samples are retained at
 `benchmarks/results/2026-08-31-windows-python311.json`. This observation is not an isolated-hardware
-SLO. Final-head CI and review evidence are being completed. The performance guide explicitly distinguishes
+SLO. [PR #46](https://github.com/Deathcharge/samsarix-agent-ethics/pull/46) has all 13 test jobs green at
+`b0f4db22317fb6cb9edd30efb703fed604b81613`; both downloaded Linux/Windows artifacts contain 14 valid
+workloads and pass self-comparison. The extracted sdist also ran against the no-optional-SDK installed
+wheel. Final-head CI and external review evidence are being completed. The performance guide distinguishes
 empirical per-invocation quantiles from production queueing/tail latency, wall occupancy from CPU/cost,
 temporary-volume fsync from deployment durability, and memory parsing from interpreter/disk startup.
 The source distribution includes the harness; wheel runtime contents/public APIs/dependencies do not change.

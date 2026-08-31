@@ -371,6 +371,7 @@ def run_benchmarks(
 
 
 def read_report(path: Path) -> dict:
+    require(path.is_file(), "Benchmark report must be a regular file")
     with path.open("rb") as stream:
         payload = stream.read(MAX_REPORT_BYTES + 1)
     require(len(payload) <= MAX_REPORT_BYTES, "Report exceeds byte budget")
@@ -382,8 +383,16 @@ def read_report(path: Path) -> dict:
     def reject_constant(_value: str) -> None:
         raise ValueError("Non-finite JSON value")
 
+    def finite_float(value: str) -> float:
+        number = float(value)
+        require(math.isfinite(number), "Non-finite JSON value")
+        return number
+
     report = json.loads(
-        payload.decode("utf-8-sig"), object_pairs_hook=unique, parse_constant=reject_constant
+        payload.decode("utf-8-sig"),
+        object_pairs_hook=unique,
+        parse_constant=reject_constant,
+        parse_float=finite_float,
     )
     validate_report(report)
     return report
