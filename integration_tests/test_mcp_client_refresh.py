@@ -197,9 +197,27 @@ def test_refresh_preserves_grant_and_exact_policy_dispatch(
             evidence = json.dumps([r.to_dict() for r in records])
             for secret in [*authority.issued_secrets, authority.clients["support-one"][0]]:
                 assert secret not in evidence
+            assert any(resource.request_bodies)
             for body in resource.request_bodies:
                 assert authority.clients["support-one"][0].encode() not in body
                 assert all(secret.encode() not in body for secret in authority.issued_secrets)
+
+    anyio.run(scenario)
+
+
+@pytest.mark.parametrize("missing", [True, False], ids=["missing", "mismatched"])
+def test_injected_provider_requires_matching_store(tmp_path: Path, missing: bool) -> None:
+    tls = _tls(tmp_path)
+
+    async def scenario() -> None:
+        async with _deployment(tls, authority_type=RefreshAuthority) as (resource, authority):
+            oauth, store = _seed(resource, authority)
+            with pytest.raises(TypeError, match="requires its matching token store"):
+                async with _http(
+                    resource, authority, tls, oauth=oauth, store=None if missing else MemoryTokens()
+                ):
+                    pytest.fail("Fixture must not yield an unrelated token store")
+            assert store.writes == 0 and resource.request_bodies == [] and authority.events == []
 
     anyio.run(scenario)
 

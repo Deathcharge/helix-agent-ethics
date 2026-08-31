@@ -46,6 +46,17 @@ the **137-test complete MCP client contract passes in 58.52s**. Ruff check/forma
 mypy (41 source files), build and Twine pass. Full core, installed-wheel and exact final-commit
 CI/provenance checks are post-commit gates; their final results will be recorded on the PR.
 
+Follow-up evidence: full Windows core **797 passed, one POSIX-only skip, 95.56% coverage in
+181.67s**; the installed local wheel passed **137 MCP contracts in 61.82s** and the support demo.
+All 56 runtime package files are byte-identical to the attested baseline wheel. PR #48 CI
+`33404899886` is green at `c3bb5f1`: 798 core tests on Python 3.11-3.14 and 137 MCP contracts on
+Linux/Windows. CodeRabbit review `5067914133` returned two nonblocking test-hardening comments;
+follow-ups reject missing/mismatched injected token stores before HTTP and guard secret-exclusion
+assertions against empty capture. Two new fixture guard cases bring the refresh module to 16 cases.
+The bot's test-function docstring-coverage warning is informational; descriptive tests and fixture
+boundary docstrings are retained, without changing configured quality gates. Final-head/main
+verification is recorded on [PR #48](https://github.com/Deathcharge/samsarix-agent-ethics/pull/48).
+
 P1 gates remain deployment issuer/credential storage/rollback/supervisor and aggregate resource
 acceptance, external pilot, protected package-publication approval and legal review. P2 remains
 selected browser/long-lived SSE flows and controlled deployment load/SLO selection. No paid service,

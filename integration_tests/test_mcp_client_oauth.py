@@ -399,6 +399,8 @@ async def _http(
     auth_timeout_hook: bool = True,
     oauth: OAuthClientProvider | None = None,
 ) -> Any:
+    if oauth is not None and (store is None or oauth.context.storage is not store):
+        raise TypeError("Injected OAuth provider requires its matching token store")
     store = store or MemoryTokens()
     oauth = oauth or ClientCredentialsOAuthProvider(
         server_url=resource.url,

@@ -295,8 +295,8 @@ and long-lived OAuth-authenticated SSE subscriptions are not covered.
 
 The separate `test_mcp_client_refresh.py` contracts exercise the stock `OAuthClientProvider` from
 MCP 2.1.1 over verified TLS in auto/JSON sessions with the bounded transport and Samsarix adapter.
-They **seed an existing
-confidential-client grant and trusted cached issuer metadata**. Test-only SDK context updates force
+They **seed an existing confidential-client grant and trusted cached issuer metadata**.
+Test-only SDK context updates force
 expiry without sleeping; these are not application setup instructions or proof of browser login,
 metadata discovery, or restart recovery.
 
