@@ -425,7 +425,7 @@ def _write_atomic_payload(
     """Fsync a staged payload and atomically publish it at one local pathname.
 
     File fsync is not directory-metadata or power-loss durability. Normal Python
-    unwinding removes the staging file; abrupt process termination cannot do so.
+    unwinding attempts staging cleanup; abrupt process termination cannot do so.
     """
 
     target = Path(path)

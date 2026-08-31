@@ -40,11 +40,23 @@ Implemented work:
 - Linux/Windows process-contract CI is required by main distribution attestation. Contributor,
   release, runtime and deployment documentation describe the same recovery boundary.
 
-Completed local checks so far: **38 real-process contracts passed in 36.18 seconds**;
-**54 focused I/O tests passed**, including 14 new interruption/cleanup cases. Ruff check and format
-(97 files), mypy (41 source files), and the fresh-process demo pass on Windows/Python 3.11.9.
-The full core suite, clean distribution verification and final-head CI/review are being completed;
-they are not represented as passed by these focused checks.
+Completed local checks: **677 core tests passed in 423.76 seconds, 95.47% coverage**;
+**38 real-process contracts passed in 36.18 seconds**; **54 focused I/O tests passed**, including
+14 new interruption/cleanup cases. Ruff check and format (97 files), mypy (41 source files), build,
+Twine and the fresh-process demo pass on Windows/Python 3.11.9. The installed wheel passes all
+**52 new interruption/process checks in 38.68 seconds** and **123 MCP client contracts in 46.16
+seconds**. A separate no-optional-dependency environment passes pip check and the restart demo;
+archive inspection confirms the example is in the sdist and the process-kill fixture is not shipped.
+
+[PR #45](https://github.com/Deathcharge/samsarix-agent-ethics/pull/45) has all 13 test jobs green at
+`b61e671d795e5b19145f39e406ccc8e9c72b07d9`, including both process-recovery platforms. The completed
+Codex Security diff scan `23edb34a-39f4-471b-acb7-9b9d9cde3577` reviewed all 15 changed files at that
+head with no reportable findings or deferred candidates. It is a focused source/regression review,
+not a whole-repository independent penetration test. Preflight passed without configuration edits;
+TAC access/grants could not be verified because the access connector was not connected. CodeRabbit's
+automatic status said review skipped, which is not external review approval. Follow-up changes only
+clarify best-effort cleanup wording and record this evidence. Final-head CI and exact-main artifact
+attestation remain post-commit/merge checks, recorded on the PR rather than claimed prospectively here.
 
 Acceptance requires: no partial canonical artifact after owned-process death; preserved exclusive
 create semantics; fresh load/verification before decisions or callbacks; no implicit rollback or
