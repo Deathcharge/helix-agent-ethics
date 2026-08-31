@@ -96,6 +96,69 @@ concurrency, memory and spend budgets using deployment measurements and leave me
 
 ## CI evidence and methodology
 
+### Exact-built-in optimization observation (2026-08-31)
+
+Profiling the `a4f0707` baseline identified generic container/type checks during ordinary string
+equality and dictionary field lookup. The candidate at `b00df32` adds exact `str`/`dict` fast paths;
+subclasses and other mappings still use the existing generic behavior. There is no field-value
+cache, policy index, skipped validation, early rule exit, new runtime dependency or API change.
+Golden and baseline-differential tests cover scalar/structured equality, bool/number distinctions,
+Unicode, custom mappings/subclasses, references, mutation, decisions, explanations and batches.
+
+Three paired runs used separately installed baseline/candidate wheels, the same unchanged harness,
+the default 14 workloads and the same Windows/CPython 3.11.9 interpreter. Execution order was
+baseline-1, candidate-1, candidate-2, baseline-2, baseline-3, candidate-3. No other benchmark or test
+ran concurrently, but the desktop and read-only developer tooling were not isolated. These are
+**local observations with substantial between-run variation**, not a controlled experiment or SLO.
+
+The table reports the median of the three run medians in milliseconds/invocation, and the range of
+the three paired candidate changes. Negative changes mean a lower measured median, not a promised
+speedup. The unchanged load/bind path also moved, showing why noise cannot be attributed to code.
+
+| Workload | Baseline median of medians (ms) | Candidate median of medians (ms) | Paired median change range |
+| --- | ---: | ---: | ---: |
+| 10 rules / last-match | 0.09120 | 0.05035 | -70.14% to -35.04% |
+| 10 rules / no-match | 0.08740 | 0.04680 | -69.68% to -34.68% |
+| 100 rules / last-match | 0.65680 | 0.22750 | -80.00% to -56.45% |
+| 100 rules / no-match | 0.58760 | 0.21805 | -62.89% to -45.78% |
+| 1,000 rules / last-match | 6.65850 | 2.03950 | -81.19% to -58.70% |
+| 1,000 rules / no-match | 8.42760 | 2.11130 | -78.59% to -69.66% |
+| Coding load/bind | 5.49990 | 5.17480 | -9.72% to -5.91% |
+| Coding read dispatch | 0.24930 | 0.19360 | -52.59% to -13.45% |
+| Coding deny dispatch | 0.26775 | 0.19200 | -60.18% to -21.96% |
+| Coding review dispatch | 0.32380 | 0.21035 | -44.00% to -31.54% |
+| Eight-call allowed batch | 2.72775 | 1.84725 | -40.24% to -32.28% |
+| Eight-call denied batch | 3.19550 | 2.05580 | -63.20% to -8.09% |
+| Read with JSONL fsync | 2.26810 | 1.64860 | -41.99% to +8.06% |
+| Baseline/candidate shadow | 0.76900 | 0.31455 | -68.66% to -24.94% |
+
+All six reports are retained, including the slower candidate filesystem-audit observation:
+[baseline 1](../benchmarks/results/2026-08-31-hot-path/baseline-1.json),
+[candidate 1](../benchmarks/results/2026-08-31-hot-path/candidate-1.json),
+[candidate 2](../benchmarks/results/2026-08-31-hot-path/candidate-2.json),
+[baseline 2](../benchmarks/results/2026-08-31-hot-path/baseline-2.json),
+[baseline 3](../benchmarks/results/2026-08-31-hot-path/baseline-3.json),
+[candidate 3](../benchmarks/results/2026-08-31-hot-path/candidate-3.json).
+Each pair passes strict compatibility checks and a 20% median-regression comparison. That chosen
+budget is an inspection aid, not a statistical significance test or shared-runner CI threshold.
+
+Reproduce the report comparison, substituting pair numbers 1, 2 and 3:
+
+```bash
+python -m benchmarks.policy_gate compare benchmarks/results/2026-08-31-hot-path/baseline-1.json benchmarks/results/2026-08-31-hot-path/candidate-1.json --max-regression-percent 20
+```
+
+The baseline is the attested `a4f07077d96b82c29ba52c7ca806268694a185be` wheel, SHA-256
+`7efd712397f0179af36574c3381f300f6edee53e9b4482e6a7e95d0cc88e3e70`. The locally built candidate
+wheel at `b00df32cfb5c46e0fe901cc9b71e777983bb2ea5` has SHA-256
+`31913fdf49e1ffc8df4f62aa5a1cc6f8b66fc5060e697112217848418ebce1b0`.
+All reports identify harness SHA-256 `25a20a9180ac2c44b377399f11597e4f5aeedea389447f257b0a3f7f7295c3d3`;
+their package fingerprints distinguish the runtime contents despite both versions being 0.1.0.
+Follow-up documentation/build metadata may change archive hashes without changing measured runtime
+contents. Do not relabel historical reports as measurements of a later artifact.
+
+### Initial baseline observation
+
 One illustrative Windows/CPython 3.11.9 installed-wheel run is retained with
 [all raw samples and environment metadata](../benchmarks/results/2026-08-31-windows-python311.json).
 It used the default 14-workload configuration, eight reported logical CPUs, GC enabled and a 100 ns
