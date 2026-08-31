@@ -2,7 +2,91 @@
 
 Last updated: 2026-08-31
 
-## Current increment: bounded MCP HTTP response bodies
+## Current increment: verified TLS and client-credentials OAuth
+
+Baseline revalidated: clean, synchronized `main` at `277c379b8492cb093a256d7261af73bb00843f9a`
+on 2026-08-31. Work branch: `codex/mcp-tls-oauth-contract`. The product remains an independently
+usable policy-gating library/CLI for developers operating agents. This increment proves a concrete
+machine-to-machine support workflow: read a ticket, approve a reply, block deletion, with a real
+TLS connection and an OAuth-authenticated server principal.
+
+The preceding TCP contract used static test bearer tokens and could not establish certificate
+validation or the SDK's actual OAuth lifecycle. Added a narrow, ephemeral authorization server
+and separate protected resource origin, both served over loopback HTTPS. Tests use the stock
+`ClientCredentialsOAuthProvider` in MCP 2.1.1, not a mocked provider. The existing hashed client lock
+already supplies cryptography; no package dependency, runtime API, external account, production
+service or system trust-store change was required. Test servers/certificates/stores are explicitly
+not a deployable identity service.
+
+Primary research: the [SDK OAuth client guide](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/),
+[MCP authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization),
+and HTTPX2 [request hooks](https://httpx2.pydantic.dev/advanced/event-hooks/)/
+[timeout extensions](https://httpx2.pydantic.dev/advanced/extensions/), checked on 2026-08-31.
+Exact installed SDK/HTTPX2 source was inspected where wire behavior differed from expectations.
+
+**123 MCP contracts pass locally in 66.18 seconds**, including **31 new TLS/OAuth cases**:
+
+- Basic/form-post client credentials, JSON/finite SSE, auto/legacy negotiation, and read/review/deny.
+- Separate client/provider/store tenant boundaries and no client credentials on metadata endpoints.
+- Untrusted CA, hostname mismatch and expired certificates at both resource and issuer origins.
+- Invalid client credentials and mismatched resource/issuer metadata before protected execution.
+- Resource metadata, issuer metadata and token responses share the existing body-budget latch.
+- Token service/storage outages and challenged unauthorized scopes prevent tool dispatch.
+- Access-token reacquisition, client revocation during review, cancellation and token-request timeout.
+- Exact-version characterization of missing auth-request timeout inheritance and plain-403 replay.
+
+Two integration assumptions were corrected, not hidden by broad exception assertions. An OAuth
+revocation error can be raised from the Client context exit as an exception group. More importantly,
+the SDK constructs token requests without timeout extensions; HTTPX2 inserts the client default
+only on the original request, not subsequent requests yielded by auth. A public async request hook
+now supplies missing timeouts in the documented application wiring and test fixture. A wire-boundary
+characterization test pins the upstream omission; a stalled token endpoint proves the hook aborts
+with a real network read timeout and observable disconnect. A separate cancellation test proves
+cleanup without issuing a token or reaching a tool. Every new deployment scenario has a cooperative
+20-second bound in addition to bounded server startup/teardown.
+
+The guide also records that remote challenges can replace constructor scopes, plain 403 responses
+can be replayed once by SDK auth, SDK exceptions can include remote token-error bodies, and token
+state can be updated before durable storage succeeds. Applications must enforce allowed grants and
+egress destinations, isolate credential state, redact third-party logs, discard failed providers,
+and bound the initial handshake independently of the later policy adapter. None of these behaviors
+is misrepresented as a new Samsarix authentication, retry, storage or exactly-once guarantee.
+
+CI now runs all four MCP client contract files on Linux and Windows; contributor/release commands
+match. Local Windows/Python 3.11.9 core verification passes **663 tests with 95.36% branch-inclusive
+coverage** (449.34 seconds). The local built wheel passes all **123 client contracts from
+site-packages** (96.34 seconds). A separate `--no-deps` wheel environment without MCP/AnyIO/HTTPX2
+passes imports, version, policy validation, schema output, and read/delete exits 0/3. Wheel/sdist
+build and Twine checks pass; neither distribution includes integration fixtures or certificate
+keys. Ruff check/format (93 files), mypy (41 source files), `pip check`, the MCP demo and all changed
+local documentation links pass. Initial PR CI `33390715248` passes all 11 test jobs: core 663 tests
+on Python 3.11–3.14 (3.11 Linux coverage 95.33%), plus every optional adapter including the 123 MCP
+client contracts on Linux and Windows. Main-only attestation is correctly skipped on the PR.
+
+Exact-head review/merge and final attested-artifact evidence belong to
+[PR #44](https://github.com/Deathcharge/samsarix-agent-ethics/pull/44).
+Independent review prompted explicit resource-body assertions for form-post credential containment
+(including requests rejected before MCP reads them) and clearer default-versus-explicit timeout
+wording. The bounded test observer replays original ASGI messages; all 31 TLS/OAuth cases pass
+after this refinement. A stale verification-progress comment was reconciled against the completed
+checks above; it did not represent an outstanding test failure.
+Final release disposition remains **release candidate**, not publication
+or proof of production hosting/product-market fit. No sibling repository or licensing was changed.
+
+Remaining gates, in order:
+
+1. P1 deployment: real identity-provider/proxy acceptance, durable credential rotation/expiry/recovery,
+   reviewer identity, and process-crash recovery in an owner-selected environment. Local TLS/OAuth
+   acceptance reduces this gap but does not close it.
+2. P1 resource controls: process-memory/CPU, request/header, aggregate-workflow and spend quotas remain
+   external to per-response body budgets and cooperative phase deadlines.
+3. P1 owner gates: protected package publication identity/approval, licensing review, and a genuine
+   external adopter evaluation. No package/tag/release or production deployment is authorized here.
+4. P2: measured latency/load targets, long-lived OAuth SSE subscriptions/event-store resumption,
+   and any selected browser/PKCE, registration or refresh-token flow. These are not covered by the
+   machine-client acceptance fixture.
+
+## Previous increment: bounded MCP HTTP response bodies
 
 Baseline revalidated: clean, synchronized `main` at `8ab66e21228292c6537b97b67cb82c4c75e29e52`
 on 2026-08-31. Work branch: `codex/mcp-http-response-budgets`. The preceding increment established

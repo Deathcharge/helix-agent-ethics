@@ -104,7 +104,7 @@ class HTTPHarness(Harness):
 
 
 @asynccontextmanager
-async def _serve(harness: HTTPHarness) -> Any:
+async def _serve(harness: Any, *, certfile: str | None = None, keyfile: str | None = None) -> Any:
     """Own one loopback socket and task, with bounded startup and teardown."""
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
@@ -116,6 +116,8 @@ async def _serve(harness: HTTPHarness) -> Any:
                 access_log=False,
                 log_level="critical",
                 timeout_graceful_shutdown=1,
+                ssl_certfile=certfile,
+                ssl_keyfile=keyfile,
             )
         )
         # An in-process fixture must not replace pytest's process signal handlers.
@@ -136,7 +138,8 @@ async def _serve(harness: HTTPHarness) -> Any:
                         if stopped.is_set():
                             raise RuntimeError("Loopback server exited before startup")
                         await anyio.sleep(0.01)
-                yield f"http://{address[0]}:{address[1]}/mcp"
+                scheme = "https" if certfile is not None else "http"
+                yield f"{scheme}://{address[0]}:{address[1]}/mcp"
             finally:
                 server.should_exit = True
                 with anyio.fail_after(5, shield=True):

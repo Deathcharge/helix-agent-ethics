@@ -636,8 +636,9 @@ python examples/mcp_client_policy_demo.py
 
 `await create_mcp_client_tool_policy(bound_catalog, connected_client, server_id="support-primary")`
 pins the full paginated tool registry and enforces policy before each outbound MCP v2 tool-call
-round. The `mcp-client` extra pins `mcp==2.1.1`; CI verifies in-memory and real loopback HTTP
-support workflows on Linux/Windows. For network use, `create_mcp_http_transport(...)` adds
+round. The `mcp-client` extra pins `mcp==2.1.1`; CI verifies in-memory and real loopback HTTP/TLS
+support workflows, including stock SDK client-credentials OAuth against isolated test servers,
+on Linux/Windows. For network use, `create_mcp_http_transport(...)` adds
 independent encoded/decoded response-body budgets before MCP parsing, including gzip/deflate,
 and latches closed after a breach. Enable it in the application's HTTP wiring before connecting.
 Tool definition drift, unapproved review, and blocked policy decisions prevent dispatch.
