@@ -33,6 +33,11 @@ that install exactly one of `requirements-openai-agents.lock`, `requirements-lan
 lock. Keep optional packages out of the base development environment so the dependency-free import
 contract remains testable.
 
+Development uses the editable install above. Release acceptance and CI use regular installs and
+separate environments per SDK; follow [RELEASING.md](RELEASING.md) when qualifying a candidate.
+`tests/test_release_instructions.py` guards critical guide commands and provenance constraints;
+those static checks complement, but do not replace, actual clean-environment execution.
+
 The MCP v1 server and v2 client extras cannot coexist. For the v2 client lock, also pass
 `--constraint requirements-dev.lock` during compilation, preserving shared transitive pins, and
 run `python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py integration_tests/test_mcp_client_oauth.py integration_tests/test_mcp_client_refresh.py` plus

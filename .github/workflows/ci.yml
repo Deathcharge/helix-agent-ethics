@@ -37,7 +37,7 @@ jobs:
       - name: Install locked development dependencies
         run: |
           python -m pip install --require-hashes -r requirements-dev.lock
-          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps .
       - name: Test
         run: python -m pytest
       - name: Check formatting
@@ -469,7 +469,7 @@ jobs:
           python -m pip install --require-hashes \
             -r requirements-dev.lock \
             -r requirements-openai-agents.lock
-          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps .
       - name: Test exact OpenAI Agents SDK contract
         run: python -m pytest --no-cov integration_tests/test_openai_agents_sdk.py
       - name: Smoke-test the OpenAI Agents example
@@ -497,7 +497,7 @@ jobs:
           python -m pip install --require-hashes \
             -r requirements-dev.lock \
             -r requirements-langchain.lock
-          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps .
       - name: Test exact LangChain agent contract
         run: python -m pytest --no-cov integration_tests/test_langchain_sdk.py
       - name: Smoke-test the LangChain example
@@ -525,7 +525,7 @@ jobs:
           python -m pip install --require-hashes \
             -r requirements-dev.lock \
             -r requirements-pydantic-ai.lock
-          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps .
       - name: Test exact Pydantic AI agent contract
         run: python -m pytest --no-cov integration_tests/test_pydantic_ai_sdk.py
       - name: Smoke-test the Pydantic AI example
@@ -553,7 +553,7 @@ jobs:
           python -m pip install --require-hashes \
             -r requirements-dev.lock \
             -r requirements-mcp.lock
-          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps .
       - name: Test exact MCP server contract
         run: python -m pytest --no-cov integration_tests/test_mcp_sdk.py
       - name: Smoke-test the MCP server example
@@ -588,7 +588,7 @@ jobs:
           python -m pip install --require-hashes \
             -r requirements-dev.lock \
             -r requirements-mcp-client.lock
-          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps .
           python -m pip check
       - name: Test exact MCP client contract
         run: >-
@@ -621,7 +621,7 @@ jobs:
       - name: Install locked core development environment
         run: |
           python -m pip install --require-hashes -r requirements-dev.lock
-          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps .
           python -m pip check
       - name: Test actual process death, publication races, and restart
         run: python -m pytest --no-cov integration_tests/test_deployment_process.py
@@ -666,7 +666,7 @@ jobs:
           python -m pip install --require-hashes \
             -r requirements-dev.lock \
             -r requirements-opentelemetry.lock
-          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip install --no-build-isolation --no-deps .
       - name: Test exact OpenTelemetry API and SDK contract
         run: python -m pytest --no-cov integration_tests/test_opentelemetry_sdk.py
       - name: Smoke-test the OpenTelemetry example

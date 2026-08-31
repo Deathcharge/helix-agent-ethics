@@ -2,7 +2,49 @@
 
 Last updated: 2026-08-31
 
-## Current increment: post-grant MCP credential refresh acceptance
+## Current increment: clean-room release and adoption verification
+
+Baseline: clean synchronized `main` at `d78fdcc3c12fd700cd0e1baf0feda34a85587e23`, green main CI
+`33406051342`. Previous turn was progress: PR #48 merged 16 refresh/fixture cases, addressed review
+comments, verified exact-main artifact provenance and passed 139 installed-wheel MCP contracts.
+Its [final record](https://github.com/Deathcharge/samsarix-agent-ethics/pull/48#issuecomment-5480277840)
+contains the evidence. Work branch: `codex/clean-room-release-verification`.
+
+The product remains an independent deterministic policy-gating library/CLI. This increment serves
+new adopters and release operators evaluating its actual installed package without inherited
+development state. A current-state audit found five missing project-install steps in the release
+guide: core, OpenAI Agents, LangChain, Pydantic AI and OpenTelemetry. Hash-locked test/SDK dependencies
+do not install Samsarix. An actual fresh core environment reproduced `ModuleNotFoundError` during
+public API test collection (exit 2); explicit regular installation fixes that import boundary.
+The guide also verified artifact repository identity without pinning the intended commit/ref/signer,
+and downloaded into the same `dist/` directory used for local builds.
+
+Bounded primary research checked
+[pip regular versus editable installs](https://pip.pypa.io/en/stable/topics/local-project-installs/)
+and [GitHub CLI attestation constraints](https://cli.github.com/manual/gh_attestation_verify).
+The concrete decision is to repair and exercise the actual release path before adding more API
+surface. Every documented lane now installs the package and checks dependencies in a separate new
+environment; CI's eight installation steps use regular installs. Candidate verification requires
+a successful main-push run, exact commit/ref/workflow constraints, separate download paths, and
+repeating each SDK contract/demo with the exact verified wheel. The guide distinguishes checkout
+resources from an sdist, Bash from PowerShell continuation, source builds from downloaded artifacts,
+and cryptographic provenance from runtime safety or release approval.
+
+Ten static guide regressions cover lane completeness, dependency/install/check ordering, isolated
+lock combinations, both artifact identities and download separation. They initially produced nine
+failures, including the two formerly editable MCP lanes under the new regular-install requirement;
+after repair all ten pass. These are intentionally not represented as execution of the prose.
+Separate clean environments execute the real dependency installs, package imports, SDK contracts
+and examples. No runtime API, schema, dependency, licensing or sibling-repository change is intended.
+Verification results and final commit/CI/artifact evidence will be recorded as they complete.
+
+P1 acceptance still requires a selected production identity/storage/operational environment, real
+adopter pilot, protected registry publication setup/approval and legal review. P2 includes selected
+browser/long-lived SSE workflows and deployment load/SLOs. No live deployment, paid API, registry
+publication or external customer contact. Disposition remains release candidate with named external
+gates; this repair does not establish demand or complete the broader product objective.
+
+## Previous increment: post-grant MCP credential refresh acceptance
 
 Baseline revalidated: clean synchronized `main` at `e6e19f84bf4df544fe440d712166a7ebaa927dbc`,
 successful main CI `33402887441`. Previous turn was progress: PR #47 merged the exact-built-in
