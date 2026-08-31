@@ -597,6 +597,7 @@ jobs:
           integration_tests/test_mcp_client_http.py
           integration_tests/test_mcp_http_transport.py
           integration_tests/test_mcp_client_oauth.py
+          integration_tests/test_mcp_client_refresh.py
       - name: Smoke-test the MCP client example
         run: python examples/mcp_client_policy_demo.py
 

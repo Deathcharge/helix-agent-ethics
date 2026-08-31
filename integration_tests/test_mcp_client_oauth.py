@@ -23,7 +23,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 from mcp import Client
-from mcp.client.auth import OAuthFlowError
+from mcp.client.auth import OAuthClientProvider, OAuthFlowError
 from mcp.client.auth.extensions.client_credentials import ClientCredentialsOAuthProvider
 from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
@@ -265,6 +265,7 @@ class AuthorizationServer:
         self.delay_token = False
         self.token_disconnected = anyio.Event()
         self.scope_requests: list[str] = []
+        self.grant_types = ["client_credentials"]
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
         if scope["type"] == "lifespan":
@@ -286,7 +287,7 @@ class AuthorizationServer:
                     "issuer": self.metadata_issuer or self.url,
                     "authorization_endpoint": self.url + "/authorize",
                     "token_endpoint": self.url + "/token",
-                    "grant_types_supported": ["client_credentials"],
+                    "grant_types_supported": self.grant_types,
                     "token_endpoint_auth_methods_supported": [
                         "client_secret_basic",
                         "client_secret_post",
@@ -330,8 +331,11 @@ class AuthorizationServer:
         if not expected or not hmac.compare_digest(expected, secret):
             await _json(send, 401, {"error": "invalid_client"})
             return
-        assert fields["grant_type"] == ["client_credentials"]
         assert fields["resource"] == [self.resource.url]
+        await self.issue_token(fields, tenant, send)
+
+    async def issue_token(self, fields: dict[str, list[str]], tenant: str, send: Any) -> None:
+        assert fields["grant_type"] == ["client_credentials"]
         self.scope_requests.append(fields["scope"][0])
         if fields["scope"] != ["support:tools"]:
             await _json(send, 400, {"error": "invalid_scope"})
@@ -357,10 +361,14 @@ class AuthorizationServer:
 
 @asynccontextmanager
 async def _deployment(
-    tls: TLSMaterial, *, json_response: bool = True, issuer_tls: TLSMaterial | None = None
+    tls: TLSMaterial,
+    *,
+    json_response: bool = True,
+    issuer_tls: TLSMaterial | None = None,
+    authority_type: type[AuthorizationServer] = AuthorizationServer,
 ) -> Any:
     resource = ProtectedServer(json_response=json_response)
-    authority = AuthorizationServer(resource)
+    authority = authority_type(resource)
     issuer_tls = issuer_tls or tls
     async with (
         _serve(resource, certfile=tls.certfile, keyfile=tls.keyfile) as resource_url,
@@ -389,9 +397,10 @@ async def _http(
     store: MemoryTokens | None = None,
     timeout: float = 5,
     auth_timeout_hook: bool = True,
+    oauth: OAuthClientProvider | None = None,
 ) -> Any:
     store = store or MemoryTokens()
-    oauth = ClientCredentialsOAuthProvider(
+    oauth = oauth or ClientCredentialsOAuthProvider(
         server_url=resource.url,
         storage=store,
         client_id=f"support-{tenant}",
