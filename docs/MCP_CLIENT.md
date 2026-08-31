@@ -179,7 +179,9 @@ disabled: select the canonical endpoint and review any target change before crea
 Connection limits are not response-size, rate, cost, or whole-workflow limits.
 
 One HTTP client per credential/tenant boundary prevents mutable default headers or cookies being
-shared accidentally. Authenticate actor facts independently; neither `_meta` nor `server_id`
+shared accidentally. Scope the auth provider and its token store to the same boundary; separate
+HTTP clients do not isolate an incorrectly shared token store. Authenticate actor facts
+independently; neither `_meta` nor `server_id`
 establishes tenant identity. A changed token or registry during approval can reject the final
 preflight. Remote credentials revoked *after* preflight still require server-side enforcement.
 The SDK does not close a caller-supplied HTTP client: keep the outer `async with` shown above.
@@ -219,7 +221,8 @@ The injected disconnect happens after the handler has run. An `allow` audit reco
 **not** establish delivery, success, rollback, or exactly-once execution. Cancellation tests observe
 cleanup by client/server shutdown, not a universal remote-cancellation deadline. These tests do not
 cover internet/TLS/OAuth infrastructure, hostile response sizes, reverse proxies, connection-pool
-exhaustion, or durability across process crashes. Reproduce those with your selected deployment.
+exhaustion, SSE event-store resumption, or durability across process crashes. Reproduce those with
+your selected deployment.
 
 References: [official v2 migration guide](https://py.sdk.modelcontextprotocol.io/migration/),
 [client API](https://py.sdk.modelcontextprotocol.io/client/),

@@ -29,7 +29,15 @@ Verification on Windows/Python 3.11.9: `python -m pytest --no-cov
 integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py` passed
 **40 tests**. `python -m ruff check .`, `python -m mypy` (40 source files), `python -m pip check`,
 and `python examples/mcp_client_policy_demo.py` passed in the applicable locked environments.
-Full core/build verification and exact-head remote CI results are recorded in the increment PR.
+The full local core rerun passed **619 tests, zero failures/errors/skips, and 95.22% branch-inclusive
+coverage**. Build/Twine checks passed for wheel and sdist. A separate `--no-deps` wheel environment
+without MCP passed import, CLI version, policy validation and read/delete decisions (exit 0/3).
+The wheel excludes the test authentication fixture. Changed-document local links resolve.
+
+[PR #42](https://github.com/Deathcharge/samsarix-agent-ethics/pull/42) records exact-head verification.
+Its initial CI run `33381178508` passed all 11 test jobs, including the 40 real SDK/client contracts
+on Linux and Windows. Main-only attestation and any review-follow-up evidence belong to the final
+PR/release record, not an assumption based on that initial run.
 
 Release disposition remains a **release candidate with named external gates**, not verified
 production hosting or external product-market fit. No known local P0 was found in this increment.
@@ -47,7 +55,9 @@ Ordered remaining work:
 Final engineering review checks focus on false-positive tests, cleanup, secret handling, transport
 retries, and overstated guarantees. A lost-result test deliberately runs the remote handler first:
 an allow record alone proves neither successful delivery nor rollback. Test fixtures are never
-packaged as an auth service. No paid service or runtime operating cost was introduced.
+packaged as an auth service. Final documentation review also distinguishes per-tenant HTTP clients
+from per-tenant auth/token storage and explicitly excludes untested SSE event-store resumption.
+No paid service or runtime operating cost was introduced.
 
 ## Previous increment: MCP v2 client enforcement
 
