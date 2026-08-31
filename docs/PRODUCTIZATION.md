@@ -59,6 +59,11 @@ packaged as an auth service. Final documentation review also distinguishes per-t
 from per-tenant auth/token storage and explicitly excludes untested SSE event-store resumption.
 No paid service or runtime operating cost was introduced.
 
+PR #42's actual review reported one documentation finding: the example's 30-second HTTP idle
+timeout remains effective even when the adapter dispatch deadline is increased. Confirmed against
+the exact SDK transport and clarified both independent limits, without weakening the bounded
+default or implying that network heartbeats extend the adapter deadline.
+
 ## Previous increment: MCP v2 client enforcement
 
 Baseline revalidated at `a99233a52da50824c621ea83d75053fe99c43f51` on clean, synchronized

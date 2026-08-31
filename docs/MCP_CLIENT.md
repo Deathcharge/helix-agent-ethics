@@ -158,6 +158,7 @@ async with httpx2.AsyncClient(
     auth=auth,
     trust_env=False,
     follow_redirects=False,
+    # HTTP network-idle limit, separate from the adapter's dispatch deadline.
     timeout=httpx2.Timeout(30, read=30),
     limits=httpx2.Limits(max_connections=20, max_keepalive_connections=10),
 ) as http:
@@ -177,6 +178,12 @@ provider. Do not disable certificate verification. `trust_env=False` ignores amb
 configuration; configure a required corporate proxy explicitly. Redirect following is deliberately
 disabled: select the canonical endpoint and review any target change before creating a new client.
 Connection limits are not response-size, rate, cost, or whole-workflow limits.
+
+This example caps HTTP read inactivity at 30 seconds, even if a call supplies a larger adapter
+`read_timeout_seconds`. For a longer silent tool, configure **both** the HTTP read-idle limit and
+the adapter dispatch deadline deliberately. Network activity can reset the HTTP idle timer but
+does not extend the adapter's total dispatch-phase deadline. Neither limit bounds the entire
+discovery/review/dispatch workflow.
 
 One HTTP client per credential/tenant boundary prevents mutable default headers or cookies being
 shared accidentally. Scope the auth provider and its token store to the same boundary; separate
