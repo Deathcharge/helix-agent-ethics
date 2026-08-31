@@ -38,6 +38,14 @@ Separate clean environments execute the real dependency installs, package import
 and examples. No runtime API, schema, dependency, licensing or sibling-repository change is intended.
 Verification results and final commit/CI/artifact evidence will be recorded as they complete.
 
+The first regular-install core run exposed a second verification defect: all **807 tests passed**
+(one POSIX-only skip), but coverage failed at **71.79%** because the CLI test helper unconditionally
+prepended checkout `src` to `PYTHONPATH`. Parent tests exercised site-packages while child tests
+exercised a different copy, doubling the measured module set. The helper now pins the parent's
+actual imported package root, matching the existing restart/process helpers. A regression models a
+distinct installed path and ensures no checkout or unrelated import root is injected. The 90%
+coverage threshold remains unchanged; the failed run is retained as evidence, not called green.
+
 P1 acceptance still requires a selected production identity/storage/operational environment, real
 adopter pilot, protected registry publication setup/approval and legal review. P2 includes selected
 browser/long-lived SSE workflows and deployment load/SLOs. No live deployment, paid API, registry
