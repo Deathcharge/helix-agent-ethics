@@ -90,8 +90,12 @@ Current hardening backlog:
 - [x] Exercise verified TLS and the stock SDK client-credentials OAuth provider against separate
   loopback resource/authorization servers: credential isolation, revocation, scoped grants,
   certificate/metadata rejection, bounded discovery/token bodies, and interrupted token exchange.
+- [x] Exercise actual publisher process death and fresh-process enforcement for all four artifact
+  writers, concurrent exclusive creation, and authenticated restart rejection on Linux/Windows.
+  Clean staged files during ordinary Python interruption and document ambiguous post-publication
+  errors. This is not OS/power-loss durability or a persisted desired-state/sequence service.
 - Body budgets are not whole-process memory/CPU, request/header, rate or workflow quotas.
-  Real identity-provider/proxy acceptance, durable credential lifecycle and process-crash recovery
+  Real identity-provider/proxy acceptance, durable credential lifecycle and deployment crash recovery
   remain deployment work. Local ephemeral TLS/OAuth fixtures are not a production auth service.
 - No published package/release, public third-party adopter, or production deployment evidence.
 - The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible.

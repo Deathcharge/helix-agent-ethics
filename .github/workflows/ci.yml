@@ -600,6 +600,33 @@ jobs:
       - name: Smoke-test the MCP client example
         run: python examples/mcp_client_policy_demo.py
 
+  deployment-process-contract:
+    name: Deployment process recovery (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - name: Install locked core development environment
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-build-isolation --no-deps -e .
+          python -m pip check
+      - name: Test actual process death, publication races, and restart
+        run: python -m pytest --no-cov integration_tests/test_deployment_process.py
+      - name: Demonstrate fresh-process emergency-policy recovery
+        run: python examples/policy_restart_demo.py
+
   opentelemetry-contract:
     name: OpenTelemetry 1.44.0 contract
     runs-on: ubuntu-latest
@@ -639,6 +666,7 @@ jobs:
         pydantic-ai-contract,
         mcp-contract,
         mcp-client-contract,
+        deployment-process-contract,
         opentelemetry-contract,
       ]
     runs-on: ubuntu-latest

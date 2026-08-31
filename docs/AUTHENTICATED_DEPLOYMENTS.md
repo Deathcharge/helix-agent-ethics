@@ -126,6 +126,10 @@ change. Re-verify at every load, restart, or binding operation.
   trustworthy clock.
 - Sequence equality is allowed so a process can restart on its current desired deployment. If an
   application needs one-time activation, it must atomically consume its own authorization record.
+- Never reset the protected minimum sequence merely because a process restarted, and do not
+  silently fall back to a previous/staged envelope after missing, corrupt or unauthorized input.
+  The [process-recovery contract](POLICY_DEPLOYMENTS.md#interrupted-publication-and-restart) exercises
+  fresh-process key, audience, expiry, not-yet-valid, rollback and MAC rejection before callbacks.
 - `PolicyRuntime` still provides last-known-good in-process activation after an envelope has been
   authenticated. Remote distribution and host convergence remain external.
 

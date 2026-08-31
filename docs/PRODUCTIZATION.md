@@ -2,7 +2,86 @@
 
 Last updated: 2026-08-31
 
-## Current increment: verified TLS and client-credentials OAuth
+## Current increment: interrupted artifact publication and process restart
+
+Baseline revalidated: clean, synchronized `main` at `036e52ce0bcc0212ec80b5c655668803eb4183ab`
+on 2026-08-31. Work branch: `codex/deployment-crash-recovery`. Previous goal turn was concrete
+progress: the TLS/OAuth increment was merged and its exact main distributions were verified.
+This increment keeps the independently useful library/CLI shape and addresses deployment operators
+who must know which policy a restarted support/coding agent will enforce after an interrupted rollout.
+
+The existing artifact writers flushed staged file contents and published one canonical pathname,
+but tests only simulated collisions in process. Their cleanup handled selected ordinary errors,
+not `KeyboardInterrupt`/`SystemExit` or other Python unwinding. An internal “durably replace” docstring
+also overstated what file fsync alone establishes: directory metadata was not synced.
+
+Bounded research checked [OPA persisted bundles](https://www.openpolicyagent.org/docs/management-bundles)
+and its [storage boundary](https://www.openpolicyagent.org/docs/storage), which distinguish policy
+recovery from an authoritative durable data source. Linux's
+[fsync contract](https://man7.org/linux/man-pages/man2/fsync.2.html) distinguishes file contents from
+directory-entry durability. The concrete decision is to prove the library's actual local process
+boundary, not introduce a database, watcher, credential store, or claim OS/power-loss guarantees.
+
+Implemented work:
+
+- The shared atomic writer now attempts staging cleanup in `finally`, preserving the original
+  exception when cleanup itself fails. Public APIs, serialized formats and dependencies are unchanged.
+- Four artifact families (policy, policy deployment, tool-gate deployment, authenticated envelope)
+  are tested with actual publisher termination during partial staging, after file fsync, and after
+  publication. A separate fresh interpreter validates the selected canonical artifact and outcomes.
+- Concurrent exclusive publishers are released from the same pre-publication barrier; exactly one
+  succeeds, and the loser cannot overwrite the winning artifact.
+- Fresh authenticated bindings reject wrong keys/audiences, expired/future envelopes, rollback below
+  the trusted minimum sequence and tampered MACs before any callback. Missing/corrupt active files
+  do not cause fallback to previous or abandoned staging files.
+- The runnable emergency-lockdown demo shows that memory-only activation does not survive a fresh
+  process, explicit publication changes the fresh process's decision, and corrupt input returns an
+  error rather than a decision. It touches only its own temporary files and performs no tool effects.
+- Linux/Windows process-contract CI is required by main distribution attestation. Contributor,
+  release, runtime and deployment documentation describe the same recovery boundary.
+
+Completed local checks: **677 core tests passed in 423.76 seconds, 95.47% coverage**;
+**38 real-process contracts passed in 36.18 seconds**; **54 focused I/O tests passed**, including
+14 new interruption/cleanup cases. Ruff check and format (97 files), mypy (41 source files), build,
+Twine and the fresh-process demo pass on Windows/Python 3.11.9. The installed wheel passes all
+**52 new interruption/process checks in 38.68 seconds** and **123 MCP client contracts in 46.16
+seconds**. A separate no-optional-dependency environment passes pip check and the restart demo;
+archive inspection confirms the example is in the sdist and the process-kill fixture is not shipped.
+
+[PR #45](https://github.com/Deathcharge/samsarix-agent-ethics/pull/45) has all 13 test jobs green at
+`b61e671d795e5b19145f39e406ccc8e9c72b07d9`, including both process-recovery platforms. The completed
+Codex Security diff scan `23edb34a-39f4-471b-acb7-9b9d9cde3577` reviewed all 15 changed files at that
+head with no reportable findings or deferred candidates. It is a focused source/regression review,
+not a whole-repository independent penetration test. Preflight passed without configuration edits;
+TAC access/grants could not be verified because the access connector was not connected. CodeRabbit's
+automatic status said review skipped, which is not external review approval. Follow-up changes only
+clarify best-effort cleanup wording and record this evidence. Final-head CI and exact-main artifact
+attestation remain post-commit/merge checks, recorded on the PR rather than claimed prospectively here.
+
+Acceptance requires: no partial canonical artifact after owned-process death; preserved exclusive
+create semantics; fresh load/verification before decisions or callbacks; no implicit rollback or
+temporary-file recovery; interruption cleanup that preserves primary failures; passing source and
+installed-wheel contracts; exact-head CI and reviewed commits. A filesystem error can occur after
+publication, so callers must reconcile the canonical artifact instead of blindly retrying.
+
+Remaining work, in value order:
+
+1. P1 deployment: an owner-selected controller/storage system must persist protected desired state,
+   keys, trusted time/sequence anchors and reviewer identity; fence old workers during revocation;
+   and prove OS/power-loss, volume and process-supervisor recovery. File publication is not that system.
+2. P1 network/resource acceptance: real identity-provider/proxy configuration and outer process,
+   request/header, aggregate workflow and spend limits remain deployment responsibilities.
+3. P1 owner release/adoption gates: protected publication identity/approval, licensing review and
+   an external pilot. No package/tag/release, paid service or production deployment is authorized here.
+4. P2: measured latency/load targets and selected long-lived OAuth SSE/browser/refresh flows.
+
+Release disposition remains **release candidate with named external gates**. The library does not
+persist `PolicyRuntime` generations or choose a recovery artifact. Normal interruption cleanup is
+best effort; abrupt process death or filesystem failure may leave private staging files. Operators
+must identify abandoned files only after their writer stops, never glob-load or auto-promote them.
+No sibling repository, licensing, runtime dependency, live infrastructure or system trust was changed.
+
+## Previous increment: verified TLS and client-credentials OAuth
 
 Baseline revalidated: clean, synchronized `main` at `277c379b8492cb093a256d7261af73bb00843f9a`
 on 2026-08-31. Work branch: `codex/mcp-tls-oauth-contract`. The product remains an independently

@@ -422,7 +422,11 @@ def _write_atomic_payload(
     label: str,
     error_type: type[SamsarixEthicsError],
 ) -> Path:
-    """Durably replace or exclusively create one already serialized JSON payload."""
+    """Fsync a staged payload and atomically publish it at one local pathname.
+
+    File fsync is not directory-metadata or power-loss durability. Normal Python
+    unwinding attempts staging cleanup; abrupt process termination cannot do so.
+    """
 
     target = Path(path)
     if target.exists() and not force:
@@ -447,16 +451,12 @@ def _write_atomic_payload(
                 raise error_type(f"refusing to overwrite existing file: {target}") from exc
             Path(temporary_name).unlink()
         temporary_name = None
-    except SamsarixEthicsError:
-        if temporary_name:
-            with suppress(OSError):
-                Path(temporary_name).unlink(missing_ok=True)
-        raise
     except OSError as exc:
+        raise error_type(f"cannot write {label} {target}: {exc}") from exc
+    finally:
         if temporary_name:
             with suppress(OSError):
                 Path(temporary_name).unlink(missing_ok=True)
-        raise error_type(f"cannot write {label} {target}: {exc}") from exc
     return target.resolve()
 
 

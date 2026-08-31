@@ -31,6 +31,8 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
    python -m ruff check .
    python -m mypy
    python -m pytest
+   python -m pytest --no-cov integration_tests/test_deployment_process.py
+   python examples/policy_restart_demo.py
    python -m build --no-isolation
    python -m twine check dist/*
    ```

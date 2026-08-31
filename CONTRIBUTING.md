@@ -46,6 +46,8 @@ python -m ruff format --check .
 python -m ruff check .
 python -m mypy
 python -m pytest
+python -m pytest --no-cov integration_tests/test_deployment_process.py
+python examples/policy_restart_demo.py
 python -m build --no-isolation
 python -m twine check dist/*
 ```
@@ -53,6 +55,9 @@ python -m twine check dist/*
 Use `python -m ruff format .` to apply formatting. Tests must exercise real package behavior; mocks
 are appropriate only at actual external boundaries. Keep the coverage gate at or above 90% and add
 command-level tests for CLI behavior or exit-code changes.
+
+The process-recovery suite deliberately kills only its own bounded child interpreters and uses
+temporary files. It needs no optional SDKs, service, credentials, or system restart.
 
 ## Policy-engine changes
 
