@@ -192,6 +192,9 @@ AsyncHTTPTransport**, not on AsyncClient. Do not add client `proxy`/`mounts` tha
 transport; every used route must have its own bounded wrapper. Redirect following is deliberately
 disabled: select the canonical endpoint and review any target change before creating a new client.
 Connection limits are not response-size, rate, cost, or whole-workflow limits.
+The response-budget wrapper does not select or validate credential destinations or URL schemes.
+Enforce the HTTPS allowlist in application configuration before supplying credentials; local
+cleartext HTTP in the integration suite uses only isolated loopback servers and ephemeral test tokens.
 
 This example caps HTTP read inactivity at 30 seconds, even if a call supplies a larger adapter
 `read_timeout_seconds`. For a longer silent tool, configure **both** the HTTP read-idle limit and
@@ -243,7 +246,9 @@ The wrapper owns its supplied transport: do not share or independently close tha
   credentials, headers, or body fragments. The SDK can wrap/translate these errors: catch around the
   whole Client lifetime and inspect the application-owned transport, not remote error text.
 - Transport/response cleanup uses a cooperative, shielded five-second deadline. Close failures
-  propagate and may replace the original exception; `failure_reason` preserves a prior rejection.
+  do not replace an active primary error/cancellation; cleanup adds a fixed recovery note without
+  payload data. A close failure with no primary error propagates. `failure_reason` retains a prior
+  response-contract rejection even if the SDK translates or wraps the exception.
   Normal network errors, pool timeouts, and caller cancellation do not themselves latch
   a response-budget failure. No automatic retry or telemetry is added.
 

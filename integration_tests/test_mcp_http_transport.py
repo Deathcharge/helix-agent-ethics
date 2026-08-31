@@ -392,7 +392,7 @@ def test_cooperative_cleanup_deadline_covers_sdk_internal_close(
         wrapped = create_mcp_http_transport(HangingTransport())
         # An outer watchdog timing out must fail the test, not satisfy raises().
         with anyio.fail_after(2):
-            with pytest.raises(TimeoutError):
+            with pytest.raises(MCPHTTPResponseError if stage == "header" else TimeoutError):
                 if stage == "close":
                     await wrapped.aclose()
                 elif stage == "exit":
@@ -407,6 +407,80 @@ def test_cooperative_cleanup_deadline_covers_sdk_internal_close(
                         await response.aread()
         assert closed == ["transport" if stage in {"close", "exit"} else "response"]
         assert wrapped.failure_reason == ("unsupported_encoding" if stage == "header" else None)
+
+    anyio.run(scenario)
+
+
+@pytest.mark.parametrize("stage", ["wire", "decoded", "codec", "header", "caller", "cancel"])
+@pytest.mark.parametrize("cleanup", ["raise", "timeout"])
+def test_primary_error_survives_sdk_and_transport_cleanup(
+    stage: str, cleanup: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(http_module, "_CLOSE_TIMEOUT", 0.05)
+
+    async def scenario() -> None:
+        closed: list[str] = []
+
+        async def close(name: str) -> None:
+            closed.append(name)
+            if cleanup == "timeout":
+                await anyio.sleep_forever()
+            raise OSError("secondary close failure")
+
+        class FailingStream(httpx2.AsyncByteStream):
+            async def __aiter__(self) -> Any:
+                yield b"not compressed payload"
+
+            async def aclose(self) -> None:
+                await close("response")
+
+        class FailingTransport(httpx2.AsyncBaseTransport):
+            async def handle_async_request(self, request: Any) -> Any:
+                return httpx2.Response(
+                    200,
+                    headers={
+                        "Content-Encoding": {"codec": "gzip", "header": "br"}.get(stage, "identity")
+                    },
+                    stream=FailingStream(),
+                )
+
+            async def aclose(self) -> None:
+                await close("transport")
+
+        wrapped = create_mcp_http_transport(
+            FailingTransport(),
+            max_wire_bytes=1 if stage == "wire" else 1000,
+            max_response_bytes=1 if stage == "decoded" else 1000,
+        )
+        caller_error = (
+            anyio.get_cancelled_exc_class()()
+            if stage == "cancel"
+            else RuntimeError("caller primary")
+        )
+        expected = type(caller_error) if stage in {"caller", "cancel"} else MCPHTTPResponseError
+        with anyio.fail_after(2):
+            with pytest.raises(expected) as error:
+                if stage in {"caller", "cancel"}:
+                    async with wrapped:
+                        raise caller_error
+                else:
+                    response = await wrapped.handle_async_request(
+                        httpx2.Request("GET", "https://example.invalid")
+                    )
+                    await response.aread()
+        if stage in {"caller", "cancel"}:
+            assert error.value is caller_error
+        else:
+            assert (
+                error.value.reason
+                == {
+                    "wire": "wire_bytes",
+                    "decoded": "decoded_bytes",
+                    "codec": "invalid_content_encoding",
+                    "header": "unsupported_encoding",
+                }[stage]
+            )
+        assert closed == ["transport" if stage in {"caller", "cancel"} else "response"]
 
     anyio.run(scenario)
 

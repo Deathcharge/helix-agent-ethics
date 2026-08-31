@@ -5,8 +5,10 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
+from contextlib import contextmanager
 from importlib import import_module
+from sys import exception
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
@@ -73,7 +75,7 @@ class _WireStream:
 
     async def aclose(self) -> None:
         # HTTPX2 also closes this stream internally at EOF or on iteration failure.
-        with self.budget.owner._fail_after(_CLOSE_TIMEOUT, shield=True):
+        with self.budget.owner._cleanup():
             await self.source.aclose()
 
 
@@ -94,7 +96,7 @@ class _DecodedStream:
             await self.aclose()
 
     async def aclose(self) -> None:
-        with self.budget.owner._fail_after(_CLOSE_TIMEOUT, shield=True):
+        with self.budget.owner._cleanup():
             await self.response.aclose()
 
 
@@ -143,6 +145,17 @@ class MCPHTTPTransport(_HTTPXTransport):  # type: ignore[misc, unused-ignore]
             self._failure_reason = reason
         raise MCPHTTPResponseError(self._failure_reason) from None
 
+    @contextmanager
+    def _cleanup(self, primary: BaseException | None = None) -> Iterator[None]:
+        primary = exception() if primary is None else primary
+        try:
+            with self._fail_after(_CLOSE_TIMEOUT, shield=True):
+                yield
+        except BaseException:
+            if primary is None:
+                raise
+            primary.add_note("MCP HTTP cleanup failed; owned resources may require recovery.")
+
     async def __aenter__(self) -> MCPHTTPTransport:
         self._check()
         await self._transport.__aenter__()
@@ -156,14 +169,14 @@ class MCPHTTPTransport(_HTTPXTransport):  # type: ignore[misc, unused-ignore]
     ) -> None:
         if not self._closed:
             self._closed = True
-            with self._fail_after(_CLOSE_TIMEOUT, shield=True):
+            with self._cleanup(exc_value):
                 await self._transport.__aexit__(exc_type, exc_value, traceback)
 
     async def aclose(self) -> None:
         """Close the owned transport once, including after a budget rejection."""
         if not self._closed:
             self._closed = True
-            with self._fail_after(_CLOSE_TIMEOUT, shield=True):
+            with self._cleanup():
                 await self._transport.aclose()
 
     async def handle_async_request(self, request: Any) -> Any:
@@ -210,7 +223,7 @@ class MCPHTTPTransport(_HTTPXTransport):  # type: ignore[misc, unused-ignore]
                 extensions=response.extensions,
             )
         except BaseException:
-            with self._fail_after(_CLOSE_TIMEOUT, shield=True):
+            with self._cleanup():
                 await response.aclose()
             raise
 

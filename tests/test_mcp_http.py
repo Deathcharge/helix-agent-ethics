@@ -285,3 +285,41 @@ def test_decoder_failure_is_latched(sdk: Any) -> None:
     with pytest.raises(MCPHTTPResponseError, match="invalid_content_encoding"):
         collect(wrapped)
     assert wrapped.failure_reason == "invalid_content_encoding"
+
+
+@pytest.mark.parametrize("has_primary", [False, True])
+def test_cleanup_failure_preserves_primary_error(has_primary: bool) -> None:
+    primary = RuntimeError("original")
+
+    class ClosingErrorStream(Stream):
+        async def aclose(self) -> None:
+            await super().aclose()
+            raise OSError("secondary close failure")
+
+    source = ClosingErrorStream([primary] if has_primary else [b"ok"])
+    wrapped = create_mcp_http_transport(Transport(Response(stream=source)))
+    with pytest.raises(RuntimeError if has_primary else OSError) as error:
+        collect(wrapped)
+    if has_primary:
+        assert error.value is primary
+        assert any("cleanup failed" in note for note in primary.__notes__)
+    assert source.closed == 1
+
+
+def test_context_exit_preserves_supplied_primary_error() -> None:
+    primary = RuntimeError("caller primary")
+
+    class ClosingErrorTransport(Transport):
+        async def __aexit__(self, *_args: Any) -> None:
+            raise OSError("secondary close failure")
+
+    wrapped = create_mcp_http_transport(ClosingErrorTransport())
+
+    async def run() -> None:
+        async with wrapped:
+            raise primary
+
+    with pytest.raises(RuntimeError) as error:
+        asyncio.run(run())
+    assert error.value is primary
+    assert any("cleanup failed" in note for note in primary.__notes__)

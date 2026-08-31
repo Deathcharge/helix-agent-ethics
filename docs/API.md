@@ -520,6 +520,7 @@ Reasons are `wire_bytes`, `decoded_bytes`, `invalid_content_length`, `unsupporte
 `invalid_content_encoding`, `response_not_streaming`, or `invalid_stream`. An ordinary network
 failure or cancellation is not a budget failure. A closed wrapper rejects reuse with
 `MCPHTTPResponseError("transport_closed")`.
+Cleanup preserves an active primary exception; without one, cleanup failures propagate.
 
 `MCPHTTPResponseError.reason` contains a diagnostic label, not response/request data. Factory
 dependency errors use `install_mcp_client_extra` or `unsupported_httpx2_version`; invalid budgets

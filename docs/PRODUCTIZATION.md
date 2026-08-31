@@ -23,9 +23,10 @@ extra/input; the existing 30-package hashed lock is unchanged. Core imports stil
 or MCP dependencies. The recommended guide wiring now enables budgets before opening a Client and
 places TLS/proxy/pool configuration on the wrapped transport to avoid bypassing it with HTTP mounts.
 
-Local verification: **660 core tests pass with 95.35% branch-inclusive coverage**; the new module's
-41 unit tests cover 100% of its statements/branches. **80 exact-SDK client tests pass**, including
-40 new transport tests. Tests cover exact boundaries, incremental wire/decoded overflow,
+Local core verification before the review follow-up: **660 tests pass with 95.35% branch-inclusive
+coverage**. The final module's **44 unit tests cover 100%** of its statements/branches.
+**92 exact-SDK client tests pass**, including 52 new transport tests. Tests cover exact boundaries,
+incremental wire/decoded overflow,
 declared/chunked bodies, gzip/deflate inflation and corruption, unsupported encodings, failed
 discovery before tool dispatch, oversized results after one authorized invocation, both MCP modes
 and JSON/SSE formats, interleaved failure latching, cancellation and single-connection pool pressure.
@@ -35,14 +36,22 @@ iteration, explicit response close, header rejection, transport close and contex
 An additional strict-consumer typing check found that the dynamic runtime transport base was not
 visible to type checkers. A type-checking-only nominal base fixes direct `AsyncClient` wiring without
 importing optional dependencies at runtime; a bounded subprocess regression now checks this in CI.
+External review also prompted preservation of primary exceptions during failed cleanup. Close-only
+errors still propagate, while an active primary error/cancellation receives a fixed recovery note;
+12 exact-SDK regressions cover raised/timed-out cleanup after wire/decoded/decoder/header failures
+and caller errors/cancellation. The reviewer withdrew a proposed HTTPS-enforcement change after
+confirming endpoint/auth configuration is application-owned. The guide makes that boundary explicit;
+SECURITY.md now accurately distinguishes network-free core evaluation from optional network I/O.
+This corrects exposure documentation without introducing new vulnerability-class exclusions.
 
 On Windows/Python 3.11.9, Ruff formatting/lint, mypy (41 source files), locked installation and
-`pip check`, wheel/sdist build and Twine checks pass. The built wheel passes all 80 client contracts
+`pip check`, wheel/sdist build and Twine checks pass. The built wheel passes all 92 client contracts
 from site-packages. A separate `--no-deps` wheel environment without MCP/AnyIO/HTTPX2 passes imports,
 CLI version, policy validation and allow/deny exits 0/3. Wheel contents include the new module and
 optional dependency metadata but exclude the integration server fixture; changed-document local
 links resolve. `pip-audit` 2.10.1 reports no known vulnerabilities in the unchanged client lock.
-CI, external review and exact merged-artifact evidence will be recorded in the PR.
+Final-head full core/CI, review resolution and exact merged-artifact evidence will be recorded in
+[PR #43](https://github.com/Deathcharge/samsarix-agent-ethics/pull/43).
 
 Final acceptance remains a release candidate, not proven production hosting or external demand.
 No sibling repository, production service, package publication or licensing was changed.
