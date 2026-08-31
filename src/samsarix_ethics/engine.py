@@ -35,7 +35,8 @@ _MatchedRule: TypeAlias = tuple[int, str, Effect, str]
 def _field_value(context: Mapping[str, Any], path: str) -> Any:
     value: Any = context
     for part in path.split("."):
-        if not isinstance(value, Mapping) or part not in value:
+        # Avoid ABC dispatch for ordinary JSON objects; preserve custom Mapping behavior.
+        if (type(value) is not dict and not isinstance(value, Mapping)) or part not in value:
             return _MISSING
         value = value[part]
     return value
@@ -62,6 +63,9 @@ def _sequence_for_membership(value: Any, *, operator: str, role: str) -> Sequenc
 def _json_equal(left: Any, right: Any) -> bool:
     """Compare JSON values without Python's ``True == 1`` type confusion."""
 
+    # Only exact strings can skip the generic checks: subclasses keep their old semantics.
+    if type(left) is str and type(right) is str:
+        return left == right
     if isinstance(left, bool) or isinstance(right, bool):
         return type(left) is type(right) and left == right
     if isinstance(left, (int, float)) and isinstance(right, (int, float)):
