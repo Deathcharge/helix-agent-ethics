@@ -6,6 +6,10 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Optional MCP v2 (`2.1.1`) client adapter with bounded full-registry discovery/pinning,
+  fail-closed outbound policy enforcement, complete-request one-shot review binding,
+  explicit continuation reauthorization, per-phase deadlines, a real SDK CI contract,
+  and a no-network support workflow. Its `mcp-client` extra is separate from the v1 server extra.
 - Installable `samsarix-agent-ethics` Python package with zero runtime dependencies.
 - `samsarix-ethics` CLI for policy initialization, validation, and action checks.
 - Immutable JSON policy model with bounded parsing and strict validation.

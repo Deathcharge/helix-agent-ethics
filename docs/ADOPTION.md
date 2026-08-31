@@ -21,6 +21,21 @@ allow, deny, one-shot review, missing review, and registry drift. The
 maintained compatibility contracts, not evidence of a third-party adopter, live model call,
 production traffic, or hosted deployment.
 
+## Implemented gap: MCP v2 outbound enforcement
+
+The current MCP v2 high-level client can automatically resend calls to resolve input requests.
+The separate `mcp==2.1.1` client adapter deliberately uses the public single-round session API:
+it pins a complete paginated registry, authorizes before dispatch, binds review to metadata and
+continuation state, and returns input-required results for explicit reauthorization. The real
+in-memory contract covers auto/legacy connections, pagination, allow/deny/review, definition
+drift, actor changes, metadata, continuations, timeout, cancellation and transport errors.
+
+`examples/mcp_client_policy_demo.py` demonstrates a support ticket read, reviewed reply, and
+blocked deletion with no network or API keys. This is reproducible integration evidence, not a
+production deployment or public third-party adopter. Authentication, trusted server selection,
+background callbacks and remote side-effect integrity remain application-owned. The v1 server
+extra remains separate and incompatible with v2 in one environment. See [MCP_CLIENT.md](MCP_CLIENT.md).
+
 ## Implemented gap: stable MCP server-side enforcement
 
 The MCP tools specification recommends confirmation for sensitive operations, while the protocol

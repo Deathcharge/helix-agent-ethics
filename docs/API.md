@@ -482,6 +482,30 @@ cancellation remain application-owned. The adapter contract version is
 `MCP_SERVER_ADAPTER_VERSION = 1`; integration failures raise `MCPServerIntegrationError`. See
 [MCP.md](MCP.md) for the exact supported and unsupported execution paths.
 
+### `await create_mcp_client_tool_policy(bindings, client, *, server_id, ...)`
+
+Creates an optional `MCPClientToolPolicy` for a connected MCP 2.1.1 `Client`. Install the
+`mcp-client` extra separately from the v1 `mcp` server extra. The async factory pins the complete
+paginated tool definitions and checks exact trusted-catalog membership. `tools` returns detached
+copies; `registry_fingerprint` identifies canonical snapshot content, not server authenticity.
+
+Optional synchronous `actor_provider()` and `context_provider()` supply fresh application facts.
+Async `approval_provider(review)` receives `MCPClientReviewRequest`, with detached sensitive
+`request`/`to_dict()` payloads and `approval(approved=...)` evidence. Review binds the server alias,
+registry, actor, tool, arguments, metadata and continuation state to a fresh invocation ID. Fresh
+discovery/facts and final current-policy enforcement follow review. Rejection cannot dispatch.
+
+`await adapter.call_tool(name, arguments=None, read_timeout_seconds=None, progress_callback=None,
+*, input_responses=None, request_state=None, meta=None)` sends at most one tools/call round through
+the captured public session. `InputRequiredResult` is returned for explicit reauthorization; no
+high-level input driver or retries run. `context.mcp` is reserved for the server/registry identity
+and supplied metadata/continuation facts. Timeouts default to 30 seconds per discovery/dispatch
+and 300 seconds per review; values must be finite in `(0, 3600]`.
+
+`MCP_CLIENT_ADAPTER_VERSION = 1`; integration failures raise `MCPClientIntegrationError`, ordinary
+policy blocks retain typed gate errors, and SDK exceptions/cancellation propagate. See
+[MCP_CLIENT.md](MCP_CLIENT.md) for audit timing, limits, incompatible extras and transport ownership.
+
 ### `BoundToolCatalog`
 
 The immutable mapping returned by `ToolGate.bind_catalog(...)`. It exposes `gate`, `catalog`,
@@ -756,7 +780,8 @@ records. See [AUDIT_CHAINS.md](AUDIT_CHAINS.md) for the format and complete thre
 `PolicyValidationError`, `PolicyDeploymentValidationError`, `PolicyActivationError`,
 `PolicyCompositionError`, `PolicyTestValidationError`, `InputValidationError`, `EvaluationError`,
 `AuditLogError`, `AuditChainError`, `OpenAIAgentsIntegrationError`, `LangChainIntegrationError`,
-`PydanticAIIntegrationError`, `MCPServerIntegrationError`, and the tool-call enforcement errors derive from
+`PydanticAIIntegrationError`, `MCPServerIntegrationError`, `MCPClientIntegrationError`, and the
+tool-call enforcement errors derive from
 `SamsarixEthicsError`. `AuditChainError` also derives from `AuditLogError`, preserving fail-closed
 gate handling. The base
 class and specialized errors are exported from `samsarix_ethics` and defined in

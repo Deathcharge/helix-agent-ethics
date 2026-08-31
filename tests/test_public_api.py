@@ -28,6 +28,11 @@ def test_public_api_is_importable() -> None:
     assert "LangChainToolPolicy" in samsarix_ethics.__all__
     assert "create_langchain_tool_policy" in samsarix_ethics.__all__
     assert "MCPServerIntegrationError" in samsarix_ethics.__all__
+    assert "MCPClientIntegrationError" in samsarix_ethics.__all__
+    assert "MCPClientToolPolicy" in samsarix_ethics.__all__
+    assert "MCPClientReviewRequest" in samsarix_ethics.__all__
+    assert "create_mcp_client_tool_policy" in samsarix_ethics.__all__
+    assert samsarix_ethics.MCP_CLIENT_ADAPTER_VERSION == 1
     assert "MCPServerToolPolicy" in samsarix_ethics.__all__
     assert "MCPToolReviewRequest" in samsarix_ethics.__all__
     assert "create_mcp_server_tool_policy" in samsarix_ethics.__all__

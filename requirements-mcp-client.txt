@@ -1,0 +1,6 @@
+# Exact current MCP v2 client contract; separate environment from the v1 server extra.
+mcp==2.1.1
+# Shared pins must agree with the separately installed development lock on Linux too.
+cffi==2.1.0
+cryptography==50.0.0
+idna==3.18

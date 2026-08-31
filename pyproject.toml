@@ -37,6 +37,9 @@ langchain = [
 mcp = [
     "mcp==1.28.1",
 ]
+mcp-client = [
+    "mcp==2.1.1",
+]
 openai-agents = [
     "openai-agents==0.18.3",
 ]

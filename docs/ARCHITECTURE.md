@@ -295,6 +295,15 @@ with a fresh one-shot exact-call fingerprint before final current-policy enforce
 JSON Schema validation runs before this boundary. Direct handler calls, FastMCP internal routes,
 other MCP primitives, and upstream/proxy/provider execution remain outside it.
 
+The separate MCP v2 client adapter captures one connected public session, pins every paginated
+tool definition against the trusted catalog, and refreshes that full snapshot before each
+outbound call. Full request metadata and continuation state enter reserved `context.mcp` facts
+and exact review evidence. Final current-policy enforcement occurs after any review and fresh
+discovery/facts; the captured session sends one round only. Input-required results return to the
+application for explicit resolution and reauthorization. Remote schema coercion, authentication,
+hidden implementation drift, background callbacks, transport behavior and atomic remote state are
+not controlled by discovery pinning. See [MCP_CLIENT.md](MCP_CLIENT.md).
+
 ## Trust boundaries
 
 - **Policy authors/operators** are trusted to define correct rules and secure policy files.

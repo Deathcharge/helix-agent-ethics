@@ -28,9 +28,15 @@ tool inside the hash-verified dependency boundary.
 Optional integrations have separate exact contract inputs and locks. Regenerate them with the same
 universal Python 3.11 flags and run their dedicated integration tests and examples in environments
 that install exactly one of `requirements-openai-agents.lock`, `requirements-langchain.lock`,
-`requirements-pydantic-ai.lock`, `requirements-mcp.lock`, or `requirements-opentelemetry.lock` together with the development
+`requirements-pydantic-ai.lock`, `requirements-mcp.lock`, `requirements-mcp-client.lock`, or
+`requirements-opentelemetry.lock` together with the development
 lock. Keep optional packages out of the base development environment so the dependency-free import
 contract remains testable.
+
+The MCP v1 server and v2 client extras cannot coexist. For the v2 client lock, also pass
+`--constraint requirements-dev.lock` during compilation, preserving shared transitive pins, and
+run `python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py` plus
+`python examples/mcp_client_policy_demo.py` in its own hash-locked environment.
 
 ## Required checks
 
