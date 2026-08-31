@@ -48,6 +48,7 @@ python -m mypy
 python -m pytest
 python -m pytest --no-cov integration_tests/test_deployment_process.py
 python examples/policy_restart_demo.py
+python -m benchmarks.policy_gate run --iterations 2 --repeats 1 --warmup 0 --rules 10
 python -m build --no-isolation
 python -m twine check dist/*
 ```
@@ -58,6 +59,9 @@ command-level tests for CLI behavior or exit-code changes.
 
 The process-recovery suite deliberately kills only its own bounded child interpreters and uses
 temporary files. It needs no optional SDKs, service, credentials, or system restart.
+
+Benchmark correctness is tested by the regular suite. Read [performance methodology](docs/PERFORMANCE.md)
+before reporting timing changes; run controlled measurements separately from tests or other load.
 
 ## Policy-engine changes
 

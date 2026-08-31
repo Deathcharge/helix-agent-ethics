@@ -2,7 +2,55 @@
 
 Last updated: 2026-08-31
 
-## Current increment: interrupted artifact publication and process restart
+## Current increment: reproducible performance evidence
+
+Baseline revalidated: clean, synchronized `main` at `c9c1e38286098c9f5b4ab304011e728ca2d38d49`,
+with successful main CI `33395558329`. Previous turn was progress: real-process recovery was merged
+and exact-main wheel/sdist provenance plus 175 installed-wheel checks were verified. Work branch:
+`codex/policy-performance-evidence`. The full long-running product objective remains unchanged.
+
+An adopter could reproduce correctness but could not measure or compare policy-gating overhead
+through repository-owned tooling. This increment serves developers/operators deciding whether the
+independent library fits a coding/support agent's latency and resource budget. It adds evidence,
+not a hosted service, benchmark leaderboard, performance SLA or new runtime API.
+
+Bounded primary research checked [OPA performance guidance](https://www.openpolicyagent.org/docs/policy-performance)
+and [Python timing behavior](https://docs.python.org/3/library/timeit.html). The concrete choice is to
+separate synthetic policy scans, complete gate/dispatch boundaries, preparation-inclusive batches,
+shadow work, in-memory load/bind and real filesystem audit writes. Raw individual timings and repeat
+means are retained; noisy hosted-runner performance is not a CI speed gate.
+
+Implemented: 14 default workloads (10/100/1,000-rule last/no-match plus eight coding workloads), exact
+outcome/callback checks on every invocation, actual audit-record verification, cooperative time and
+work/report-size budgets, exclusive UTF-8 report output, environment/harness/fixture/package content
+fingerprints, and strict compatible-run median comparison. Wrong decisions, forbidden callbacks,
+lost audit records, invalid/incompatible evidence and exhausted budgets cannot produce success.
+No arguments, actor, policy contents, callback values, local paths or hostname are emitted. Environment
+labels and content fingerprints are operational metadata; reports are unsigned and need trusted storage.
+
+Focused verification: **63 benchmark tests pass in 5.54s**. The source baseline including the initial
+59 benchmark tests passed **736 tests in 262.08s, 95.47% core coverage**; four additional callback/audit/
+deadline adversarial tests then passed in the focused run. Ruff check/format (100 files), mypy
+(41 source files), build and Twine pass. The installed wheel, with no optional SDKs, completed the
+default 14 workloads and a zero-budget self-comparison; raw samples are retained at
+`benchmarks/results/2026-08-31-windows-python311.json`. This observation is not an isolated-hardware
+SLO. Final-head CI and review evidence are being completed. The performance guide explicitly distinguishes
+empirical per-invocation quantiles from production queueing/tail latency, wall occupancy from CPU/cost,
+temporary-volume fsync from deployment durability, and memory parsing from interpreter/disk startup.
+The source distribution includes the harness; wheel runtime contents/public APIs/dependencies do not change.
+
+Acceptance: runnable no-extra-dependency source/sdist/installed-wheel workloads; bounded errors and
+non-overwrite output; no false success on changed behavior; exact report compatibility and recomputed
+statistics; real Linux/Windows execution; retained raw evidence; reviewed/green commits and exact-main
+package verification. Measured observations and final evidence will be recorded on this increment's PR.
+
+Remaining P1 gates are owner-selected deployment identity/storage/rollback/supervisor acceptance,
+aggregate resource/spend limits, external pilot, legal/publication identity/approval and actual release.
+P2 work is controlled deployment load/SLO selection, profile-led optimizations with semantic parity,
+and selected long-lived/browser/refresh OAuth flows. Local benchmark observations do not close those
+gates. No paid service, production deployment, package publication or sibling repository change.
+
+## Previous increment: interrupted artifact publication and process restart
 
 Baseline revalidated: clean, synchronized `main` at `036e52ce0bcc0212ec80b5c655668803eb4183ab`
 on 2026-08-31. Work branch: `codex/deployment-crash-recovery`. Previous goal turn was concrete
