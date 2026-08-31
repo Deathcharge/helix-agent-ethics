@@ -2,7 +2,38 @@
 
 Last updated: 2026-08-31
 
-## Current increment: clean-room release and adoption verification
+## Current increment: source-archive test completeness
+
+Post-merge PR #49 verification passed all 14 main CI jobs (`33408878186`) at
+`7f5f5b8cbee0f77cbfcda9d25a98a88e59eed6b8`, both exact-commit/ref/workflow attestations, Twine,
+a fresh dependency-free wheel CLI smoke, and all six installed-wheel SDK lanes (153 contracts
+and six demos). All 56 runtime package files matched the preceding attested wheel byte-for-byte.
+The subsequent extracted-source check exposed an omission: setuptools included `test_*.py`
+but not `tests/conftest.py`. Reproducing with the attested archive's CLI tests and `-x` produced
+two passes and `fixture 'write_json' not found` (exit 1). This archive-test failure is not green
+and is not hidden by the successful installed-wheel checks.
+
+The affected user is an adopter or release operator checking shipped source without a checkout.
+The manifest now explicitly includes core Python tests and helpers. The Python 3.11 build lane
+compares every checkout core-test file byte-for-byte with its archived regular file, safely extracts
+the sdist into a temporary directory, installs the built wheel, and runs the full archived core
+suite with the unchanged coverage gate. Import-root and environment checks prevent an editable
+checkout from masking the installed artifact. This is a focused packaging follow-up, not a runtime,
+dependency, API, license or security-boundary change. Branch: `codex/sdist-test-completeness`.
+
+The rebuilt archive passes the exact CI block locally: **808 passed, one POSIX-only skip,
+95.56% coverage in 141.44s**, using installed site-packages (5,260 statements). All 38 archived Python
+test/helper files match the checkout; the old attested archive fails this check on the missing
+fixture. Build/Twine, Ruff check/format (103 files), mypy (41 source files) and dependency checks pass.
+All 56 runtime package files match the attested baseline wheel byte-for-byte. Final-head/main CI
+and exact-main artifact evidence will be recorded on
+[PR #50](https://github.com/Deathcharge/samsarix-agent-ethics/pull/50). No registry publication,
+paid API, live service, customer contact, sibling changes or independent security scan. P1 gates
+remain a selected production identity/storage/operating environment, real adopter pilot, protected
+publication approval and legal review; P2 includes deployment load/SLOs and selected browser/SSE
+flows. Disposition remains release candidate with those external gates, not a completed product goal.
+
+## Previous increment: clean-room release and adoption verification
 
 Baseline: clean synchronized `main` at `d78fdcc3c12fd700cd0e1baf0feda34a85587e23`, green main CI
 `33406051342`. Previous turn was progress: PR #48 merged 16 refresh/fixture cases, addressed review
