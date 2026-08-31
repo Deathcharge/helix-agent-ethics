@@ -2,7 +2,69 @@
 
 Last updated: 2026-08-31
 
-## Current increment: MCP v2 client enforcement
+## Current increment: real MCP v2 HTTP boundary
+
+Baseline: clean `main` at `b19de71785f817f2739869b98e4516f8b6f3b863` (PR #41),
+re-fetched and checked on 2026-08-31. Work branch: `codex/mcp-http-contract`.
+The client implementation already passed its in-memory contract, but production-facing network
+claims lacked real socket evidence. No runtime API or dependency changes were needed for this
+increment; no sibling repositories were touched.
+
+Added 23 real loopback TCP tests alongside the existing 17 in-memory contracts. They cover
+auto/legacy negotiation, JSON/SSE, allow/deny/review, authenticated principal isolation despite
+forged metadata, concurrent clients, real 401/403 rejection, credential revocation and registry
+drift during approval, unknown tools, audit outages, timeouts, cancellation, and response loss
+after handler execution. Tests count wire requests and handler invocations, use random ephemeral
+credentials, and close the caller-owned HTTP client and bounded local server/socket lifecycle.
+Both Linux and Windows are now included in the client CI matrix.
+
+Research used the current official [transport guide](https://py.sdk.modelcontextprotocol.io/client/transports/)
+and [Streamable HTTP specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http).
+Deployment guidance now shows application-owned HTTP configuration and scopes its auth, TLS,
+redirect, proxy, connection-limit and lifecycle responsibilities. Observed SDK errors can appear
+as nested exception groups at context exit; 401/403 can become generic MCP errors. OAuth hooks
+can independently replay requests: the adapter's no-retry contract is not an HTTP exactly-once claim.
+
+Verification on Windows/Python 3.11.9: `python -m pytest --no-cov
+integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py` passed
+**40 tests**. `python -m ruff check .`, `python -m mypy` (40 source files), `python -m pip check`,
+and `python examples/mcp_client_policy_demo.py` passed in the applicable locked environments.
+The full local core rerun passed **619 tests, zero failures/errors/skips, and 95.22% branch-inclusive
+coverage**. Build/Twine checks passed for wheel and sdist. A separate `--no-deps` wheel environment
+without MCP passed import, CLI version, policy validation and read/delete decisions (exit 0/3).
+The wheel excludes the test authentication fixture. Changed-document local links resolve.
+
+[PR #42](https://github.com/Deathcharge/samsarix-agent-ethics/pull/42) records exact-head verification.
+Its initial CI run `33381178508` passed all 11 test jobs, including the 40 real SDK/client contracts
+on Linux and Windows. Main-only attestation and any review-follow-up evidence belong to the final
+PR/release record, not an assumption based on that initial run.
+
+Release disposition remains a **release candidate with named external gates**, not verified
+production hosting or external product-market fit. No known local P0 was found in this increment.
+Ordered remaining work:
+
+1. P1 engineering: bound hostile remote response resources before SDK decoding and exercise
+   connection-pool pressure; current registry limits apply after decoding.
+2. P1 deployment acceptance: real TLS/OAuth/proxy and process-crash recovery in an owner-selected
+   environment; test-only bearer auth is not a production authentication implementation.
+3. P1 release/adoption gates: owner-controlled PyPI identity/Trusted Publisher and protected release
+   approval, licensing review, and a genuine external adopter evaluation. No package/tag/release
+   or production deployment was created.
+4. P2: independently measured latency/load budgets and more deployment-specific reference workflows.
+
+Final engineering review checks focus on false-positive tests, cleanup, secret handling, transport
+retries, and overstated guarantees. A lost-result test deliberately runs the remote handler first:
+an allow record alone proves neither successful delivery nor rollback. Test fixtures are never
+packaged as an auth service. Final documentation review also distinguishes per-tenant HTTP clients
+from per-tenant auth/token storage and explicitly excludes untested SSE event-store resumption.
+No paid service or runtime operating cost was introduced.
+
+PR #42's actual review reported one documentation finding: the example's 30-second HTTP idle
+timeout remains effective even when the adapter dispatch deadline is increased. Confirmed against
+the exact SDK transport and clarified both independent limits, without weakening the bounded
+default or implying that network heartbeats extend the adapter deadline.
+
+## Previous increment: MCP v2 client enforcement
 
 Baseline revalidated at `a99233a52da50824c621ea83d75053fe99c43f51` on clean, synchronized
 `main`; work continued on `codex/mcp-client-policy`. The preceding MCP v1 server contract was
@@ -47,9 +109,8 @@ with per-entry validation and incremental aggregate item/byte accounting plus on
 Regression tests preserve the previous canonical fingerprint, exact byte boundary (including
 escaped Unicode), page-spanning aggregate limits, and one registry hash for 64 tools.
 
-Next useful engineering milestone: test the v2 boundary over an actual local Streamable HTTP
-transport (including authorization isolation, cancellation and server disconnect), without adding
-a hosted gateway or expanding claims beyond measured evidence.
+The following HTTP increment addresses the former loopback-transport evidence gap; production
+OAuth/TLS/proxy acceptance remains separate.
 
 ## Current repository assessment
 
