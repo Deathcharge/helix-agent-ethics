@@ -183,6 +183,12 @@ remain appropriate for development but are not the release acceptance path. See
     and controlled comparison conditions are selected. See [the methodology](docs/PERFORMANCE.md).
 12. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
     ref in the release notes.
+    Refresh any claimed consumer compatibility against that exact artifact, separately from the
+    public SDK tests. Record the consumer commit, actual installed wheel hash, tested interpreter,
+    skipped contracts, and whether its declared dependency was changed. A consumer's old direct-URL
+    extra or the shared `0.1.0` version label can otherwise conceal testing the wrong source. The
+    [paired consumer qualification](docs/ADOPTION.md#current-default-qualification-2026-08-31)
+    demonstrates this distinction without making private repositories necessary for public CI.
 
 ## Registry publication prerequisites
 

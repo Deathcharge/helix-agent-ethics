@@ -106,6 +106,11 @@ Current hardening backlog:
   remain deployment work. Local ephemeral TLS/OAuth fixtures are not a production auth service.
 - No published package/release, public third-party adopter, or production deployment evidence.
 - The first verified consumer is a private Samsarix repository; its evidence is maintainer-visible.
+  Its current default branch has also passed paired Windows/Python 3.11 installed-wheel
+  qualification against its original Agent Ethics pin and the attested `4d5efad` candidate:
+  14 policy contracts and 239 collected consumer tests per lane. Its source pin is unchanged;
+  this is not a new hosted-matrix, MCP-extra, external-customer or production claim. See
+  [the exact qualification record](docs/ADOPTION.md#current-default-qualification-2026-08-31).
   The public OpenAI, LangChain, Pydantic AI, MCP, and OpenTelemetry adapters are reproducible
   integration evidence,
   not external adopter case studies.
