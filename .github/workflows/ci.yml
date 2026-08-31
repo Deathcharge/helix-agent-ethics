@@ -202,6 +202,55 @@ jobs:
       - name: Validate distributions
         if: matrix.python-version == '3.11'
         run: python -m twine check dist/*
+      - name: Test extracted source distribution against built wheel
+        if: matrix.python-version == '3.11'
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          import tarfile
+          from tempfile import TemporaryDirectory
+
+          sdists = list(Path("dist").glob("*.tar.gz"))
+          wheels = list(Path("dist").glob("*.whl"))
+          assert len(sdists) == len(wheels) == 1
+          expected_tests = {
+              path.as_posix(): path.read_bytes()
+              for path in Path("tests").rglob("*.py")
+          }
+          assert "tests/conftest.py" in expected_tests
+          environment = os.environ.copy()
+          environment.pop("PYTHONPATH", None)
+          environment.pop("PYTHONHOME", None)
+          environment["PYTHONNOUSERSITE"] = "1"
+          subprocess.run(
+              [sys.executable, "-m", "pip", "install", "--no-deps", "--force-reinstall",
+               str(wheels[0].resolve())],
+              check=True, env=environment, timeout=120,
+          )
+          with TemporaryDirectory(prefix="samsarix-sdist-") as directory:
+              prefix = sdists[0].name.removesuffix(".tar.gz")
+              with tarfile.open(sdists[0], "r:gz") as archive:
+                  for name, expected in expected_tests.items():
+                      member = archive.getmember(f"{prefix}/{name}")
+                      assert member.isfile(), name
+                      with archive.extractfile(member) as stream:
+                          assert stream.read() == expected, name
+                  archive.extractall(directory, filter="data")
+              extracted = Path(directory) / prefix
+              subprocess.run(
+                  [sys.executable, "-c", "import samsarix_ethics, sys; "
+                   "from pathlib import Path; "
+                   "assert Path(samsarix_ethics.__file__).resolve().is_relative_to(sys.prefix)"],
+                  cwd=extracted, check=True, env=environment, timeout=30,
+              )
+              subprocess.run(
+                  [sys.executable, "-m", "pytest"],
+                  cwd=extracted, check=True, env=environment, timeout=360,
+              )
+          PY
       - name: Smoke-test installed wheel
         if: matrix.python-version == '3.11'
         run: |

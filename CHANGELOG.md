@@ -6,6 +6,9 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Source distributions include shared core-test fixtures; CI verifies test-file parity and runs
+  the extracted archive's full core suite against the built wheel outside the checkout.
+
 - Clean-room release instructions install the package in every isolated SDK/core lane, verify
   exact candidate commit/ref/workflow provenance, and recheck SDK contracts against downloaded
   wheels. CI uses regular installations; regression checks guard the critical guide commands.

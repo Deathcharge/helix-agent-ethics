@@ -12,7 +12,10 @@ Python 3.11-3.14. Dedicated hash-locked lanes exercise the exact OpenAI Agents S
 Pydantic AI, MCP v1 server, MCP v2 client, and OpenTelemetry API/SDK contracts plus their no-network examples; release candidates
 are valid only when the complete matrix and all optional-integration lanes are green.
 The core, SDK and process lanes install the local project non-editably using the locked build
-backend. The separate wheel smoke test still verifies the exact distributions produced by CI.
+backend. The Python 3.11 lane also checks every core test/helper against the source archive,
+extracts that archive outside the checkout, and runs its full core suite against the built wheel
+with the same 90% coverage gate. The separate clean-wheel smoke test still checks a base install
+without development dependencies. Integration tests and SDK locks remain checkout-only resources.
 
 For pushes to `main`, a separate least-privilege job waits for the complete matrix, downloads those
 already-verified files, and creates GitHub build-provenance attestations. The attestation links each
