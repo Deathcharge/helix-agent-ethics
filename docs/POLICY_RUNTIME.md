@@ -102,7 +102,7 @@ that need mutually coherent metadata should read the single `runtime_status` sna
 Rollback is an ordinary activation of a retained prior policy/contract/lock set. The generation
 still increases, making the rollback observable rather than reusing an old generation number.
 
-This package does not fetch, watch, persist, authenticate, approve, sign, schedule, or distribute
+`PolicyRuntime` itself does not fetch, watch, persist, authenticate, approve, sign, schedule, or distribute
 artifacts. It also does not coordinate generations across processes or hosts. The embedding
 application owns artifact transport, durable desired state, leader election, retries, health
 monitoring, and deployment authorization. On process restart, construct the runtime from the
@@ -114,3 +114,9 @@ Run the checked-in example with:
 ```bash
 python examples/policy_runtime_demo.py
 ```
+
+For the fresh-process restart trap and explicit publication workflow, run
+`python examples/policy_restart_demo.py` and read
+[interrupted publication and restart](POLICY_DEPLOYMENTS.md#interrupted-publication-and-restart).
+In-memory activation alone does not survive restart; a process-local generation is not durable
+desired state or an anti-rollback counter.

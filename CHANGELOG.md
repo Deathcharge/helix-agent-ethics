@@ -6,6 +6,11 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Real-process deployment publication/restart contracts on Linux/Windows, including interrupted
+  create/replace, concurrent exclusive creators, and reauthentication before fresh callbacks.
+  A runnable emergency-policy example demonstrates why memory-only activation is not persistence.
+- Staged artifact cleanup during normal Python interruption, including KeyboardInterrupt and
+  SystemExit; documented post-publication error and process-crash versus power-loss boundaries.
 - Real verified-TLS MCP client-credentials OAuth acceptance on Linux/Windows, including credential
   isolation, certificate/metadata rejection, token/review revocation, bounded auth response bodies,
   and interrupted token exchange. Documented/tested HTTPX2 request-hook wiring supplies missing

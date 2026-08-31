@@ -47,6 +47,73 @@ an exclusive create does not overwrite a file that another process wins concurre
 contains only artifact IDs, versions, fingerprints, lock status, and the output path—not policy
 rules, values, descriptions, or messages.
 
+### Interrupted publication and restart
+
+All four local writers (`write_policy`, `write_policy_deployment`, `write_tool_gate_deployment`,
+and `write_tool_gate_deployment_envelope`) use the same staged-file protocol. They write and fsync
+the body in the destination directory, close it, then either replace the canonical path or create
+it exclusively using a hard link. A competing exclusive creator cannot overwrite the winner.
+The destination filesystem must support these operations; there is no copy/delete fallback.
+
+Normal Python exception unwinding, including `KeyboardInterrupt` and `SystemExit`, attempts to
+remove the staging file without replacing the original exception. Abrupt process termination
+cannot execute cleanup. A later cleanup/filesystem error can occur **after publication succeeded**:
+an exception does not prove the destination is unchanged. Re-read and validate the canonical
+artifact before deciding what happened; do not blindly retry, roll back, or promote a temporary file.
+
+The real-process CI tests stop owned publisher processes at deterministic file-operation boundaries:
+
+| Publisher stopped at | Canonical destination | Restart behavior |
+| --- | --- | --- |
+| Partial staged body or completed file fsync, before publication | Previous complete artifact, or absent on first create | Revalidate previous artifact; absent fails closed |
+| After successful replacement | Complete new artifact | Load/verify new artifact, never a mixed policy/contract/catalog |
+| After exclusive link, before staging cleanup | Complete new artifact plus an abandoned staging link | Load only the canonical artifact; do not select by filename/mtime |
+
+On restart, select an explicit application-owned canonical path and re-run its bounded loader.
+For authenticated deployments, re-verify the keyring, audience, current time and externally protected
+minimum sequence **before binding callbacks**. A previous but still valid policy is not necessarily
+authorized after a revocation: the process tests reject a sequence-1 envelope when the controller
+requires sequence 2. Missing/corrupt/expired/unauthorized artifacts must not cause automatic fallback
+to older or staged files. Restore only an explicitly authorized complete artifact.
+
+`PolicyRuntime` generation numbers restart at `1`; they are not persistent release sequences.
+An in-memory activation does not publish desired state. For emergency revocation, an application
+controller must stop/fence old workers and ingress, authorize/validate and publish desired state,
+preserve its rollback-prevention state, then construct and verify fresh bindings before reopening
+traffic. The example below deliberately exposes the memory-only restart trap without running any
+real tool side effects:
+
+```bash
+python examples/policy_restart_demo.py
+```
+
+It shows a memory-only lockdown still allowing a read in a fresh process, a published lockdown
+denying it, and a corrupt canonical file producing CLI exit `2` instead of a decision. The example
+uses temporary local files, not a deployment controller, production key store or recovery daemon.
+
+Keep the parent directory private and free of untrusted writers. A staging file can contain complete
+private policy content, not just metadata. After confirming that its writer has stopped, an operator
+may remove that specifically identified abandoned file; never delete potential live staging files
+or treat them as approved recovery state. Filesystem cleanup failures can also leave staging files.
+
+**Process-crash atomicity is not power-loss durability.** The writer fsyncs file contents, not the
+parent directory entry. Linux documents that a separate
+[directory fsync is needed for that metadata](https://man7.org/linux/man-pages/man2/fsync.2.html).
+OS crashes, power loss, hardware caches, network/FUSE filesystems, volume failure and multi-file
+commit protocols are not established by these tests. Use a deployment/storage system with the
+required durability guarantees and test it on the selected filesystem; the library does not claim
+a durable transaction, backup service, distributed rollout or persistent rollback anchor.
+
+Reproduce the local process contract after installing the development lock:
+
+```bash
+python -m pytest --no-cov integration_tests/test_deployment_process.py
+```
+
+Linux and Windows CI run the same actual-process termination, concurrent-create and authenticated
+restart cases. The test workers use the exact installed/source package and no optional dependencies;
+only their own child processes and temporary files are stopped/changed. No OS reboot is simulated.
+
 `check` and `explain` accept `--deployment` instead of `--policy` and activate all three embedded
 artifacts together. Supplying a separate `--context-contract` or `--deployment-lock` at the same
 time is rejected so an operator cannot accidentally create a mixed deployment.

@@ -305,6 +305,17 @@ generation, and uses compare-and-swap activation. Candidate validation or deploy
 leaves the last successful generation active. See the
 [atomic policy runtime guide](docs/POLICY_RUNTIME.md).
 
+In-memory activation is not persistence. Try the fresh-process emergency-lockdown example:
+
+```bash
+python examples/policy_restart_demo.py
+```
+
+It demonstrates explicit publication and fail-closed loading after corruption. Linux/Windows CI
+also kills owned publishers at real file-operation boundaries and verifies restart behavior.
+See [interrupted publication and restart](docs/POLICY_DEPLOYMENTS.md#interrupted-publication-and-restart)
+for staging-file cleanup, reauthentication, rollback anchors, and the power-loss durability limit.
+
 ## Python API
 
 ```python
