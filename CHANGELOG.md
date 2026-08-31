@@ -6,6 +6,10 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Optimize exact built-in string comparisons and dictionary field lookup without caching input or
+  changing authorization semantics. Add baseline/golden parity checks and retain three paired
+  installed-wheel performance observations with explicit measurement limitations.
+
 - Bounded, correctness-checked local performance workloads with raw per-call timings, strict
   compatible-report comparison, workload/environment fingerprints and retained Linux/Windows CI
   evidence. Measures policy scaling, coding-agent dispatch/batches, shadow and actual audit fsync;

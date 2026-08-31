@@ -2,7 +2,67 @@
 
 Last updated: 2026-08-31
 
-## Current increment: reproducible performance evidence
+## Current increment: profile-led policy evaluation optimization
+
+Baseline revalidated: clean synchronized `main` at `a4f07077d96b82c29ba52c7ca806268694a185be`,
+successful main CI `33399806731`. Previous turn was progress: PR #46 added performance tooling,
+merged with all 14 main jobs green, and verified exact-main wheel/sdist attestations, installed-wheel
+and extracted-sdist workloads. Final Windows suite: 744 passed, one POSIX-only skip, 95.47% coverage.
+The [final PR #46 record](https://github.com/Deathcharge/samsarix-agent-ethics/pull/46#issuecomment-5479494413)
+contains the post-merge evidence. Work branch: `codex/policy-hot-path-parity`.
+
+The independently useful product remains a deterministic local library/CLI for agent developers.
+This increment lowers avoidable evaluation overhead while retaining authorization semantics, so
+operators can spend less of a coding/support agent's latency budget on policy checks. It does not
+substitute a benchmark score for actual adopter validation or change the broader goal.
+
+Current profiling of 30 baseline 1,000-rule evaluations attributed 1.053s of 1.949s instrumented
+execution to JSON equality and 0.402s to field lookup. Both paths also appear in coding dispatch.
+These profiler timings include instrumentation and are not ordinary request latency. Bounded
+primary research checked [Python's profiler guidance](https://docs.python.org/3/library/profile.html),
+[type/subclass behavior](https://docs.python.org/3/library/functions.html#isinstance) and
+[OPA's profiling guidance](https://www.openpolicyagent.org/docs/policy-performance).
+
+Implemented exact-built-in fast paths for string equality and dictionary path traversal; generic
+subclass, Mapping, structured JSON and bool/number semantics remain in the existing fallback.
+There is no input cache, changed policy language, skipped validation/rules, public API or dependency
+change. Frozen pre-change reference helpers, independent golden assertions and bounded generated
+JSON pairs test equivalence. Public decision/explanation/batch checks preserve precedence, warnings,
+ordering and errors; mutation/reference checks protect fresh reads. Focused engine/parity/explanation
+checks pass 103 tests. Ruff and mypy (41 source files), build, Twine and no-optional-SDK wheel install
+pass. The full Windows suite passes **797 tests, one POSIX-only skip, 95.56% coverage in 283.06s**.
+The installed candidate wheel passes **331 engine/parity/explanation/benchmark, process-recovery
+and MCP client contracts, with one POSIX-only skip, in 80.86s**. The SDK test environment was then
+restored to an editable install. [PR #47](https://github.com/Deathcharge/samsarix-agent-ethics/pull/47)
+CI `33401698358` is green at `e9ded056bbe80459f5d7b6314a4483cc00284aae`: 798 tests on each Python
+3.11-3.14 job, plus Linux/Windows recovery and SDK contracts. CodeRabbit's automatic review was
+skipped; that status is not review approval. Codex Security scan
+`803d2cc7-74bb-4a8c-be07-b7621f1b4648` sealed the fixed `a4f0707..b00df32` runtime/test diff with
+zero findings and no discovery candidates. Both changed files have no-issue review dispositions;
+supporting gate/dispatch/runtime/shadow/MCP paths were inspected. The sealed report is nevertheless
+**partial**: it retained the earlier administrative `compact-review-close` checkpoint as deferred,
+despite final inventory/candidate recording. Do not represent it as a complete clean scan or a
+whole-repository audit. The immutable report is preserved; this bookkeeping limitation is carried
+into release evidence. Preflight passed without configuration changes; TAC access/grants could not
+be verified because the connector was disconnected. Final-head CI and exact-main verification
+remain post-commit checks to be recorded on the PR.
+
+Three alternating installed-wheel pairs (A/B, B/A, A/B) retain all six raw reports under
+`benchmarks/results/2026-08-31-hot-path/`. Each pair is compatible and passes a 20% median-regression
+inspection budget. Coding read medians were lower in all three pairs; filesystem audit was slower
+in one. Desktop variation is substantial, including changes in the unchanged load/bind path.
+[Performance methodology and all workload results](PERFORMANCE.md#exact-built-in-optimization-observation-2026-08-31)
+document those limitations rather than claiming controlled hardware, production SLOs or superiority.
+
+Acceptance: source and installed-package semantic checks; unchanged harness/fixture/settings for
+comparison; complete raw evidence including regressions; no cache or weakened authorization;
+reviewed and green exact commits; verified final distribution provenance.
+P1 gates remain deployment identity/storage/rollback/supervisor and aggregate resource acceptance,
+external pilot, protected publication approval and legal review. P2 is controlled load/SLO selection
+and selected long-lived/browser/refresh OAuth flows. No paid service, production deployment, package
+publication or sibling repository change. Disposition remains release candidate with external gates.
+
+## Previous increment: reproducible performance evidence
 
 Baseline revalidated: clean, synchronized `main` at `c9c1e38286098c9f5b4ab304011e728ca2d38d49`,
 with successful main CI `33395558329`. Previous turn was progress: real-process recovery was merged
