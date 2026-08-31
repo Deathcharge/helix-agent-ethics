@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import hashlib
+import json
 from contextlib import nullcontext
 from dataclasses import dataclass, replace
 from types import SimpleNamespace
@@ -136,17 +138,19 @@ def policy() -> Policy:
     )
 
 
-def bindings(*, runtime: Any = None, audit_sink: Any = None) -> Any:
+def bindings(
+    *, runtime: Any = None, audit_sink: Any = None, names: tuple[str, ...] = ("operate",)
+) -> Any:
     catalog = ToolCatalog.from_dict(
         {
             "tool_catalog_version": 1,
             "id": "tools",
             "version": "1",
-            "tools": [{"name": "operate", "capabilities": ["external:write"]}],
+            "tools": [{"name": name, "capabilities": ["external:write"]} for name in names],
         }
     )
     return ToolGate(runtime or policy(), audit_sink=audit_sink).bind_catalog(
-        catalog, registered_tools=["operate"]
+        catalog, registered_tools=names
     )
 
 
@@ -483,3 +487,87 @@ def test_dispatch_failure_is_never_retried(failure: BaseException) -> None:
     with pytest.raises(type(failure)):
         asyncio.run(adapter.call_tool("operate", {"mode": "read"}))
     assert len(client.session.calls) == 1
+
+
+def test_discovery_validates_entries_once_and_hashes_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    names = tuple(f"tool_{index}" for index in range(64))
+    tools = [Tool(name) for name in names]
+    client = Client()
+    client.session.pages = {None: Page(tools)}
+    validations = []
+    digests = []
+    original_validate = module.validate_context
+    original_digest = module._digest
+
+    def validate(value: Any, *, label: str) -> Any:
+        validations.append(tuple(value))
+        return original_validate(value, label=label)
+
+    def digest(value: Any) -> str:
+        digests.append(value)
+        return original_digest(value)
+
+    monkeypatch.setattr(module, "validate_context", validate)
+    monkeypatch.setattr(module, "_digest", digest)
+    adapter = asyncio.run(
+        create_mcp_client_tool_policy(bindings(names=names), client, server_id="test")
+    )
+    assert validations == [(name,) for name in names]
+    assert len(digests) == 1
+    expected = json.dumps(
+        {
+            "mcp_client_registry_version": 1,
+            "tools": {tool.name: tool.model_dump() for tool in tools},
+        },
+        sort_keys=True,
+        ensure_ascii=True,
+        allow_nan=False,
+        separators=(",", ":"),
+    ).encode("ascii")
+    assert adapter.registry_fingerprint == "v1:sha256:" + hashlib.sha256(expected).hexdigest()
+
+
+@pytest.mark.parametrize("delta", [0, -1])
+def test_incremental_discovery_byte_limit_matches_full_canonical_bytes(
+    monkeypatch: pytest.MonkeyPatch, delta: int
+) -> None:
+    tools = [Tool("first", 'Unicode \u00e9, quote " and newline\n'), Tool("second", "end")]
+    client = Client()
+    client.session.pages = {None: Page(tools[:1], "second-page"), "second-page": Page(tools[1:])}
+    expected = json.dumps(
+        {
+            "mcp_client_registry_version": 1,
+            "tools": {tool.name: tool.model_dump() for tool in tools},
+        },
+        sort_keys=True,
+        ensure_ascii=True,
+        allow_nan=False,
+        separators=(",", ":"),
+    ).encode("ascii")
+    monkeypatch.setattr(module, "MAX_MCP_CLIENT_SNAPSHOT_BYTES", len(expected) + delta)
+
+    async def construct() -> Any:
+        return await create_mcp_client_tool_policy(
+            bindings(names=("first", "second")), client, server_id="test"
+        )
+
+    if delta == 0:
+        adapter = asyncio.run(construct())
+        assert adapter.registry_fingerprint == "v1:sha256:" + hashlib.sha256(expected).hexdigest()
+    else:
+        with pytest.raises(MCPClientIntegrationError, match="byte limit"):
+            asyncio.run(construct())
+
+
+def test_aggregate_item_limit_is_retained_across_pages(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert module._container_items({"a": [{}, {"b": [1, 2]}]}) == 6
+    client = Client()
+    client.session.pages = {
+        None: Page([Tool("first")], "second-page"),
+        "second-page": Page([Tool("second")], "must-not-fetch"),
+    }
+    # Each entry has three items and passes by itself, but their sum must be bounded.
+    monkeypatch.setattr(module, "MAX_CONTAINER_ITEMS", 5)
+    with pytest.raises(InputValidationError, match="aggregate container items"):
+        create(client)
+    assert client.session.cursors == [None, "second-page"]

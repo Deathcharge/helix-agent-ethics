@@ -101,20 +101,20 @@ Nothing in this repository currently uploads to PyPI, creates a GitHub release, 
 
 10. Download the exact CI distributions for the commit, then verify their provenance:
 
-   ```bash
-   gh run download RUN_ID \
-     --name python-distributions-COMMIT \
-     --dir dist
-   gh attestation verify dist/samsarix_agent_ethics-VERSION-py3-none-any.whl \
-     --repo Deathcharge/samsarix-agent-ethics
-   gh attestation verify dist/samsarix_agent_ethics-VERSION.tar.gz \
-     --repo Deathcharge/samsarix-agent-ethics
-   ```
+    ```bash
+    gh run download RUN_ID \
+      --name python-distributions-COMMIT \
+      --dir dist
+    gh attestation verify dist/samsarix_agent_ethics-VERSION-py3-none-any.whl \
+      --repo Deathcharge/samsarix-agent-ethics
+    gh attestation verify dist/samsarix_agent_ethics-VERSION.tar.gz \
+      --repo Deathcharge/samsarix-agent-ethics
+    ```
 
 11. Install the downloaded wheel with `--no-deps` in a new virtual environment and run
-   `samsarix-ethics --version`, schema export, policy validation, and one allow/deny walkthrough.
+    `samsarix-ethics --version`, schema export, policy validation, and one allow/deny walkthrough.
 12. Record the commit, CI run, distribution SHA-256 digests, attestation verification, and rollback
-   ref in the release notes.
+    ref in the release notes.
 
 ## Registry publication prerequisites
 

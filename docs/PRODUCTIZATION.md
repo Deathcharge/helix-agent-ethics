@@ -31,7 +31,7 @@ owner-controlled publication. Definition pinning does not authenticate server co
 side effects atomic. A timed-out authorized call may already have executed remotely. V1 server
 and v2 client extras are intentionally incompatible in one environment.
 
-Local verification on Python 3.11.9: the complete core suite passed **615 tests with 95.19%
+Local verification on Python 3.11.9: the complete core suite passed **619 tests with 95.22%
 branch-inclusive coverage**; all **17 real MCP v2 contract tests** and the no-network demo passed.
 Ruff format/check and strict mypy (40 source files) passed. These measurements supersede the older
 increment's test counts retained below; they are not a claim of exhaustive correctness.
@@ -40,6 +40,12 @@ Build and Twine distribution checks passed. The development/client locks resolve
 Linux x86-64, and `pip-audit -r requirements-mcp-client.lock --no-deps --disable-pip` reported no
 known vulnerabilities on this date (advisory matching is not a security guarantee). The retained
 v1 adapter's 13 focused tests passed again after the new public exports were added.
+
+PR review follow-up: declare the directly used AnyIO dependency explicitly (`4.14.2`, already in
+the tested lock), repair release-guide list nesting, and replace growing-prefix discovery scans
+with per-entry validation and incremental aggregate item/byte accounting plus one final digest.
+Regression tests preserve the previous canonical fingerprint, exact byte boundary (including
+escaped Unicode), page-spanning aggregate limits, and one registry hash for 64 tools.
 
 Next useful engineering milestone: test the v2 boundary over an actual local Streamable HTTP
 transport (including authorization isolation, cancellation and server disconnect), without adding

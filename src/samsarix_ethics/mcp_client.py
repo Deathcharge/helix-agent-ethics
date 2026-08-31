@@ -11,7 +11,7 @@ import inspect
 import json
 import math
 import re
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
 from importlib import import_module
 from secrets import token_hex
@@ -22,7 +22,7 @@ from .catalog import MAX_TOOL_CATALOG_TOOLS, validate_tool_catalog_registration
 from .errors import InputValidationError, SamsarixEthicsError
 from .gate import BoundToolCatalog, BoundToolGate
 from .models import Outcome
-from .validation import freeze_json_value, thaw_json_value, validate_context
+from .validation import MAX_CONTAINER_ITEMS, freeze_json_value, thaw_json_value, validate_context
 
 MCP_CLIENT_ADAPTER_VERSION = 1
 MAX_MCP_CLIENT_DISCOVERY_PAGES = 256
@@ -50,9 +50,8 @@ def _copy(value: Any, *, label: str) -> dict[str, Any]:
     )
 
 
-def _digest(value: dict[str, Any]) -> str:
-    digest = hashlib.sha256()
-    size = 0
+def _canonical_chunks(value: dict[str, Any], *, initial_size: int = 0) -> Iterator[bytes]:
+    size = initial_size
     encoder = json.JSONEncoder(
         sort_keys=True, ensure_ascii=True, allow_nan=False, separators=(",", ":")
     )
@@ -61,8 +60,29 @@ def _digest(value: dict[str, Any]) -> str:
         size += len(chunk)
         if size > MAX_MCP_CLIENT_SNAPSHOT_BYTES:
             raise MCPClientIntegrationError("MCP client snapshot exceeds the canonical byte limit")
+        yield chunk
+
+
+def _digest(value: dict[str, Any]) -> str:
+    digest = hashlib.sha256()
+    for chunk in _canonical_chunks(value):
         digest.update(chunk)
     return f"v1:sha256:{digest.hexdigest()}"
+
+
+def _container_items(value: dict[str, Any]) -> int:
+    """Count entries in an already shape-validated payload, including its outer key."""
+    count = 0
+    stack: list[Any] = [value]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, Mapping):
+            count += len(item)
+            stack.extend(item.values())
+        elif isinstance(item, list):
+            count += len(item)
+            stack.extend(item)
+    return count
 
 
 def _facts(provider: _Provider | None, *, label: str) -> dict[str, Any]:
@@ -162,6 +182,8 @@ class MCPClientToolPolicy:
     async def _discover(self) -> tuple[tuple[Any, ...], str]:
         definitions: list[Any] = []
         payloads: dict[str, Any] = {}
+        canonical_size = len(b'{"mcp_client_registry_version":1,"tools":{}}')
+        container_items = 0
         cursor: str | None = None
         seen: set[str] = set()
         with self._fail_after(self._timeout):
@@ -182,12 +204,23 @@ class MCPClientToolPolicy:
                         raise MCPClientIntegrationError(
                             "MCP discovery contains invalid or duplicate names"
                         )
-                    payloads[tool.name] = tool.model_dump(
-                        mode="json", by_alias=True, exclude_none=True
-                    )
-                    # Bound the aggregate, not just each individually reasonable page.
-                    validate_context(payloads, label="MCP discovery")
-                    _digest({"mcp_client_registry_version": 1, "tools": payloads})
+                    entry = {
+                        tool.name: tool.model_dump(mode="json", by_alias=True, exclude_none=True)
+                    }
+                    # The one-key envelope preserves the full registry's depth accounting.
+                    validate_context(entry, label="MCP discovery")
+                    container_items += _container_items(entry)
+                    if container_items > MAX_CONTAINER_ITEMS:
+                        raise InputValidationError(
+                            "MCP discovery exceeds aggregate container items"
+                        )
+                    # Count only the new entry (minus its braces, plus a comma after the first).
+                    # Streaming retains the aggregate byte bound without re-encoding old tools.
+                    next_size = canonical_size - 2 + bool(payloads)
+                    for chunk in _canonical_chunks(entry, initial_size=next_size):
+                        next_size += len(chunk)
+                    canonical_size = next_size
+                    payloads.update(entry)
                     definitions.append(tool.model_copy(deep=True))
                 cursor = page.next_cursor
                 if cursor is None:

@@ -13,7 +13,8 @@ python -m pip install -e '.[mcp-client]'
 python examples/mcp_client_policy_demo.py
 ```
 
-The exact supported contract is `mcp==2.1.1`. The existing `mcp` extra pins `mcp==1.28.1` for the
+The exact supported contract is `mcp==2.1.1` with directly declared `anyio==4.14.2` for deadlines.
+The existing `mcp` extra pins `mcp==1.28.1` for the
 server adapter. These extras are **mutually incompatible in one environment**; neither silently
 upgrades the other. The base Samsarix package still has zero runtime dependencies. MCP and AnyIO
 are loaded lazily by the async factory. The v2 lock, CI lane, and in-memory tests are separate.
