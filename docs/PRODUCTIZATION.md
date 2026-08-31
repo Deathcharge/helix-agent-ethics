@@ -2,7 +2,49 @@
 
 Last updated: 2026-08-31
 
-## Current increment: source-archive test completeness
+## Current increment: real consumer release qualification
+
+Baseline revalidated: clean synchronized main `4d5efad4023db4be29aed1d00be60342c1e312c2`, all 14
+jobs in CI `33410554427` green, no open issues or PRs. Previous turn was progress: PRs #49/#50
+fixed clean-room setup and source-archive verification. The
+[final artifact record](https://github.com/Deathcharge/samsarix-agent-ethics/pull/50#issuecomment-5480888018)
+includes exact provenance, archived core tests and six installed-wheel SDK lanes.
+
+The next gap was adoption evidence rather than another runtime API: `docs/ADOPTION.md` identified
+the first framework integration and a ten-test contract from August 1, while the actual private
+consumer default branch is now `3ff74077f4929aac3a61ff8d2cf2ce1aa0b5a143` with fourteen policy
+tests. Its dependency remains pinned to Agent Ethics `eb69207`. No successful current hosted matrix
+is inferred from its three inspected terminal/cancelled runs. The user is a consumer maintainer
+qualifying a package update before changing a dependency or deploying it.
+
+The product remains a standalone library/CLI; no private runtime or CI dependency was added.
+Current primary research checked pip's
+[regular-install](https://pip.pypa.io/en/stable/topics/local-project-installs/) and
+[direct-URL](https://pip.pypa.io/en/stable/topics/vcs-support/) behavior. Decision: test actual
+installed consumer callbacks, not version labels
+or a proposed integration. Exact Git exports keep sibling worktrees and private source untouched.
+Two fresh hash-locked environments install the same consumer wheel and either its declared Agent
+Ethics baseline or the verified candidate. Installed roots and direct-URL hashes prove selection.
+
+Measured result: both lanes pass **14 policy contracts**, **239 consumer tests with one optional MCP
+module skipped**, **91.59% consumer branch coverage**, and the support read/denied-close/approved-close
+demo. Baseline full suite took 11.93s; candidate 13.36s. The base consumer also imports with Agent
+Ethics absent. This is Windows/Python 3.11.9, no-network fixture evidence, not a refreshed consumer
+hosted matrix, an MCP-extra test, real model behavior, a source-pin change or an external pilot.
+The precise commits, wheel digests, commands and limits now live in the existing adoption record.
+The release guide requires similarly precise evidence for future claimed consumer compatibility.
+
+No library regression was found and no runtime, dependency, schema, license, CI privilege or sibling
+change is warranted by these observations. Work branch: `codex/consumer-release-qualification`.
+Ruff check/format (103 files), mypy (41 source files), ten static release-guide tests, both consumer
+demos from the exported root, package builds and Twine pass. Final-head/main CI/provenance remain
+gates for this documentation/evidence change. No independent security scan, registry publication,
+production deployment, customer outreach or paid API. P1 remains a separately scoped consumer pin
+update with its supported matrix, real adopter pilot, selected production identity/storage/operations,
+and protected publisher/legal approval. P2 remains deployment load/SLOs and selected browser/SSE.
+Disposition: release candidate with named external gates; the broader product goal remains active.
+
+## Previous increment: source-archive test completeness
 
 Post-merge PR #49 verification passed all 14 main CI jobs (`33408878186`) at
 `7f5f5b8cbee0f77cbfcda9d25a98a88e59eed6b8`, both exact-commit/ref/workflow attestations, Twine,

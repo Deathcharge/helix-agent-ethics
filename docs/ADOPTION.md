@@ -100,6 +100,8 @@ Samsarix Agent Framework is the first consumer-owned integration. Its optional
   framework's `ToolError` contract; and
 - keeps Agent Ethics absent from the framework's default dependency-free install.
 
+### Original integration evidence (2026-08-01)
+
 | Evidence | Value |
 | --- | --- |
 | Consumer owner | Samsarix LLC |
@@ -118,11 +120,72 @@ private, this is owner-verifiable adoption evidence rather than a publicly repro
 case study. No production traffic, external customer, availability claim, or product-market fit is
 inferred.
 
-The compatibility window is the exact Agent Ethics commit above. Moving to another commit or
-release requires the consumer contract suite and installed-wheel smoke tests to pass again. The
+The original integration window is the exact Agent Ethics commit above. Moving to another commit
+or release requires the consumer contract suite and installed-wheel smoke tests to pass again. The
 rollback path is to revert the consumer merge or restore its core `ToolRegistry`; removing the
 policy gate is a security behavior change and requires an equivalent application authorization
 boundary.
+
+### Current-default qualification (2026-08-31)
+
+The consumer's current `master` is `3ff74077f4929aac3a61ff8d2cf2ce1aa0b5a143` (`0.2.0`),
+and its `[ethics]` extra still selects `eb69207b14ddd79bdfe774ec5b166c8ca8ce940e`. We exported
+those exact Git trees into disposable directories, built regular wheels without changing the
+consumer, and qualified its unchanged tests against both that declared baseline and the attested
+Agent Ethics `4d5efad4023db4be29aed1d00be60342c1e312c2` wheel. The consumer remains private.
+
+| Measured contract | Declared baseline | Attested candidate |
+| --- | --- | --- |
+| Consumer policy-registry tests | 14 passed in 0.29s | 14 passed in 0.57s |
+| Full collected consumer suite | 239 passed, 1 module skipped, 11.93s | 239 passed, 1 module skipped, 13.36s |
+| Consumer branch coverage | 91.59% | 91.59% |
+| Installed support demo | read allowed, unapproved close denied, one approved close | same asserted journey |
+| Base consumer without Agent Ethics | import succeeds; optional package absent | import succeeds; optional package absent |
+
+These are **Windows/Python 3.11.9** observations in two new environments with Agent Ethics'
+hash-locked development tools. The skipped module requires the consumer's optional real MCP SDK;
+it was not installed in these base lanes. This does not refresh the consumer's hosted Python
+matrix: the three most recent `master` runs inspected were terminal/cancelled, not green evidence.
+The 14 policy tests cover sync/async calls, fresh approval facts, agent and tool-chain denial,
+untrusted arguments, malformed providers, metadata-only audit output and durable-run rejection
+when policy/capability contracts differ. No live model, production credentials or customer data
+were used. The existing demo's trusted boolean is not a reviewer identity or one-shot approval
+store, and this consumer has not adopted the newer structured approval/catalog/runtime APIs.
+
+Both packages report `0.1.0`; version equality and `pip check` alone cannot identify the tested
+Agent Ethics source. Qualification therefore checks both package imports under each environment's
+`site-packages` and the installed distribution's `direct_url.json` SHA-256 against the selected
+wheel. The candidate's build provenance was verified before installation. Artifact identities:
+
+- Consumer wheel (locally built from `3ff7407`):
+  `ecd4874d63e67921f1c4eed8f3fa1c28c70d8196ad870733d9da5423ce2f8512`.
+- Baseline Agent Ethics wheel (locally built from `eb69207`):
+  `8d50c715e6410ee69faf7ab284824502eeedb26bad5414251cf516ef04893f27`.
+- Candidate Agent Ethics wheel (CI `33410554427`, `4d5efad`):
+  `081bfddeca0d6a23f152a96db05028ec1786271b37a0532cab103c9ec7625f61`.
+
+Maintainers with consumer-repository access can reproduce the measured contract by exporting the
+exact consumer commit, building its wheel, and preparing separate baseline/candidate environments
+with `requirements-dev.lock` from Agent Ethics `4d5efad`. Install the consumer wheel **without
+extras** and exactly one selected Agent Ethics wheel using `python -m pip install --no-deps`.
+Do not request the consumer's `[ethics]` extra for the candidate lane: its unchanged direct-URL
+requirement still selects the baseline. Clear inherited `PYTHONPATH`/`PYTHONHOME`, disable user site
+packages, verify the installed hashes/paths, then run from the exported consumer root:
+
+```bash
+python -m pip check
+python -m pytest -p no:cacheprovider -q tests/test_ethics.py
+python -m pytest -p no:cacheprovider --cov=samsarix_agent_framework --cov-branch --cov-report=term-missing --cov-fail-under=90
+python examples/policy_guarded_tools.py
+```
+
+The demo was also run with an absolute script path from outside the consumer tree. Regular
+installation follows [pip's deployment/CI guidance](https://pip.pypa.io/en/stable/topics/local-project-installs/);
+the declared Git requirement follows [pip's direct-URL contract](https://pip.pypa.io/en/stable/topics/vcs-support/).
+No private source or raw test transcript is redistributed here. These results qualify a possible
+source-pin update, **not** a changed dependency, production rollout, external pilot, or blanket
+compatibility promise. Updating the consumer pin and rerunning its own supported matrix remain a
+separately scoped consumer change; a future Agent Ethics release needs its own qualification.
 
 ## Implemented gap: application-owned audit sinks
 
