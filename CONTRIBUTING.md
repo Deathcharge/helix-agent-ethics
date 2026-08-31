@@ -35,7 +35,7 @@ contract remains testable.
 
 The MCP v1 server and v2 client extras cannot coexist. For the v2 client lock, also pass
 `--constraint requirements-dev.lock` during compilation, preserving shared transitive pins, and
-run `python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py integration_tests/test_mcp_client_oauth.py` plus
+run `python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py integration_tests/test_mcp_client_oauth.py integration_tests/test_mcp_client_refresh.py` plus
 `python examples/mcp_client_policy_demo.py` in its own hash-locked environment.
 The HTTP tests bind ephemeral loopback ports and require no external server or credentials.
 

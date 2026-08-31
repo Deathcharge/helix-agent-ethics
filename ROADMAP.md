@@ -98,6 +98,9 @@ Current hardening backlog:
   writers, concurrent exclusive creation, and authenticated restart rejection on Linux/Windows.
   Clean staged files during ordinary Python interruption and document ambiguous post-publication
   errors. This is not OS/power-loss durability or a persisted desired-state/sequence service.
+- [x] Verify post-grant MCP refresh rotation/omission, same-provider concurrency, review-time
+  rejection, storage divergence, response budgets and interruption over TLS. Seeded grants/cached
+  metadata are not browser authorization, issuer discovery or durable credential recovery.
 - Body budgets are not whole-process memory/CPU, request/header, rate or workflow quotas.
   Real identity-provider/proxy acceptance, durable credential lifecycle and deployment crash recovery
   remain deployment work. Local ephemeral TLS/OAuth fixtures are not a production auth service.
