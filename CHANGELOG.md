@@ -6,6 +6,10 @@ All notable product changes are recorded here.
 
 ### Added
 
+- Post-grant MCP refresh-token TLS contracts for rotation/omission, concurrent calls, review-time
+  rejection, storage failures, bounded responses and interrupted exchanges. Document SDK relative
+  expiry reload and rotation-loss recovery boundaries; no runtime auth API or dependency change.
+
 - Optimize exact built-in string comparisons and dictionary field lookup without caching input or
   changing authorization semantics. Add baseline/golden parity checks and retain three paired
   installed-wheel performance observations with explicit measurement limitations.

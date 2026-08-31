@@ -288,8 +288,47 @@ observe protected handlers and token grants. Important observed limits:
 The test-only CA, certificates, clients, in-memory stores and narrow authorization server are
 generated locally and are **not production authentication components**. Certificates are trusted
 only by the test clients; no system trust store is changed. No real account or provider credentials
-are needed. Browser authorization-code/PKCE, CIMD/registration, refresh-token grants, persistent
-credential recovery, and long-lived OAuth-authenticated SSE subscriptions are not covered.
+are needed. Browser authorization-code/PKCE, CIMD/registration, persistent credential recovery,
+and long-lived OAuth-authenticated SSE subscriptions are not covered.
+
+### Post-grant refresh acceptance
+
+The separate `test_mcp_client_refresh.py` contracts exercise the stock `OAuthClientProvider` from
+MCP 2.1.1 over verified TLS in auto/JSON sessions with the bounded transport and Samsarix adapter.
+They **seed an existing confidential-client grant and trusted cached issuer metadata**.
+Test-only SDK context updates force
+expiry without sleeping; these are not application setup instructions or proof of browser login,
+metadata discovery, or restart recovery.
+
+- Basic and form-post authentication refresh twice across a read and a human-reviewed send.
+  Rotated refresh tokens replace the old token; omitted refresh-token and scope fields retain the
+  prior values. The fixture enforces client/tenant and resource binding. Policy-denied calls never
+  reach the tool, and refresh tokens/client secrets are absent from resource bodies and Samsarix
+  audit records. See [RFC 6749 section 6](https://www.rfc-editor.org/rfc/rfc6749.html#section-6).
+- Two concurrent calls through one provider produce one refresh and two authorized handler calls.
+  This is one provider's in-process lock, **not coordination across clients, processes or hosts**.
+- Revoked/wrong-tenant grants, a 503, malformed success data and failed storage during review
+  prevent tool dispatch. A failed grant can trigger full reauthorization; the fixture has no browser
+  callbacks, so it stops with `OAuthFlowError`. Do not wrap this in an unattended reauthorization loop.
+- A store failure after rotation leaves the old token in the store while the issuer has invalidated
+  it and the provider has the replacement in memory. Discard the provider/client and reconcile with
+  the selected identity provider; retrying stale storage is not a rollback strategy. Durable storage
+  and rotation-loss recovery remain deployment acceptance gates.
+- Oversized refresh responses latch the body-budget failure; a timeout/cancellation disconnects the
+  test exchange without a tool effect. A timeout after an issuer commits rotation can still lose the
+  replacement token. The fixture's interrupted exchange stops before issuance and does not prove
+  safe retry after a lost response. Request-hook timeouts and the outer operation deadline remain
+  necessary for auth-generated requests.
+- A fresh provider loading a token with `expires_in=0` does not reconstruct an absolute expiry
+  timestamp. In the tested case, the server rejects the old access token and the SDK attempts full
+  reauthorization, not a refresh. Persisting relative lifetime alone is insufficient; qualify the
+  application's actual storage/expiry/restart policy against its SDK and issuer.
+
+This narrow fixture is not a complete authorization server and does not implement refresh-token
+family replay detection, sender-constrained tokens, or cross-process credential transactions.
+Production issuer selection should account for the rotation/replay guidance in
+[RFC 9700 section 4.14](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14).
+There is no new Samsarix auth API, automatic retry, dependency or credential storage component.
 
 ### Response budgets and recovery
 
@@ -342,7 +381,7 @@ wrapper is not a general compression-conformance validator.
 After installing the development and v2 client locks as described in [RELEASING.md](../RELEASING.md):
 
 ```bash
-python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py integration_tests/test_mcp_client_oauth.py
+python -m pytest --no-cov integration_tests/test_mcp_client_sdk.py integration_tests/test_mcp_client_http.py integration_tests/test_mcp_http_transport.py integration_tests/test_mcp_client_oauth.py integration_tests/test_mcp_client_refresh.py
 ```
 
 The HTTP suite owns an ephemeral `127.0.0.1` socket, real Uvicorn/ASGI server, SDK HTTP client and
@@ -367,6 +406,7 @@ Linux and Windows CI run the same tests.
 | Oversized resource metadata, issuer metadata or token response | Body-budget latch prevents subsequent HTTP dispatch |
 | Revoked token/client; plain 403 | Explicitly counted grant/replay behavior, with no unauthorized handler invocation |
 | Token exchange network timeout/cancellation | Request timeout hook works; server observes disconnect; no token persistence or tool effect |
+| Existing-grant refresh | Rotation/omission, concurrency, review-time failures, budgets and interruption; seeded issuer/grant, not browser or durable recovery |
 
 The injected disconnect happens after the handler has run. An `allow` audit record therefore does
 **not** establish delivery, success, rollback, or exactly-once execution. Cancellation tests observe

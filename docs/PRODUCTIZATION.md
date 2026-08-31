@@ -2,7 +2,68 @@
 
 Last updated: 2026-08-31
 
-## Current increment: profile-led policy evaluation optimization
+## Current increment: post-grant MCP credential refresh acceptance
+
+Baseline revalidated: clean synchronized `main` at `e6e19f84bf4df544fe440d712166a7ebaa927dbc`,
+successful main CI `33402887441`. Previous turn was progress: PR #47 merged the exact-built-in
+optimization, verified exact-main wheel/sdist attestations and package checks, and documented the
+partial security-report bookkeeping limitation. Its
+[final record](https://github.com/Deathcharge/samsarix-agent-ethics/pull/47#issuecomment-5479876927)
+contains the post-merge evidence. Work branch: `codex/mcp-refresh-contracts`.
+
+The product remains an independent deterministic library/CLI for agent developers, not a hosted
+authorization service. The acceptance gap is a long-lived support agent's existing OAuth grant:
+can a read or human-reviewed send safely proceed across access-token expiry, and what happens
+when refresh or token persistence fails? Prior TLS contracts only covered client-credentials
+reacquisition. This increment adds post-grant refresh evidence without enlarging the runtime API.
+
+Bounded primary research checked the
+[pinned SDK OAuth provider contract](https://py.sdk.modelcontextprotocol.io/client/oauth-clients/),
+[RFC 6749 refresh semantics](https://www.rfc-editor.org/rfc/rfc6749.html#section-6) and
+[RFC 9700 rotation/replay guidance](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14).
+Tests deliberately seed a prior confidential-client grant and cached trusted issuer metadata;
+test-only SDK expiry updates avoid wall-clock sleeps. They do not simulate browser consent or
+claim dynamic discovery, production issuer acceptance or durable credential recovery.
+
+Implemented: stock MCP 2.1.1 provider refresh over verified TLS, Basic/form-post auth, two successive
+rotations or omitted replacement fields, preserved scopes, same-provider concurrency, policy denial
+and exact human-reviewed dispatch. Failure cases cover revoked/wrong-tenant grants, unavailable or
+malformed token responses, storage failure during review, oversized response, timeout and cancellation.
+Assertions observe actual protected handlers, token requests, store writes and credential exclusion
+from resource bodies/audit records. A reload case preserves evidence that `expires_in` alone does
+not restore an absolute expiry clock. CI and contributor/release commands include the new module.
+
+Important boundary: a store failure after rotation leaves issuer/provider/store state divergent;
+discarding the provider/client is necessary but does not recover the lost replacement. Likewise,
+an interruption after issuer commit is different from the tested interruption before issuance.
+No cross-process lock, refresh-token family replay detector, credential database or automatic retry
+is introduced. SDK third-party log redaction remains the application's responsibility.
+
+Acceptance: focused and full MCP client contracts, unchanged core quality checks, installed-wheel
+contracts, review of real handler/request assertions, green exact commits and distribution provenance.
+Initial verification: **45 OAuth/refresh tests pass in 34.22s**, including 14 new refresh cases;
+the **137-test complete MCP client contract passes in 58.52s**. Ruff check/format (102 files),
+mypy (41 source files), build and Twine pass. Full core, installed-wheel and exact final-commit
+CI/provenance checks are post-commit gates; their final results will be recorded on the PR.
+
+Follow-up evidence: full Windows core **797 passed, one POSIX-only skip, 95.56% coverage in
+181.67s**; the installed local wheel passed **137 MCP contracts in 61.82s** and the support demo.
+All 56 runtime package files are byte-identical to the attested baseline wheel. PR #48 CI
+`33404899886` is green at `c3bb5f1`: 798 core tests on Python 3.11-3.14 and 137 MCP contracts on
+Linux/Windows. CodeRabbit review `5067914133` returned two nonblocking test-hardening comments;
+follow-ups reject missing/mismatched injected token stores before HTTP and guard secret-exclusion
+assertions against empty capture. Two new fixture guard cases bring the refresh module to 16 cases.
+The bot's test-function docstring-coverage warning is informational; descriptive tests and fixture
+boundary docstrings are retained, without changing configured quality gates. Final-head/main
+verification is recorded on [PR #48](https://github.com/Deathcharge/samsarix-agent-ethics/pull/48).
+
+P1 gates remain deployment issuer/credential storage/rollback/supervisor and aggregate resource
+acceptance, external pilot, protected package-publication approval and legal review. P2 remains
+selected browser/long-lived SSE flows and controlled deployment load/SLO selection. No paid service,
+production deployment, registry publication or sibling-repository change. Release candidate with
+named external gates; the broader product goal is unchanged.
+
+## Previous increment: profile-led policy evaluation optimization
 
 Baseline revalidated: clean synchronized `main` at `a4f07077d96b82c29ba52c7ca806268694a185be`,
 successful main CI `33399806731`. Previous turn was progress: PR #46 added performance tooling,
